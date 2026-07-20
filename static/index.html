@@ -58,6 +58,13 @@
         <article id="stageVoice" class="stage-monitor"><div><strong>批量语音</strong><span class="stage-badge">等待</span></div><p class="stage-current">等待语音任务</p><div class="stage-progress"><i></i></div><small>0 / 0</small></article>
         <article id="stageStitch" class="stage-monitor"><div><strong>AI 素材拼接</strong><span class="stage-badge">等待</span></div><p class="stage-current">等待拼接任务</p><div class="stage-progress"><i></i></div><small>0 / 0</small></article>
         <article id="stageCapcut" class="stage-monitor"><div><strong>CapCut 自动剪辑</strong><span class="stage-badge">等待</span></div><p class="stage-current">等待第五步任务</p><div class="stage-progress"><i></i></div><small>0 / 0</small></article>
+        <article id="stageUpload" class="stage-monitor disabled"><div><strong>最终成片上传</strong><span class="stage-badge">未配置</span></div><p class="stage-current">上传服务尚未接入</p><div class="stage-progress"><i></i></div><small>0 / 0</small></article>
+      </div>
+      <div class="realtime-table-wrap">
+        <table class="realtime-table">
+          <thead><tr><th>步骤</th><th>程序</th><th>当前任务 / 子阶段</th><th>进度</th><th>完成 / 失败 / 总计</th><th>最后更新</th><th>状态</th></tr></thead>
+          <tbody id="pipelineRows"><tr><td colspan="7" class="empty">正在读取五个步骤…</td></tr></tbody>
+        </table>
       </div>
     </section>
 
@@ -65,7 +72,7 @@
       <div class="panel tasks-panel">
         <div class="section-heading table-heading">
           <div><p class="eyebrow">STEP 5 TASKS</p><h2>第五步任务与进度</h2></div>
-          <label class="date-filter">处理日期 <select id="dateSelect" aria-label="处理日期"><option value="">全部日期</option></select></label>
+          <label class="date-filter">第五步日期 <select id="dateSelect" aria-label="第五步日期"><option value="">全部日期</option></select></label>
         </div>
         <div class="summary-grid">
           <div><small>总任务</small><strong id="countTotal">0</strong></div><div><small>等待</small><strong id="countWaiting">0</strong></div>

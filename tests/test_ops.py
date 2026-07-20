@@ -7,6 +7,22 @@ import app
 
 
 class OpsTests(unittest.TestCase):
+    def test_download_directory_fallback_finds_today_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            project = root / "实体机"
+            project.mkdir()
+            (project / "video_ai_sttn.mp4").write_bytes(b"video")
+            store = app.Store(root / "test.db")
+            config = dict(app.CONFIG)
+            config["download_root"] = str(root)
+            collector = app.Collector(config, store)
+            collector.scan_download_pipeline(False)
+            stage = collector.pipeline["download"]
+            self.assertEqual(stage["completed"], 1)
+            self.assertEqual(stage["todayCompleted"], 1)
+            self.assertIn("实体机 1条", stage["todaySummary"])
+
     def test_pipeline_stage_normalization(self):
         stage = app.Collector.normalize_stage(
             {

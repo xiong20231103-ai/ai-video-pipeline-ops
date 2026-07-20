@@ -8,6 +8,8 @@
 - CapCut 第五步逐任务状态。
 - CPU、内存、GPU、磁盘、网络和程序在线状态。
 
+五个步骤均显示程序在线状态、当前任务或子阶段、进度、完成/失败/总数、数据来源和最后更新时间。工作台关闭后，第一步会从下载目录恢复当天已处理视频数量，不会因为尚未进入第四步而消失。
+
 Dashboard 不控制任何生产程序。网盘上传尚未接入时会明确显示“未配置”。
 
 ## 快速开始
@@ -20,6 +22,7 @@ Dashboard 不控制任何生产程序。网盘上传尚未接入时会明确显�
 
 - `GET /api/health`
 - `GET /api/overview`
+- `GET /api/pipeline`
 - `GET /api/tasks`
 - `GET /api/events`
 
@@ -28,6 +31,7 @@ Dashboard 不控制任何生产程序。网盘上传尚未接入时会明确显�
 ## 状态来源
 
 - `TikHub_AI_视频工作台/ops_pipeline_status.json`：工作台每2秒原子更新前三步状态。
+- 工作台下载目录：作为第一步历史回退来源，默认从 `workbench_settings.json` 自动识别，也可通过 `config.json` 的 `download_root` 指定。
 - `tools/BatchVoiceClient-Portable/data/last_batch_handoff.json`：即使只运行语音客户端，也能恢复最近批次。
 - `E:/生成视频/日期/项目/generation_records_*.json`：恢复最近拼接结果。
 - `handoff/capcut/*.status.json`：第五步真实状态。

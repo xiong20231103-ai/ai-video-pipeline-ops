@@ -12,6 +12,23 @@ function formatClock(value) {
   });
 }
 
+function formatDateTime(value) {
+  if (!value) return "--";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", {
+    month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit"
+  });
+}
+
+function formatAge(seconds) {
+  if (seconds == null) return "无状态时间";
+  if (seconds < 10) return "刚刚";
+  if (seconds < 60) return `${seconds}秒前`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}分钟前`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}小时前`;
+  return `${Math.floor(seconds / 86400)}天前`;
+}
+
 function setBar(id, value) {
   const safe = Number.isFinite(Number(value)) ? Math.min(100, Math.max(0, Number(value))) : 0;
   $(id).style.width = `${safe}%`;
@@ -54,6 +71,7 @@ function stageClass(value) {
   if (value === "failed") return "failed";
   if (value === "running") return "active";
   if (value === "unconfigured") return "disabled";
+  if (value === "offline") return "failed";
   return "idle";
 }
 
@@ -70,18 +88,38 @@ function renderStage(name, data = {}) {
   card.querySelector(".stage-badge").textContent = data.stateText || "等待";
   card.querySelector(".stage-current").textContent = data.current || data.source || "暂无当前任务";
   card.querySelector(".stage-progress i").style.width = `${Math.max(0, Math.min(100, Number(data.progress || 0)))}%`;
-  card.querySelector("small").textContent = `${Number(data.completed || 0)} 完成 / ${Number(data.failed || 0)} 失败 / ${Number(data.total || 0)} 总计`;
+  const today = data.todaySummary ? ` · 今日 ${data.todaySummary}` : "";
+  card.querySelector("small").textContent = `${Number(data.completed || 0)} 完成 / ${Number(data.failed || 0)} 失败 / ${Number(data.total || 0)} 总计${today}`;
 }
 
 function renderPipeline(pipeline = {}) {
-  renderStage("download", pipeline.download);
-  renderStage("voice", pipeline.voice);
-  renderStage("stitch", pipeline.stitch);
-  renderStage("capcut", pipeline.capcut);
-  const upload = pipeline.upload || {};
-  const uploadNode = $("pipeUpload");
-  uploadNode.className = `pipe-step ${stageClass(upload.state)}`;
-  $("pipeUploadText").textContent = upload.stateText || "未配置";
+  ["download", "voice", "stitch", "capcut", "upload"].forEach(name => renderStage(name, pipeline[name]));
+  renderPipelineRows(pipeline);
+}
+
+function renderPipelineRows(pipeline = {}) {
+  const order = ["download", "voice", "stitch", "capcut", "upload"];
+  const rows = $("pipelineRows");
+  rows.innerHTML = order.map(key => {
+    const item = pipeline[key] || {};
+    const onlineText = item.state === "unconfigured"
+      ? "尚未接入"
+      : (item.programOnline ? "程序运行中" : "程序未运行");
+    const onlineClass = item.programOnline ? "online" : "offline";
+    const current = item.current || item.todaySummary || item.source || "暂无当前任务";
+    const liveText = item.state === "running"
+      ? (item.isLive ? "实时更新" : "状态未刷新")
+      : formatAge(item.ageSeconds);
+    return `<tr>
+      <td><span class="step-name"><i class="step-number">${escapeHtml(item.step || "")}</i>${escapeHtml(item.name || key)}</span></td>
+      <td>${escapeHtml(item.program || "--")}<span class="program-state ${onlineClass}">${escapeHtml(onlineText)}</span></td>
+      <td>${escapeHtml(current)}<span class="subtext">${escapeHtml(item.source || "")}</span></td>
+      <td><div class="table-progress"><div class="bar"><i style="width:${Math.max(0, Math.min(100, Number(item.progress || 0)))}%"></i></div><small>${Number(item.progress || 0)}%</small></div></td>
+      <td>${Number(item.completed || 0)} / ${Number(item.failed || 0)} / ${Number(item.total || 0)}</td>
+      <td class="update-time">${escapeHtml(formatDateTime(item.updatedAt))}<small>${escapeHtml(liveText)}</small></td>
+      <td><span class="task-state ${stageClass(item.state) === "active" ? "running" : stageClass(item.state)}">${escapeHtml(item.stateText || "等待")}</span></td>
+    </tr>`;
+  }).join("");
 }
 
 function categoryFor(raw) {
@@ -106,10 +144,21 @@ function renderOverview(data) {
   $("countCompleted").textContent = counts.completed || 0;
   $("countFailed").textContent = counts.failed || 0;
   const current = data.current;
-  if (current) {
-    const category = categoryFor(current.state);
+  const pipeline = data.pipeline || {};
+  const activeStage = ["download", "voice", "stitch", "capcut", "upload"]
+    .map(key => pipeline[key]).find(item => item && item.state === "running");
+  if (activeStage) {
+    $("heroTitle").textContent = `${activeStage.name} · ${activeStage.stateText}`;
+    $("heroSubtitle").textContent = activeStage.current || `${activeStage.program}正在运行`;
+  } else if (current) {
     $("heroTitle").textContent = current.state_text || "生产线等待中";
     $("heroSubtitle").textContent = `${current.date_label || "未定日期"} · ${current.project || "未分类"} · ${current.material || "未指定材料"} · ${current.language || "未指定语言"}`;
+  } else {
+    $("heroTitle").textContent = "暂时没有生产任务";
+    $("heroSubtitle").textContent = "Dashboard 正常运行，正在等待工作台或客户端写入状态。";
+  }
+  if (current) {
+    const category = categoryFor(current.state);
     $("currentDate").textContent = current.date_label || "--";
     $("currentProject").textContent = current.project || "--";
     $("currentMaterial").textContent = current.material || "--";
@@ -118,12 +167,9 @@ function renderOverview(data) {
     $("currentState").className = `task-state ${category}`;
     $("currentError").textContent = current.error || "";
     $("currentError").classList.toggle("hidden", !current.error);
-  } else {
-    $("heroTitle").textContent = "暂时没有生产任务";
-    $("heroSubtitle").textContent = "Dashboard 正常运行，正在等待工作台或客户端写入状态。";
   }
   renderMetrics(data.metrics);
-  renderPipeline(data.pipeline);
+  renderPipeline(pipeline);
   renderDateOptions(data.dates || []);
 }
 

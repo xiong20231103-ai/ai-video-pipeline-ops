@@ -79,12 +79,14 @@ def load_config() -> dict[str, Any]:
         "listen_port": 8765,
         "workbench_dir": "../TikHub_AI_视频工作台",
         "workbench_ops_status": "../TikHub_AI_视频工作台/ops_pipeline_status.json",
+        "download_root": "",
         "voice_handoff_file": "../TikHub_AI_视频工作台/tools/BatchVoiceClient-Portable/data/last_batch_handoff.json",
         "generation_output_root": "E:/生成视频",
         "capcut_handoff_dir": "../TikHub_AI_视频工作台/handoff/capcut",
         "fourth_step_handoff_dir": "../TikHub_AI_视频工作台/交接记录",
         "final_output_root": "E:/",
         "scan_interval_seconds": 2,
+        "pipeline_live_after_seconds": 15,
         "heartbeat_interval_seconds": 60,
         "offline_after_seconds": 180,
         "simulation_enabled": True,
@@ -351,6 +353,7 @@ class Collector:
             "stitch": self.empty_stage("等待拼接任务"),
         }
         self.last_generation_scan_epoch = 0.0
+        self.last_download_scan_epoch = 0.0
 
     @staticmethod
     def empty_stage(state_text: str = "等待任务") -> dict[str, Any]:
@@ -364,6 +367,10 @@ class Collector:
             "current": "",
             "updatedAt": "",
             "source": "",
+            "isLive": False,
+            "historyDate": "",
+            "todayCompleted": 0,
+            "todaySummary": "",
         }
 
     @staticmethod
@@ -414,6 +421,13 @@ class Collector:
             or data.get("completedAt") or data.get("startedAt") or ""
         )
         stage["source"] = source
+        stage["isLive"] = bool(data.get("isLive", False))
+        stage["historyDate"] = str(data.get("historyDate") or "")
+        try:
+            stage["todayCompleted"] = max(0, int(data.get("todayCompleted") or 0))
+        except (TypeError, ValueError):
+            stage["todayCompleted"] = 0
+        stage["todaySummary"] = str(data.get("todaySummary") or "")
         return stage
 
     def start(self) -> None:
@@ -579,13 +593,93 @@ class Collector:
         data = self._json(path)
         if not data:
             return False
+        updated_epoch = parse_time(data.get("updatedAt"), path.stat().st_mtime)
+        fresh = time.time() - updated_epoch <= float(
+            self.config.get("pipeline_live_after_seconds") or 15
+        )
         stages = data.get("stages") or {}
         for name in ("download", "voice", "stitch"):
             if isinstance(stages.get(name), dict):
                 item = dict(stages[name])
                 item.setdefault("updatedAt", data.get("updatedAt"))
+                item["isLive"] = fresh
                 self.pipeline[name] = self.normalize_stage(item, "工作台实时状态")
-        return True
+                if not fresh and self.pipeline[name]["state"] == "running":
+                    self.pipeline[name]["state"] = "offline"
+                    self.pipeline[name]["stateText"] = "状态已中断"
+        return fresh
+
+    def download_root(self) -> Path | None:
+        configured = str(self.config.get("download_root") or "").strip()
+        if configured:
+            root = resolve_path(configured)
+            return root if root.exists() else None
+        settings_path = resolve_path(str(self.config.get("workbench_dir") or "")) / "workbench_settings.json"
+        if not settings_path.exists():
+            return None
+        settings = self._json(settings_path)
+        if not settings:
+            return None
+        selected = Path(str(settings.get("tikhub_downloads") or "").strip())
+        if not selected.exists():
+            return None
+        # The workbench normally stores a selected project folder such as
+        # downloads/实体机. Scan the parent so all project categories are included.
+        return selected.parent if selected.parent.exists() else selected
+
+    def scan_download_pipeline(self, workbench_live: bool) -> None:
+        if time.time() - self.last_download_scan_epoch < 10:
+            return
+        self.last_download_scan_epoch = time.time()
+        root = self.download_root()
+        if not root:
+            return
+        today = datetime.now().astimezone().date()
+        files: list[Path] = []
+        for path in root.glob("*/*.mp4"):
+            try:
+                if datetime.fromtimestamp(path.stat().st_mtime).astimezone().date() == today:
+                    files.append(path)
+            except OSError:
+                continue
+        if not files:
+            return
+        latest = max(files, key=lambda item: item.stat().st_mtime)
+        projects: dict[str, int] = {}
+        for path in files:
+            projects[path.parent.name] = projects.get(path.parent.name, 0) + 1
+        summary = "、".join(f"{name} {count}条" for name, count in sorted(projects.items()))
+        date_label = f"{today.month}.{today.day}"
+        if workbench_live:
+            stage = self.pipeline["download"]
+            stage["todayCompleted"] = len(files)
+            stage["todaySummary"] = summary
+            stage["historyDate"] = date_label
+            if stage["state"] == "idle":
+                stage["stateText"] = f"等待任务 · 今日已处理 {len(files)} 条"
+                stage["total"] = len(files)
+                stage["completed"] = len(files)
+                stage["progress"] = 100
+                stage["current"] = summary
+            return
+        self.pipeline["download"] = self.normalize_stage(
+            {
+                "state": "completed",
+                "stateText": f"今日已处理 {len(files)} 条",
+                "total": len(files),
+                "completed": len(files),
+                "failed": 0,
+                "progress": 100,
+                "current": f"{summary} · 最新 {latest.name}",
+                "updatedAt": datetime.fromtimestamp(latest.stat().st_mtime).astimezone().isoformat(
+                    timespec="seconds"
+                ),
+                "historyDate": date_label,
+                "todayCompleted": len(files),
+                "todaySummary": summary,
+            },
+            "下载目录扫描",
+        )
 
     def scan_voice_pipeline(self) -> None:
         path = resolve_path(str(self.config.get("voice_handoff_file") or ""))
@@ -594,7 +688,17 @@ class Collector:
         data = self._json(path)
         if not data:
             return
-        direct = self.normalize_stage(data, "语音客户端批次记录")
+        item = dict(data)
+        item["updatedAt"] = (
+            data.get("completedAt") or data.get("lastHeartbeat") or data.get("startedAt")
+        )
+        item["stateText"] = {
+            "running": "正在生成语音",
+            "completed": "语音生成完成",
+            "completed_with_errors": "语音生成有失败",
+            "failed": "语音生成失败",
+        }.get(str(data.get("status") or ""), str(data.get("status") or "等待语音任务"))
+        direct = self.normalize_stage(item, "语音客户端批次记录")
         selected = data.get("selectedProjects") or []
         if selected:
             direct["current"] = "、".join(str(item) for item in selected)
@@ -656,6 +760,7 @@ class Collector:
 
     def scan_pipeline(self) -> None:
         workbench_available = self.scan_workbench_pipeline()
+        self.scan_download_pipeline(workbench_available)
         self.scan_voice_pipeline()
         self.scan_generation_pipeline(workbench_available)
 
@@ -673,7 +778,7 @@ class Collector:
 
 
 def process_status() -> dict[str, bool]:
-    result = {"workbench": False, "voice": False, "capcut": False}
+    result = {"workbench": False, "voice": False, "capcut": False, "upload": False}
     for process in psutil.process_iter(["name", "cmdline"]):
         try:
             name = (process.info.get("name") or "").lower()
@@ -686,6 +791,8 @@ def process_status() -> dict[str, bool]:
             result["voice"] = True
         if "capcutbatchclient" in name or "capcutbatchclient" in command:
             result["capcut"] = True
+        if "uploadworker" in name or "upload_service.py" in command:
+            result["upload"] = True
     return result
 
 
@@ -821,6 +928,7 @@ def overview_payload() -> dict[str, Any]:
         },
         "CapCut任务状态",
     )
+    processes = (COLLECTOR.last_metrics.get("processes") or {})
     pipeline = {
         **COLLECTOR.pipeline,
         "capcut": capcut_stage,
@@ -830,6 +938,33 @@ def overview_payload() -> dict[str, Any]:
             "source": "预留接口",
         },
     }
+    stage_meta = {
+        "download": ("1", "下载与AI去字幕", "工作台", bool(processes.get("workbench"))),
+        "voice": ("2", "批量语音生成", "语音客户端", bool(processes.get("voice"))),
+        "stitch": ("3", "AI素材拼接", "工作台", bool(processes.get("workbench"))),
+        "capcut": ("4", "CapCut自动剪辑", "CapCut客户端", bool(processes.get("capcut"))),
+        "upload": ("5", "最终成片上传", "上传服务", bool(processes.get("upload"))),
+    }
+    for key, stage in pipeline.items():
+        step, name, program, program_online = stage_meta[key]
+        stage["key"] = key
+        stage["step"] = step
+        stage["name"] = name
+        stage["program"] = program
+        stage["programOnline"] = program_online
+        updated_epoch = parse_time(stage.get("updatedAt"))
+        stage["ageSeconds"] = max(0, round(time.time() - updated_epoch)) if updated_epoch else None
+        if stage["state"] == "running":
+            stage["isLive"] = bool(
+                program_online
+                and updated_epoch
+                and time.time() - updated_epoch
+                <= float(CONFIG.get("pipeline_live_after_seconds") or 15)
+            )
+        elif stage["state"] == "unconfigured":
+            stage["isLive"] = False
+        else:
+            stage["isLive"] = bool(stage.get("isLive"))
     return {
         "machine": {
             "name": CONFIG["machine_name"],
@@ -894,6 +1029,15 @@ def health():
 @app.get("/api/overview")
 def overview():
     return overview_payload()
+
+
+@app.get("/api/pipeline")
+def pipeline():
+    overview = overview_payload()
+    return {
+        "items": list(overview["pipeline"].values()),
+        "updatedAt": overview["updatedAt"],
+    }
 
 
 @app.get("/api/tasks")
