@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>家庭 AI 视频生产线 · OPS</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OP</div>
+      <div><h1>家庭 AI 视频生产线</h1><p>只读运行监控中心</p></div>
+    </div>
+    <div class="header-status">
+      <div id="machineBadge" class="status-badge neutral"><span></span>正在连接</div>
+      <div class="last-update">最后更新 <strong id="lastUpdated">--</strong></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero panel">
+      <div>
+        <p class="eyebrow">当前生产状态</p>
+        <h2 id="heroTitle">正在读取生产线</h2>
+        <p id="heroSubtitle">请稍候，Dashboard 正在汇总全部环节状态。</p>
+      </div>
+      <div class="hero-side"><div class="readonly-pill">只读模式</div><p>不会操作鼠标、键盘或生产程序</p></div>
+    </section>
+
+    <section class="metrics-grid" aria-label="系统资源">
+      <article class="metric-card"><div class="metric-label"><span class="metric-icon blue">C</span>CPU</div><strong id="cpuValue">--</strong><div class="bar"><i id="cpuBar"></i></div><small id="cpuNote">处理器占用</small></article>
+      <article class="metric-card"><div class="metric-label"><span class="metric-icon violet">M</span>内存</div><strong id="memoryValue">--</strong><div class="bar"><i id="memoryBar"></i></div><small id="memoryNote">正在读取</small></article>
+      <article class="metric-card"><div class="metric-label"><span class="metric-icon green">G</span>GPU</div><strong id="gpuValue">--</strong><div class="bar"><i id="gpuBar"></i></div><small id="gpuNote">正在检测显卡</small></article>
+      <article class="metric-card"><div class="metric-label"><span class="metric-icon amber">D</span>成片磁盘</div><strong id="diskValue">--</strong><div class="bar"><i id="diskBar"></i></div><small id="diskNote">正在读取</small></article>
+      <article class="metric-card"><div class="metric-label"><span class="metric-icon cyan">N</span>网络</div><strong id="networkValue">--</strong><div class="network-line"><i></i><i></i><i></i><i></i></div><small id="networkNote">正在检查网卡</small></article>
+    </section>
+
+    <section class="panel pipeline-panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">VIDEO PIPELINE</p><h2>全流程状态</h2></div>
+        <div class="process-pills">
+          <span id="workbenchProcess" class="process-pill">工作台 · 检查中</span>
+          <span id="voiceProcess" class="process-pill">语音客户端 · 检查中</span>
+          <span id="capcutProcess" class="process-pill">CapCut客户端 · 检查中</span>
+        </div>
+      </div>
+      <div class="pipeline">
+        <div id="pipeDownload" class="pipe-step"><span>1</span><div><strong>TikHub</strong><small id="pipeDownloadText">等待状态</small></div></div><i>→</i>
+        <div id="pipeVoice" class="pipe-step"><span>2</span><div><strong>AI 配音</strong><small id="pipeVoiceText">等待状态</small></div></div><i>→</i>
+        <div id="pipeStitch" class="pipe-step"><span>3</span><div><strong>AI 拼接</strong><small id="pipeStitchText">等待状态</small></div></div><i>→</i>
+        <div id="pipeCapcut" class="pipe-step"><span>4</span><div><strong>CapCut</strong><small id="pipeCapcutText">等待状态</small></div></div><i>→</i>
+        <div id="pipeUpload" class="pipe-step disabled"><span>5</span><div><strong>网盘上传</strong><small id="pipeUploadText">未配置</small></div></div>
+      </div>
+      <div class="stage-monitor-grid">
+        <article id="stageDownload" class="stage-monitor"><div><strong>下载 / 去字幕</strong><span class="stage-badge">等待</span></div><p class="stage-current">等待工作台状态</p><div class="stage-progress"><i></i></div><small>0 / 0</small></article>
+        <article id="stageVoice" class="stage-monitor"><div><strong>批量语音</strong><span class="stage-badge">等待</span></div><p class="stage-current">等待语音任务</p><div class="stage-progress"><i></i></div><small>0 / 0</small></article>
+        <article id="stageStitch" class="stage-monitor"><div><strong>AI 素材拼接</strong><span class="stage-badge">等待</span></div><p class="stage-current">等待拼接任务</p><div class="stage-progress"><i></i></div><small>0 / 0</small></article>
+        <article id="stageCapcut" class="stage-monitor"><div><strong>CapCut 自动剪辑</strong><span class="stage-badge">等待</span></div><p class="stage-current">等待第五步任务</p><div class="stage-progress"><i></i></div><small>0 / 0</small></article>
+      </div>
+    </section>
+
+    <section class="workspace-grid">
+      <div class="panel tasks-panel">
+        <div class="section-heading table-heading">
+          <div><p class="eyebrow">STEP 5 TASKS</p><h2>第五步任务与进度</h2></div>
+          <label class="date-filter">处理日期 <select id="dateSelect" aria-label="处理日期"><option value="">全部日期</option></select></label>
+        </div>
+        <div class="summary-grid">
+          <div><small>总任务</small><strong id="countTotal">0</strong></div><div><small>等待</small><strong id="countWaiting">0</strong></div>
+          <div><small>剪辑中</small><strong id="countRunning">0</strong></div><div class="success"><small>已完成</small><strong id="countCompleted">0</strong></div>
+          <div class="danger"><small>失败</small><strong id="countFailed">0</strong></div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>项目</th><th>材料 / 语言</th><th>编号</th><th>当前阶段</th><th>成片文件</th><th>状态</th></tr></thead>
+          <tbody id="taskRows"><tr><td colspan="6" class="empty">正在加载任务…</td></tr></tbody></table>
+        </div>
+      </div>
+      <aside class="side-column">
+        <section class="panel current-card">
+          <div class="section-heading compact"><div><p class="eyebrow">CURRENT</p><h2>当前第五步任务</h2></div><span id="currentState" class="task-state neutral">等待</span></div>
+          <dl><div><dt>日期</dt><dd id="currentDate">--</dd></div><div><dt>项目</dt><dd id="currentProject">--</dd></div><div><dt>材料</dt><dd id="currentMaterial">--</dd></div><div><dt>语言</dt><dd id="currentLanguage">--</dd></div></dl>
+          <div id="currentError" class="error-box hidden"></div>
+        </section>
+        <section class="panel upload-card">
+          <div class="upload-icon">↥</div><div><p class="eyebrow">UPLOAD SERVICE</p><h2>网盘上传未配置</h2></div>
+          <p>第一版不会伪造上传进度。接入网盘服务后，这里将显示上传中、完成和失败。</p><span>预留接口</span>
+        </section>
+        <section class="panel events-card"><div class="section-heading compact"><div><p class="eyebrow">RECENT EVENTS</p><h2>最近事件</h2></div></div><div id="eventList" class="event-list"><p class="empty">正在读取事件…</p></div></section>
+      </aside>
+    </section>
+  </main>
+  <footer><span>AI视频生产线 OPS · 本地只读服务</span><span id="footerMachine">--</span></footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>
