@@ -644,20 +644,33 @@ class Collector:
             return
         today = datetime.now().astimezone().date()
         today_label = f"{today.month}.{today.day}"
-        grouped_files: dict[str, list[Path]] = {}
-        for path in root.glob("*/*.mp4"):
+        grouped_files: dict[str, list[tuple[Path, str]]] = {}
+        for path in root.rglob("*.mp4"):
             try:
-                modified_date = datetime.fromtimestamp(path.stat().st_mtime).astimezone().date()
-                label = f"{modified_date.month}.{modified_date.day}"
-                grouped_files.setdefault(label, []).append(path)
+                relative = path.relative_to(root)
+                parts = relative.parts
+                # New external tasks are deliberately stored as
+                # 任务批次/日期/项目/材料/video.mp4.  The original shallow
+                # glob missed them entirely and displayed the material as the
+                # project.  Keep old folders compatible by falling back to
+                # their modification date and parent folder.
+                if len(parts) >= 5 and parts[0] == "任务批次":
+                    label = str(parts[1])
+                    category = " / ".join(str(part) for part in parts[2:4])
+                else:
+                    modified_date = datetime.fromtimestamp(path.stat().st_mtime).astimezone().date()
+                    label = f"{modified_date.month}.{modified_date.day}"
+                    category = path.parent.name
+                grouped_files.setdefault(label, []).append((path, category))
             except OSError:
                 continue
         history: dict[str, dict[str, Any]] = {}
-        for date_label, files in grouped_files.items():
+        for date_label, entries in grouped_files.items():
+            files = [item[0] for item in entries]
             latest = max(files, key=lambda item: item.stat().st_mtime)
             projects: dict[str, int] = {}
-            for path in files:
-                projects[path.parent.name] = projects.get(path.parent.name, 0) + 1
+            for _path, category in entries:
+                projects[category] = projects.get(category, 0) + 1
             summary = "、".join(
                 f"{name} {count}条" for name, count in sorted(projects.items())
             )

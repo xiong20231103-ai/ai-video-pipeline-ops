@@ -23,6 +23,23 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(stage["todayCompleted"], 1)
             self.assertIn("实体机 1条", stage["todaySummary"])
 
+    def test_download_scan_recognizes_external_task_batch_structure(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            video = root / "任务批次" / "7.20" / "云手机" / "碳岩板" / "video_ai_sttn.mp4"
+            video.parent.mkdir(parents=True)
+            video.write_bytes(b"video")
+            store = app.Store(root / "test.db")
+            config = dict(app.CONFIG)
+            config["download_root"] = str(root)
+            collector = app.Collector(config, store)
+
+            collector.scan_download_pipeline(False)
+
+            stage = collector.pipeline_history["download"]["7.20"]
+            self.assertEqual(stage["completed"], 1)
+            self.assertIn("云手机 / 碳岩板 1条", stage["current"])
+
     def test_pipeline_stage_normalization(self):
         stage = app.Collector.normalize_stage(
             {
