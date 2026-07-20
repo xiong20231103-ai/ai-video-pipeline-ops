@@ -262,6 +262,23 @@ function renderEvents(items) {
   }).join("");
 }
 
+function renderProjectGaps(items) {
+  const node = $("projectGapList");
+  if (!node) return;
+  if (!items.length) { node.innerHTML = `<p class="empty">暂无项目级下载记录</p>`; return; }
+  node.innerHTML = items.slice(0, 8).map(item => {
+    const expected = Number(item.expectedCount || 0);
+    const completed = Number(item.completed || 0);
+    const missing = Number(item.missingCount || Math.max(0, expected - completed));
+    const blocked = missing > 0 || item.status === "blocked_missing_links";
+    return `<div class="project-gap ${blocked ? "blocked" : "ok"}">
+      <div><strong>${escapeHtml(item.project || "未分类")} / ${escapeHtml(item.material || "--")}</strong><span>${escapeHtml(item.date || "--")}</span></div>
+      <p>${completed} / ${expected} 完成 · 失败 ${Number(item.failed || 0)} · ${blocked ? `还差 ${missing} 条` : "数量已齐"}</p>
+      <small>${escapeHtml(item.stateText || item.status || "--")}</small>
+    </div>`;
+  }).join("");
+}
+
 async function getJson(url) {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) throw new Error(`${response.status}`);
@@ -272,12 +289,12 @@ async function refresh() {
   try {
     const query = state.date ? `?date=${encodeURIComponent(state.date)}` : "";
     const pipelineQuery = state.pipelineDate ? `?date=${encodeURIComponent(state.pipelineDate)}` : "";
-    const [overview, pipeline, tasks, events] = await Promise.all([
+    const [overview, pipeline, tasks, events, projectGaps] = await Promise.all([
       getJson("/api/overview"), getJson(`/api/pipeline${pipelineQuery}`),
-      getJson(`/api/tasks${query}`), getJson("/api/events?limit=30")
+      getJson(`/api/tasks${query}`), getJson("/api/events?limit=30"), getJson("/api/project-gaps")
     ]);
     renderOverview(overview); renderPipelinePayload(pipeline);
-    renderTasks(tasks.items || []); renderEvents(events.items || []);
+    renderTasks(tasks.items || []); renderEvents(events.items || []); renderProjectGaps(projectGaps.items || []);
   } catch (error) {
     $("machineBadge").className = "status-badge offline";
     $("machineBadge").innerHTML = "<span></span>Dashboard 连接失败";

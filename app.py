@@ -80,6 +80,7 @@ def load_config() -> dict[str, Any]:
         "workbench_dir": "../TikHub_AI_视频工作台",
         "workbench_ops_status": "../TikHub_AI_视频工作台/ops_pipeline_status.json",
         "download_state_file": "../TikHub_AI_视频工作台/handoff/download/download_batch_state.json",
+        "download_project_status_file": "../TikHub_AI_视频工作台/handoff/download/project_status.json",
         "download_root": "",
         "voice_handoff_file": "../TikHub_AI_视频工作台/tools/BatchVoiceClient-Portable/data/last_batch_handoff.json",
         "generation_output_root": "E:/生成视频",
@@ -363,6 +364,7 @@ class Collector:
         }
         self.last_generation_scan_epoch = 0.0
         self.last_download_scan_epoch = 0.0
+        self.project_download_statuses: list[dict[str, Any]] = []
 
     @staticmethod
     def empty_stage(state_text: str = "等待任务") -> dict[str, Any]:
@@ -645,6 +647,43 @@ class Collector:
         if configured:
             return resolve_path(configured)
         return resolve_path(str(self.config.get("workbench_dir") or "")) / "handoff" / "download" / "download_batch_state.json"
+
+    def project_download_status_file(self) -> Path:
+        configured = str(self.config.get("download_project_status_file") or "").strip()
+        if configured:
+            return resolve_path(configured)
+        return resolve_path(str(self.config.get("workbench_dir") or "")) / "handoff" / "download" / "project_status.json"
+
+    def scan_project_download_statuses(self) -> None:
+        """Expose one durable status card per submitted project to remote clients."""
+        path = self.project_download_status_file()
+        if not path.exists():
+            self.project_download_statuses = []
+            return
+        payload = self._json(path)
+        if not payload:
+            return
+        raw_items = payload.get("items") if isinstance(payload.get("items"), dict) else {}
+        records: list[dict[str, Any]] = []
+        for task_id, raw in raw_items.items():
+            if not isinstance(raw, dict):
+                continue
+            item = dict(raw)
+            item["taskId"] = str(item.get("taskId") or task_id)
+            try:
+                expected = max(0, int(item.get("expectedCount") or 0))
+                completed = max(0, int(item.get("completed") or 0))
+                failed = max(0, int(item.get("failed") or 0))
+                missing = max(0, int(item.get("missingCount") or expected - completed))
+            except (TypeError, ValueError):
+                expected, completed, failed, missing = 0, 0, 0, 0
+            item.update({"expectedCount": expected, "completed": completed, "failed": failed, "missingCount": missing})
+            records.append(item)
+        self.project_download_statuses = sorted(
+            records,
+            key=lambda item: (parse_time(item.get("updatedAt")), str(item.get("taskId") or "")),
+            reverse=True,
+        )
 
     @staticmethod
     def download_failure_items(tasks: list[Any]) -> list[dict[str, str]]:
@@ -1015,6 +1054,7 @@ class Collector:
 
     def scan_pipeline(self) -> None:
         workbench_available = self.scan_workbench_pipeline()
+        self.scan_project_download_statuses()
         self.scan_download_pipeline(workbench_available)
         self.scan_voice_pipeline()
         self.scan_generation_pipeline(workbench_available)
@@ -1392,6 +1432,14 @@ def health():
 @app.get("/api/overview")
 def overview():
     return overview_payload()
+
+
+@app.get("/api/project-gaps")
+def project_gaps(date: str = ""):
+    items = list(COLLECTOR.project_download_statuses)
+    if date:
+        items = [item for item in items if str(item.get("date") or "") == date]
+    return {"items": items, "updatedAt": COLLECTOR.last_scan_at}
 
 
 @app.get("/api/pipeline")

@@ -83,6 +83,31 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(stage["state"], "failed")
             self.assertEqual(stage["failureItems"][0]["url"], "https://example.test/failed")
 
+    def test_project_download_statuses_keep_per_project_gap(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            status = root / "project_status.json"
+            status.write_text(json.dumps({
+                "items": {
+                    "cloud-1": {
+                        "taskId": "cloud-1", "date": "7.20", "project": "云手机", "material": "碳岩板",
+                        "expectedCount": 25, "completed": 20, "failed": 2, "missingCount": 5,
+                        "status": "blocked_missing_links", "stateText": "待补链：还差 5 条",
+                        "updatedAt": "2026-07-20T12:00:00+08:00",
+                    }
+                }
+            }, ensure_ascii=False), encoding="utf-8")
+            store = app.Store(root / "ops.db")
+            config = dict(app.CONFIG)
+            config["download_project_status_file"] = str(status)
+            collector = app.Collector(config, store)
+
+            collector.scan_project_download_statuses()
+
+            self.assertEqual(len(collector.project_download_statuses), 1)
+            self.assertEqual(collector.project_download_statuses[0]["missingCount"], 5)
+            self.assertEqual(collector.project_download_statuses[0]["project"], "云手机")
+
     def test_state_categories(self):
         self.assertEqual(app.task_category("Waiting"), "waiting")
         self.assertEqual(app.task_category("Exporting"), "running")

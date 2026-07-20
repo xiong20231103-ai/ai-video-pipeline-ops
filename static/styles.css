@@ -255,7 +255,7 @@ tr:hover td { background: #fafcff; }
 .empty { text-align: center; color: var(--muted); padding: 38px !important; }
 
 .side-column { display: grid; gap: 16px; }
-.current-card, .upload-card, .events-card { padding: 19px; }
+.current-card, .upload-card, .project-gaps-card, .events-card { padding: 19px; }
 .section-heading.compact { margin-bottom: 12px; }
 .current-card dl { margin: 0; }
 .current-card dl div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #eef2f6; }
@@ -272,6 +272,15 @@ tr:hover td { background: #fafcff; }
 .upload-card h2 { font-size: 16px; margin-bottom: 12px; }
 .upload-card > p { color: var(--muted); font-size: 12px; line-height: 1.7; padding-right: 8px; }
 .upload-card > span { display: inline-block; margin-top: 12px; padding: 5px 8px; background: #f2f4f7; color: var(--muted); border-radius: 6px; font-size: 10px; font-weight: 700; }
+.project-gap-list { display: grid; gap: 8px; }
+.project-gap { padding: 10px; border: 1px solid var(--line); border-radius: 9px; }
+.project-gap.blocked { border-color: #f3c5cb; background: var(--red-soft); }
+.project-gap.ok { border-color: #bde9d6; background: var(--green-soft); }
+.project-gap > div { display: flex; justify-content: space-between; gap: 8px; }
+.project-gap > div span, .project-gap small { color: var(--muted); font-size: 10px; }
+.project-gap p { margin: 6px 0 3px; font-size: 12px; font-weight: 700; }
+.project-gap.blocked p { color: var(--red); }
+.project-gap.ok p { color: var(--green); }
 .event-list { max-height: 340px; overflow: auto; }
 .event-item { display: grid; grid-template-columns: 8px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eef2f6; }
 .event-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); margin-top: 5px; }
