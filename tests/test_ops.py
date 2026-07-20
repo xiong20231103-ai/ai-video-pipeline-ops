@@ -56,6 +56,33 @@ class OpsTests(unittest.TestCase):
         self.assertIn("正在去字幕", stage["current"])
         self.assertEqual(stage["source"], "test")
 
+    def test_saved_download_batch_preserves_failures_and_exact_links(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            state = root / "download_batch_state.json"
+            state.write_text(json.dumps({
+                "updatedAt": "2026-07-20T12:00:00+08:00",
+                "context": {"date": "7.20", "project": "云手机", "material": "碳岩板"},
+                "stats": {"total": "3", "success": "2", "failed": "1", "progress": "100%"},
+                "lastBatchResult": {"total": 3, "succeeded": 2, "failed": 1},
+                "tasks": [
+                    {"url": "https://example.test/ok", "values": ["https://example.test/ok", "已完成", "已完成", "等待拼接配置", "100%", "", ""]},
+                    {"url": "https://example.test/failed", "values": ["https://example.test/failed", "失败", "未开始", "处理失败", "失败", "", ""]},
+                ],
+            }, ensure_ascii=False), encoding="utf-8")
+            store = app.Store(root / "ops.db")
+            config = dict(app.CONFIG)
+            config["download_state_file"] = str(state)
+            config["download_root"] = str(root / "missing-output")
+            collector = app.Collector(config, store)
+
+            collector.scan_download_pipeline(False)
+
+            stage = collector.pipeline_history["download"]["7.20"]
+            self.assertEqual(stage["failed"], 1)
+            self.assertEqual(stage["state"], "failed")
+            self.assertEqual(stage["failureItems"][0]["url"], "https://example.test/failed")
+
     def test_state_categories(self):
         self.assertEqual(app.task_category("Waiting"), "waiting")
         self.assertEqual(app.task_category("Exporting"), "running")

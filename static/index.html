@@ -65,6 +65,11 @@
         <article id="stageCapcut" class="stage-monitor"><div><strong>CapCut 自动剪辑</strong><span class="stage-badge">等待</span></div><p class="stage-current">等待第五步任务</p><div class="stage-progress"><i></i></div><small>0 / 0</small></article>
         <article id="stageUpload" class="stage-monitor disabled"><div><strong>最终成片上传</strong><span class="stage-badge">未配置</span></div><p class="stage-current">上传服务尚未接入</p><div class="stage-progress"><i></i></div><small>0 / 0</small></article>
       </div>
+      <section id="downloadFailurePanel" class="download-failure-panel hidden" aria-live="polite">
+        <div><strong>下载 / 去字幕失败任务</strong><span id="downloadFailureCount">0 条</span></div>
+        <p>这些链接未进入后续语音、拼接与剪辑；补链或重试后再继续。</p>
+        <ul id="downloadFailureList"></ul>
+      </section>
       <div class="realtime-table-wrap">
         <table class="realtime-table">
           <thead><tr><th>步骤</th><th>程序</th><th>当前任务 / 子阶段</th><th>进度</th><th>完成 / 失败 / 总计</th><th>最后更新</th><th>状态</th></tr></thead>

@@ -99,7 +99,23 @@ function renderStage(name, data = {}) {
 
 function renderPipeline(pipeline = {}) {
   ["download", "voice", "stitch", "capcut", "upload"].forEach(name => renderStage(name, pipeline[name]));
+  renderDownloadFailures(pipeline.download || {});
   renderPipelineRows(pipeline);
+}
+
+function renderDownloadFailures(download = {}) {
+  const panel = $("downloadFailurePanel");
+  const list = $("downloadFailureList");
+  const count = $("downloadFailureCount");
+  if (!panel || !list || !count) return;
+  const items = Array.isArray(download.failureItems) ? download.failureItems : [];
+  const failed = Math.max(Number(download.failed || 0), items.length);
+  panel.classList.toggle("hidden", failed <= 0);
+  count.textContent = `${failed} 条`;
+  const shown = items.slice(0, 8);
+  list.innerHTML = shown.length
+    ? shown.map(item => `<li><code>${escapeHtml(item.url || "未记录链接")}</code><span>${escapeHtml(item.reason || "下载或 AI 去字幕失败")}</span></li>`).join("")
+    : `<li><span>工作台已记录 ${failed} 条失败；请打开工作台的“批次核对 / 缺口提醒”查看并补链。</span></li>`;
 }
 
 function renderPipelinePayload(payload = {}) {

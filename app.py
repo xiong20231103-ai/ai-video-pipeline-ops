@@ -79,6 +79,7 @@ def load_config() -> dict[str, Any]:
         "listen_port": 8765,
         "workbench_dir": "../TikHub_AI_视频工作台",
         "workbench_ops_status": "../TikHub_AI_视频工作台/ops_pipeline_status.json",
+        "download_state_file": "../TikHub_AI_视频工作台/handoff/download/download_batch_state.json",
         "download_root": "",
         "voice_handoff_file": "../TikHub_AI_视频工作台/tools/BatchVoiceClient-Portable/data/last_batch_handoff.json",
         "generation_output_root": "E:/生成视频",
@@ -379,6 +380,7 @@ class Collector:
             "historyDate": "",
             "todayCompleted": 0,
             "todaySummary": "",
+            "failureItems": [],
         }
 
     @staticmethod
@@ -436,6 +438,9 @@ class Collector:
         except (TypeError, ValueError):
             stage["todayCompleted"] = 0
         stage["todaySummary"] = str(data.get("todaySummary") or "")
+        raw_failures = data.get("failureItems") or data.get("failures") or []
+        if isinstance(raw_failures, list):
+            stage["failureItems"] = [item for item in raw_failures if isinstance(item, dict)][:50]
         return stage
 
     def start(self) -> None:
@@ -635,10 +640,104 @@ class Collector:
         # downloads/实体机. Scan the parent so all project categories are included.
         return selected.parent if selected.parent.exists() else selected
 
+    def download_state_file(self) -> Path:
+        configured = str(self.config.get("download_state_file") or "").strip()
+        if configured:
+            return resolve_path(configured)
+        return resolve_path(str(self.config.get("workbench_dir") or "")) / "handoff" / "download" / "download_batch_state.json"
+
+    @staticmethod
+    def download_failure_items(tasks: list[Any]) -> list[dict[str, str]]:
+        """Extract exact failed links from the workbench's persisted task table."""
+        items: list[dict[str, str]] = []
+        for task in tasks:
+            if not isinstance(task, dict):
+                continue
+            url = str(task.get("url") or "").strip()
+            values = task.get("values")
+            if not isinstance(values, list):
+                continue
+            download = str(values[1] if len(values) > 1 else "")
+            subtitle = str(values[2] if len(values) > 2 else "")
+            stage = str(values[3] if len(values) > 3 else "")
+            if not (download == "失败" or subtitle == "失败" or stage == "处理失败"):
+                continue
+            reason = " / ".join(part for part in (stage, download, subtitle) if part and part not in {"失败", "处理失败"})
+            items.append({
+                "url": url or "未记录链接",
+                "reason": reason or "下载或 AI 去字幕失败",
+            })
+        return items
+
+    def scan_saved_download_state(self) -> dict[str, Any] | None:
+        """Use the saved workbench batch state when the GUI is closed or restarted."""
+        path = self.download_state_file()
+        if not path.exists():
+            return None
+        data = self._json(path)
+        if not data:
+            return None
+        stats = data.get("stats") if isinstance(data.get("stats"), dict) else {}
+        tasks = data.get("tasks") if isinstance(data.get("tasks"), list) else []
+        failures = self.download_failure_items(tasks)
+        context = data.get("context") if isinstance(data.get("context"), dict) else {}
+        updated_at = str(data.get("updatedAt") or "")
+        total = len(tasks)
+        try:
+            total = max(total, int(stats.get("total") or 0))
+        except (TypeError, ValueError):
+            pass
+        try:
+            completed = int(stats.get("success") or 0)
+        except (TypeError, ValueError):
+            completed = 0
+        try:
+            failed = max(len(failures), int(stats.get("failed") or 0))
+        except (TypeError, ValueError):
+            failed = len(failures)
+        try:
+            progress = int(str(stats.get("progress") or "0").rstrip("%"))
+        except (TypeError, ValueError):
+            progress = 0
+        last_result = data.get("lastBatchResult") if isinstance(data.get("lastBatchResult"), dict) else {}
+        running = bool(total and not last_result and progress < 100 and (completed + failed) < total)
+        state = "running" if running else ("failed" if failed else ("completed" if total else "idle"))
+        state_text = (
+            "正在下载与 AI 去字幕" if running else
+            (f"{failed} 条失败，等待补链重试" if failed else (f"{completed} 条已完成" if total else "等待下载任务"))
+        )
+        date_label = str(context.get("date") or "").strip()
+        if not date_label:
+            timestamp = parse_time(updated_at, path.stat().st_mtime)
+            stamp = datetime.fromtimestamp(timestamp).astimezone()
+            date_label = f"{stamp.month}.{stamp.day}"
+        current = ""
+        if failures:
+            current = failures[0]["url"]
+        elif context:
+            current = " / ".join(str(context.get(key) or "") for key in ("project", "material") if context.get(key))
+        stage = self.normalize_stage({
+            "state": state,
+            "stateText": state_text,
+            "total": total,
+            "completed": completed,
+            "failed": failed,
+            "progress": progress,
+            "current": current,
+            "updatedAt": updated_at,
+            "historyDate": date_label,
+            "failureItems": failures,
+        }, "工作台保存的下载批次")
+        self.pipeline_history["download"][date_label] = stage
+        return stage
+
     def scan_download_pipeline(self, workbench_live: bool) -> None:
-        if time.time() - self.last_download_scan_epoch < 10:
+        if time.time() - self.last_download_scan_epoch < 2:
             return
         self.last_download_scan_epoch = time.time()
+        saved_stage = self.scan_saved_download_state()
+        if saved_stage:
+            self.pipeline["download"] = dict(saved_stage)
         root = self.download_root()
         if not root:
             return
@@ -692,6 +791,20 @@ class Collector:
                 },
                 "下载目录扫描",
             )
+        # Keep saved batches (and their failures) even if their outputs were
+        # cleaned up or have not been written to the directory yet.
+        previous_history = dict(self.pipeline_history["download"])
+        for date_label, stage in previous_history.items():
+            if date_label not in history:
+                history[date_label] = dict(stage)
+                continue
+            if date_label in history and stage.get("failed"):
+                history[date_label]["failed"] = stage["failed"]
+                history[date_label]["failureItems"] = stage.get("failureItems", [])
+                history[date_label]["total"] = max(history[date_label]["total"], stage.get("total", 0))
+                history[date_label]["progress"] = 100 if stage.get("completed", 0) + stage.get("failed", 0) >= history[date_label]["total"] else stage.get("progress", 0)
+                history[date_label]["state"] = "failed"
+                history[date_label]["stateText"] = f"{stage['failed']} 条失败，等待补链重试"
         self.pipeline_history["download"] = history
         today_stage = history.get(today_label)
         if not today_stage:
