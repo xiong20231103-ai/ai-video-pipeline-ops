@@ -45,6 +45,52 @@ class OpsTests(unittest.TestCase):
         self.assertEqual(app.task_category("Completed"), "completed")
         self.assertEqual(app.task_category("Failed"), "failed")
 
+    def test_upload_pipeline_reads_real_status(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            status = root / "upload_status.json"
+            status.write_text(
+                json.dumps(
+                    {
+                        "configured": True,
+                        "authorized": True,
+                        "updatedAt": "2026-07-20T12:00:00+08:00",
+                        "account": "测试账号",
+                        "chunkSizeMB": 32,
+                        "tasks": {
+                            "one": {
+                                "date": "7.20",
+                                "project": "云手机",
+                                "material": "碳岩板",
+                                "language": "英语",
+                                "status": "uploaded",
+                                "progress": 100,
+                            },
+                            "two": {
+                                "date": "7.20",
+                                "project": "实体机",
+                                "material": "净白板",
+                                "language": "俄语",
+                                "status": "uploading",
+                                "progress": 50,
+                            },
+                        },
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            config = dict(app.CONFIG)
+            config["upload_status_file"] = str(status)
+            store = app.Store(root / "ops.db")
+            collector = app.Collector(config, store)
+            collector.scan_upload_pipeline()
+            stage = collector.pipeline_history["upload"]["7.20"]
+            self.assertEqual("running", stage["state"])
+            self.assertEqual(2, stage["total"])
+            self.assertEqual(1, stage["completed"])
+            self.assertEqual(75, stage["progress"])
+
     def test_normalize_uses_metadata(self):
         with tempfile.TemporaryDirectory() as folder:
             store = app.Store(Path(folder) / "test.db")

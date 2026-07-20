@@ -85,6 +85,7 @@ def load_config() -> dict[str, Any]:
         "capcut_handoff_dir": "../TikHub_AI_视频工作台/handoff/capcut",
         "fourth_step_handoff_dir": "../TikHub_AI_视频工作台/交接记录",
         "final_output_root": "E:/",
+        "upload_status_file": "../TikHub_AI_视频工作台/handoff/upload/upload_status.json",
         "scan_interval_seconds": 2,
         "pipeline_live_after_seconds": 15,
         "heartbeat_interval_seconds": 60,
@@ -351,11 +352,13 @@ class Collector:
             "download": self.empty_stage("等待工作台启动"),
             "voice": self.empty_stage("等待语音任务"),
             "stitch": self.empty_stage("等待拼接任务"),
+            "upload": self.empty_stage("等待百度网盘上传"),
         }
         self.pipeline_history: dict[str, dict[str, dict[str, Any]]] = {
             "download": {},
             "voice": {},
             "stitch": {},
+            "upload": {},
         }
         self.last_generation_scan_epoch = 0.0
         self.last_download_scan_epoch = 0.0
@@ -809,11 +812,87 @@ class Collector:
             ):
                 self.pipeline["stitch"] = dict(newest)
 
+    def scan_upload_pipeline(self) -> None:
+        path = resolve_path(str(self.config.get("upload_status_file") or ""))
+        data = self._json(path) if path.is_file() else {}
+        if not data:
+            stage = self.empty_stage("百度网盘上传未配置")
+            stage["state"] = "unconfigured"
+            stage["source"] = "百度网盘上传状态"
+            self.pipeline["upload"] = stage
+            self.pipeline_history["upload"] = {}
+            return
+        configured = bool(data.get("configured"))
+        authorized = bool(data.get("authorized"))
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for item in (data.get("tasks") or {}).values():
+            if not isinstance(item, dict):
+                continue
+            grouped.setdefault(str(item.get("date") or ""), []).append(item)
+        history: dict[str, dict[str, Any]] = {}
+        for date_label, items in grouped.items():
+            total = len(items)
+            completed = sum(1 for item in items if item.get("status") == "uploaded")
+            failed = sum(1 for item in items if item.get("status") == "failed")
+            active = [item for item in items if item.get("status") == "uploading"]
+            if active:
+                state, text, current = "running", "正在上传最终成片", active[0]
+            elif failed:
+                state, text = "failed", f"{failed} 条上传失败"
+                current = next(item for item in items if item.get("status") == "failed")
+            elif total and completed == total:
+                state, text, current = "completed", f"{completed} 条上传完成", items[-1]
+            else:
+                state, text, current = "idle", f"{total - completed} 条等待上传", {}
+            history[date_label] = self.normalize_stage(
+                {
+                    "state": state,
+                    "stateText": text,
+                    "total": total,
+                    "completed": completed,
+                    "failed": failed,
+                    "progress": round(
+                        sum(int(item.get("progress") or 0) for item in items)
+                        / max(total, 1)
+                    ),
+                    "current": " / ".join(
+                        str(current.get(key) or "")
+                        for key in ("project", "material", "language")
+                        if current.get(key)
+                    ),
+                    "updatedAt": data.get("updatedAt"),
+                    "historyDate": date_label,
+                    "account": data.get("account"),
+                    "chunkSizeMB": data.get("chunkSizeMB"),
+                },
+                "百度网盘上传状态",
+            )
+        self.pipeline_history["upload"] = history
+        today = current_date_label()
+        if today in history:
+            self.pipeline["upload"] = dict(history[today])
+        elif history:
+            newest = max(
+                history.values(),
+                key=lambda item: parse_time(item.get("updatedAt")),
+            )
+            self.pipeline["upload"] = dict(newest)
+        else:
+            stage = self.empty_stage(
+                "等待第五步最终成片" if configured and authorized
+                else ("等待百度网盘授权" if configured else "百度网盘上传未配置")
+            )
+            stage["state"] = "idle" if configured else "unconfigured"
+            stage["updatedAt"] = str(data.get("updatedAt") or "")
+            stage["source"] = "百度网盘上传状态"
+            self.pipeline["upload"] = stage
+
     def scan_pipeline(self) -> None:
         workbench_available = self.scan_workbench_pipeline()
         self.scan_download_pipeline(workbench_available)
         self.scan_voice_pipeline()
         self.scan_generation_pipeline(workbench_available)
+        self.scan_upload_pipeline()
 
     def scan(self) -> None:
         self.scan_metadata()
@@ -1041,12 +1120,15 @@ def pipeline_for_date(date_label: str) -> dict[str, dict[str, Any]]:
             stages[key] = Collector.empty_stage(f"{selected} 无记录")
             stages[key]["historyDate"] = selected
     stages["capcut"] = capcut_stage_for_tasks(STORE.tasks(selected), selected)
-    stages["upload"] = {
-        **Collector.empty_stage("未配置"),
-        "state": "unconfigured",
-        "source": "预留接口",
-        "historyDate": selected,
-    }
+    upload_history = COLLECTOR.pipeline_history["upload"].get(selected)
+    if upload_history:
+        stages["upload"] = dict(upload_history)
+    elif selected == current_date_label() and COLLECTOR.pipeline["upload"].get("historyDate") in {"", selected}:
+        stages["upload"] = dict(COLLECTOR.pipeline["upload"])
+    else:
+        stages["upload"] = Collector.empty_stage(f"{selected} 无上传记录")
+        stages["upload"]["historyDate"] = selected
+        stages["upload"]["source"] = "百度网盘上传状态"
     return decorate_pipeline_stages(stages)
 
 
@@ -1111,11 +1193,6 @@ def overview_payload() -> dict[str, Any]:
     pipeline = {
         **COLLECTOR.pipeline,
         "capcut": capcut_stage,
-        "upload": {
-            **Collector.empty_stage("未配置"),
-            "state": "unconfigured",
-            "source": "预留接口",
-        },
     }
     pipeline = decorate_pipeline_stages(pipeline)
     return {
@@ -1130,7 +1207,14 @@ def overview_payload() -> dict[str, Any]:
         "dates": dates,
         "current": latest,
         "pipeline": pipeline,
-        "upload": {"configured": False, "state": "未配置", "message": "网盘上传服务尚未接入"},
+        "upload": {
+            "configured": COLLECTOR.pipeline["upload"].get("state") != "unconfigured",
+            "state": COLLECTOR.pipeline["upload"].get("state"),
+            "message": COLLECTOR.pipeline["upload"].get("stateText"),
+            "completed": COLLECTOR.pipeline["upload"].get("completed", 0),
+            "failed": COLLECTOR.pipeline["upload"].get("failed", 0),
+            "total": COLLECTOR.pipeline["upload"].get("total", 0),
+        },
         "sourceErrors": STORE.source_errors(),
         "updatedAt": COLLECTOR.last_scan_at,
     }

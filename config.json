@@ -10,6 +10,7 @@
   "capcut_handoff_dir": "../TikHub_AI_视频工作台/handoff/capcut",
   "fourth_step_handoff_dir": "../TikHub_AI_视频工作台/交接记录",
   "final_output_root": "E:/",
+  "upload_status_file": "../TikHub_AI_视频工作台/handoff/upload/upload_status.json",
   "scan_interval_seconds": 2,
   "pipeline_live_after_seconds": 15,
   "heartbeat_interval_seconds": 60,

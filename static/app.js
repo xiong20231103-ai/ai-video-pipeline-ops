@@ -172,6 +172,16 @@ function renderOverview(data) {
   $("countFailed").textContent = counts.failed || 0;
   const current = data.current;
   const pipeline = data.pipeline || {};
+  const upload = data.upload || {};
+  $("uploadCardTitle").textContent = upload.configured
+    ? (upload.state === "running" ? "百度网盘上传中" : upload.message || "百度网盘上传服务")
+    : "百度网盘未配置";
+  $("uploadCardMessage").textContent = upload.configured
+    ? `完成 ${upload.completed || 0} / ${upload.total || 0}，失败 ${upload.failed || 0}。本地成片会继续保留。`
+    : "请先在TikHub工作台配置并授权百度网盘。";
+  $("uploadCardBadge").textContent = upload.configured
+    ? (upload.state === "failed" ? "上传失败" : upload.state === "completed" ? "上传完成" : upload.state === "running" ? "上传中" : "等待成片")
+    : "未配置";
   const activeStage = ["download", "voice", "stitch", "capcut", "upload"]
     .map(key => pipeline[key]).find(item => item && item.state === "running");
   if (activeStage) {
