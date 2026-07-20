@@ -352,6 +352,11 @@ class Collector:
             "voice": self.empty_stage("等待语音任务"),
             "stitch": self.empty_stage("等待拼接任务"),
         }
+        self.pipeline_history: dict[str, dict[str, dict[str, Any]]] = {
+            "download": {},
+            "voice": {},
+            "stitch": {},
+        }
         self.last_generation_scan_epoch = 0.0
         self.last_download_scan_epoch = 0.0
 
@@ -635,51 +640,60 @@ class Collector:
         if not root:
             return
         today = datetime.now().astimezone().date()
-        files: list[Path] = []
+        today_label = f"{today.month}.{today.day}"
+        grouped_files: dict[str, list[Path]] = {}
         for path in root.glob("*/*.mp4"):
             try:
-                if datetime.fromtimestamp(path.stat().st_mtime).astimezone().date() == today:
-                    files.append(path)
+                modified_date = datetime.fromtimestamp(path.stat().st_mtime).astimezone().date()
+                label = f"{modified_date.month}.{modified_date.day}"
+                grouped_files.setdefault(label, []).append(path)
             except OSError:
                 continue
-        if not files:
+        history: dict[str, dict[str, Any]] = {}
+        for date_label, files in grouped_files.items():
+            latest = max(files, key=lambda item: item.stat().st_mtime)
+            projects: dict[str, int] = {}
+            for path in files:
+                projects[path.parent.name] = projects.get(path.parent.name, 0) + 1
+            summary = "、".join(
+                f"{name} {count}条" for name, count in sorted(projects.items())
+            )
+            history[date_label] = self.normalize_stage(
+                {
+                    "state": "completed",
+                    "stateText": f"该日已处理 {len(files)} 条",
+                    "total": len(files),
+                    "completed": len(files),
+                    "failed": 0,
+                    "progress": 100,
+                    "current": f"{summary} · 最新 {latest.name}",
+                    "updatedAt": datetime.fromtimestamp(
+                        latest.stat().st_mtime
+                    ).astimezone().isoformat(timespec="seconds"),
+                    "historyDate": date_label,
+                    "todayCompleted": len(files) if date_label == today_label else 0,
+                    "todaySummary": summary if date_label == today_label else "",
+                },
+                "下载目录扫描",
+            )
+        self.pipeline_history["download"] = history
+        today_stage = history.get(today_label)
+        if not today_stage:
             return
-        latest = max(files, key=lambda item: item.stat().st_mtime)
-        projects: dict[str, int] = {}
-        for path in files:
-            projects[path.parent.name] = projects.get(path.parent.name, 0) + 1
-        summary = "、".join(f"{name} {count}条" for name, count in sorted(projects.items()))
-        date_label = f"{today.month}.{today.day}"
         if workbench_live:
             stage = self.pipeline["download"]
-            stage["todayCompleted"] = len(files)
-            stage["todaySummary"] = summary
-            stage["historyDate"] = date_label
+            stage["todayCompleted"] = today_stage["completed"]
+            stage["todaySummary"] = today_stage["current"].split(" · 最新", 1)[0]
+            stage["historyDate"] = today_label
             if stage["state"] == "idle":
-                stage["stateText"] = f"等待任务 · 今日已处理 {len(files)} 条"
-                stage["total"] = len(files)
-                stage["completed"] = len(files)
+                stage["stateText"] = f"等待任务 · 今日已处理 {today_stage['completed']} 条"
+                stage["total"] = today_stage["total"]
+                stage["completed"] = today_stage["completed"]
                 stage["progress"] = 100
-                stage["current"] = summary
+                stage["current"] = stage["todaySummary"]
             return
-        self.pipeline["download"] = self.normalize_stage(
-            {
-                "state": "completed",
-                "stateText": f"今日已处理 {len(files)} 条",
-                "total": len(files),
-                "completed": len(files),
-                "failed": 0,
-                "progress": 100,
-                "current": f"{summary} · 最新 {latest.name}",
-                "updatedAt": datetime.fromtimestamp(latest.stat().st_mtime).astimezone().isoformat(
-                    timespec="seconds"
-                ),
-                "historyDate": date_label,
-                "todayCompleted": len(files),
-                "todaySummary": summary,
-            },
-            "下载目录扫描",
-        )
+        self.pipeline["download"] = dict(today_stage)
+        self.pipeline["download"]["stateText"] = f"今日已处理 {today_stage['completed']} 条"
 
     def scan_voice_pipeline(self) -> None:
         path = resolve_path(str(self.config.get("voice_handoff_file") or ""))
@@ -702,6 +716,19 @@ class Collector:
         selected = data.get("selectedProjects") or []
         if selected:
             direct["current"] = "、".join(str(item) for item in selected)
+        history_date = ""
+        for completed_item in (data.get("completedItems") or []) + (data.get("failedItems") or []):
+            if isinstance(completed_item, dict) and completed_item.get("audioPath"):
+                history_date = Path(str(completed_item["audioPath"])).parent.name
+                break
+        if not history_date:
+            timestamp = parse_time(data.get("completedAt") or data.get("startedAt"))
+            if timestamp:
+                value = datetime.fromtimestamp(timestamp).astimezone()
+                history_date = f"{value.month}.{value.day}"
+        if history_date:
+            direct["historyDate"] = history_date
+            self.pipeline_history["voice"][history_date] = dict(direct)
         direct_timestamp = max(
             parse_time(direct.get("updatedAt")),
             parse_time(data.get("completedAt")),
@@ -712,8 +739,6 @@ class Collector:
             self.pipeline["voice"] = direct
 
     def scan_generation_pipeline(self, workbench_available: bool) -> None:
-        if workbench_available and self.pipeline["stitch"].get("state") == "running":
-            return
         if time.time() - self.last_generation_scan_epoch < 10:
             return
         self.last_generation_scan_epoch = time.time()
@@ -723,40 +748,66 @@ class Collector:
         paths = list(root.glob("*/*/generation_records_*.json"))
         if not paths:
             return
-        path = max(paths, key=lambda item: item.stat().st_mtime)
-        try:
-            raw = path.read_text(encoding="utf-8")
-            records = json.loads(raw)
-            if not isinstance(records, list):
-                return
-            signature = f"{path.stat().st_mtime_ns}:{path.stat().st_size}"
-            self.store.source_result(path, True, signature)
-        except (OSError, json.JSONDecodeError) as exc:
+        grouped: dict[str, dict[str, Any]] = {}
+        for path in paths:
             try:
+                records = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(records, list):
+                    continue
                 signature = f"{path.stat().st_mtime_ns}:{path.stat().st_size}"
-            except OSError:
-                signature = "missing"
-            self.store.source_result(path, False, signature, str(exc))
+                self.store.source_result(path, True, signature)
+            except (OSError, json.JSONDecodeError) as exc:
+                try:
+                    signature = f"{path.stat().st_mtime_ns}:{path.stat().st_size}"
+                except OSError:
+                    signature = "missing"
+                self.store.source_result(path, False, signature, str(exc))
+                continue
+            date_label = path.parent.parent.name
+            bucket = grouped.setdefault(
+                date_label,
+                {"records": {}, "projects": set(), "latest": 0.0},
+            )
+            bucket["projects"].add(path.parent.name)
+            bucket["latest"] = max(bucket["latest"], path.stat().st_mtime)
+            for index, item in enumerate(records):
+                if not isinstance(item, dict):
+                    continue
+                key = str(item.get("output") or f"{path}:{index}")
+                bucket["records"][key] = item
+
+        history: dict[str, dict[str, Any]] = {}
+        for date_label, bucket in grouped.items():
+            records = list(bucket["records"].values())
+            completed = sum(1 for item in records if item.get("status") == "success")
+            failed = sum(1 for item in records if item.get("status") == "failed")
+            total = len(records)
+            projects = "、".join(sorted(bucket["projects"]))
+            history[date_label] = self.normalize_stage(
+                {
+                    "state": "failed" if failed else ("completed" if total else "idle"),
+                    "stateText": f"该日完成 {completed}，失败 {failed}" if total else "该日无拼接记录",
+                    "total": total,
+                    "completed": completed,
+                    "failed": failed,
+                    "progress": round((completed + failed) * 100 / total) if total else 0,
+                    "current": f"{date_label} / {projects}",
+                    "updatedAt": datetime.fromtimestamp(bucket["latest"]).astimezone().isoformat(
+                        timespec="seconds"
+                    ),
+                    "historyDate": date_label,
+                },
+                "第四步生成记录",
+            )
+        self.pipeline_history["stitch"] = history
+        if workbench_available and self.pipeline["stitch"].get("state") == "running":
             return
-        completed = sum(1 for item in records if isinstance(item, dict) and item.get("status") == "success")
-        failed = sum(1 for item in records if isinstance(item, dict) and item.get("status") == "failed")
-        total = len(records)
-        state = "failed" if failed else ("completed" if total else "idle")
-        stage = self.normalize_stage(
-            {
-                "state": state,
-                "stateText": f"最近批次完成 {completed}，失败 {failed}" if total else "等待拼接任务",
-                "total": total,
-                "completed": completed,
-                "failed": failed,
-                "progress": round((completed + failed) * 100 / total) if total else 0,
-                "current": f"{path.parent.parent.name} / {path.parent.name}",
-                "updatedAt": datetime.fromtimestamp(path.stat().st_mtime).astimezone().isoformat(timespec="seconds"),
-            },
-            "第四步生成记录",
-        )
-        if parse_time(stage["updatedAt"]) >= parse_time(self.pipeline["stitch"].get("updatedAt")):
-            self.pipeline["stitch"] = stage
+        if history:
+            newest = max(history.values(), key=lambda item: parse_time(item.get("updatedAt")))
+            if parse_time(newest["updatedAt"]) >= parse_time(
+                self.pipeline["stitch"].get("updatedAt")
+            ):
+                self.pipeline["stitch"] = dict(newest)
 
     def scan_pipeline(self) -> None:
         workbench_available = self.scan_workbench_pipeline()
@@ -870,6 +921,135 @@ def task_category(state: str) -> str:
     return "running"
 
 
+STAGE_META = {
+    "download": ("1", "下载与AI去字幕", "工作台", "workbench"),
+    "voice": ("2", "批量语音生成", "语音客户端", "voice"),
+    "stitch": ("3", "AI素材拼接", "工作台", "workbench"),
+    "capcut": ("4", "CapCut自动剪辑", "CapCut客户端", "capcut"),
+    "upload": ("5", "最终成片上传", "上传服务", "upload"),
+}
+
+
+def decorate_pipeline_stages(stages: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    processes = (COLLECTOR.last_metrics.get("processes") or {})
+    result: dict[str, dict[str, Any]] = {}
+    for key, original in stages.items():
+        stage = dict(original)
+        step, name, program, process_key = STAGE_META[key]
+        program_online = bool(processes.get(process_key))
+        stage["key"] = key
+        stage["step"] = step
+        stage["name"] = name
+        stage["program"] = program
+        stage["programOnline"] = program_online
+        updated_epoch = parse_time(stage.get("updatedAt"))
+        stage["ageSeconds"] = max(0, round(time.time() - updated_epoch)) if updated_epoch else None
+        if stage["state"] == "running":
+            stage["isLive"] = bool(
+                program_online
+                and updated_epoch
+                and time.time() - updated_epoch
+                <= float(CONFIG.get("pipeline_live_after_seconds") or 15)
+            )
+        elif stage["state"] == "unconfigured":
+            stage["isLive"] = False
+        else:
+            stage["isLive"] = bool(stage.get("isLive"))
+        result[key] = stage
+    return result
+
+
+def capcut_stage_for_tasks(tasks: list[dict[str, Any]], date_label: str = "") -> dict[str, Any]:
+    counts = {"waiting": 0, "running": 0, "completed": 0, "failed": 0}
+    for item in tasks:
+        counts[task_category(item["state"])] += 1
+    priority = {"running": 4, "failed": 3, "waiting": 2, "completed": 1}
+    latest = max(
+        tasks,
+        key=lambda item: (
+            priority[task_category(item["state"])],
+            item["source_timestamp"],
+            item["updated_at"],
+        ),
+        default=None,
+    )
+    if counts["running"]:
+        state, text = "running", latest["state_text"] if latest else "剪辑中"
+    elif counts["failed"]:
+        state, text = "failed", f"{counts['failed']} 条失败"
+    elif counts["waiting"]:
+        state, text = "idle", f"{counts['waiting']} 条等待处理"
+    elif counts["completed"]:
+        state, text = "completed", f"{counts['completed']} 条已完成"
+    else:
+        state, text = "idle", "该日无CapCut任务" if date_label else "等待第五步任务"
+    total = len(tasks)
+    return Collector.normalize_stage(
+        {
+            "state": state,
+            "stateText": text,
+            "total": total,
+            "completed": counts["completed"],
+            "failed": counts["failed"],
+            "progress": round((counts["completed"] + counts["failed"]) * 100 / total)
+            if total else 0,
+            "current": (
+                f"{latest['project']} / {latest['material']} / {latest['language']}"
+                if latest else ""
+            ),
+            "updatedAt": latest["updated_at"] if latest else "",
+            "historyDate": date_label,
+        },
+        "CapCut任务状态",
+    )
+
+
+def current_date_label() -> str:
+    value = datetime.now().astimezone()
+    return f"{value.month}.{value.day}"
+
+
+def pipeline_dates() -> list[str]:
+    values = {current_date_label()}
+    for history in COLLECTOR.pipeline_history.values():
+        values.update(history.keys())
+    values.update(item["date_label"] for item in STORE.tasks() if item["date_label"])
+
+    def key(label: str) -> tuple[int, int]:
+        try:
+            month, day = label.split(".", 1)
+            return int(month), int(day)
+        except (ValueError, AttributeError):
+            return 0, 0
+
+    return sorted(values, key=key, reverse=True)
+
+
+def pipeline_for_date(date_label: str) -> dict[str, dict[str, Any]]:
+    selected = date_label or current_date_label()
+    stages: dict[str, dict[str, Any]] = {}
+    for key in ("download", "voice", "stitch"):
+        historical = COLLECTOR.pipeline_history[key].get(selected)
+        live = COLLECTOR.pipeline[key]
+        if selected == current_date_label() and live.get("state") == "running":
+            stages[key] = dict(live)
+        elif historical:
+            stages[key] = dict(historical)
+        elif selected == current_date_label() and live.get("historyDate") == selected:
+            stages[key] = dict(live)
+        else:
+            stages[key] = Collector.empty_stage(f"{selected} 无记录")
+            stages[key]["historyDate"] = selected
+    stages["capcut"] = capcut_stage_for_tasks(STORE.tasks(selected), selected)
+    stages["upload"] = {
+        **Collector.empty_stage("未配置"),
+        "state": "unconfigured",
+        "source": "预留接口",
+        "historyDate": selected,
+    }
+    return decorate_pipeline_stages(stages)
+
+
 def overview_payload() -> dict[str, Any]:
     tasks = STORE.tasks()
     counts = {"total": len(tasks), "waiting": 0, "running": 0, "completed": 0, "failed": 0}
@@ -928,7 +1108,6 @@ def overview_payload() -> dict[str, Any]:
         },
         "CapCut任务状态",
     )
-    processes = (COLLECTOR.last_metrics.get("processes") or {})
     pipeline = {
         **COLLECTOR.pipeline,
         "capcut": capcut_stage,
@@ -938,33 +1117,7 @@ def overview_payload() -> dict[str, Any]:
             "source": "预留接口",
         },
     }
-    stage_meta = {
-        "download": ("1", "下载与AI去字幕", "工作台", bool(processes.get("workbench"))),
-        "voice": ("2", "批量语音生成", "语音客户端", bool(processes.get("voice"))),
-        "stitch": ("3", "AI素材拼接", "工作台", bool(processes.get("workbench"))),
-        "capcut": ("4", "CapCut自动剪辑", "CapCut客户端", bool(processes.get("capcut"))),
-        "upload": ("5", "最终成片上传", "上传服务", bool(processes.get("upload"))),
-    }
-    for key, stage in pipeline.items():
-        step, name, program, program_online = stage_meta[key]
-        stage["key"] = key
-        stage["step"] = step
-        stage["name"] = name
-        stage["program"] = program
-        stage["programOnline"] = program_online
-        updated_epoch = parse_time(stage.get("updatedAt"))
-        stage["ageSeconds"] = max(0, round(time.time() - updated_epoch)) if updated_epoch else None
-        if stage["state"] == "running":
-            stage["isLive"] = bool(
-                program_online
-                and updated_epoch
-                and time.time() - updated_epoch
-                <= float(CONFIG.get("pipeline_live_after_seconds") or 15)
-            )
-        elif stage["state"] == "unconfigured":
-            stage["isLive"] = False
-        else:
-            stage["isLive"] = bool(stage.get("isLive"))
+    pipeline = decorate_pipeline_stages(pipeline)
     return {
         "machine": {
             "name": CONFIG["machine_name"],
@@ -1032,11 +1185,14 @@ def overview():
 
 
 @app.get("/api/pipeline")
-def pipeline():
-    overview = overview_payload()
+def pipeline(date: str = ""):
+    selected = date or current_date_label()
+    stages = pipeline_for_date(selected)
     return {
-        "items": list(overview["pipeline"].values()),
-        "updatedAt": overview["updatedAt"],
+        "date": selected,
+        "availableDates": pipeline_dates(),
+        "items": list(stages.values()),
+        "updatedAt": COLLECTOR.last_scan_at,
     }
 
 

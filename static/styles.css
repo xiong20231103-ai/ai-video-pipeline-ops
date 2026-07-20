@@ -133,6 +133,12 @@ main { max-width: 1680px; margin: 0 auto; padding: 24px clamp(16px, 3vw, 48px) 4
 .pipeline-panel { padding: 20px 24px; margin-bottom: 16px; }
 .section-heading { justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .section-heading h2 { font-size: 17px; }
+.pipeline-head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.pipeline-date-filter {
+  display: flex; align-items: center; gap: 6px; color: var(--muted);
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.pipeline-date-filter select { margin: 0; min-width: 96px; }
 .process-pills { gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
 .process-pill {
   border: 1px solid var(--line); color: var(--muted);
@@ -297,6 +303,7 @@ footer {
   .metric-card:last-child { grid-column: span 2; }
   .pipeline-panel, .tasks-panel, .current-card, .upload-card, .events-card { padding: 16px; }
   .process-pills { display: none; }
+  .pipeline-head-actions { justify-content: flex-start; }
   .stage-monitor-grid { grid-template-columns: 1fr; }
   .summary-grid { grid-template-columns: repeat(5, 105px); overflow-x: auto; }
   .summary-grid div { padding: 10px; }

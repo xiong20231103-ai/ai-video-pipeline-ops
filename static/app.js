@@ -1,4 +1,9 @@
-const state = { date: "", overview: null };
+function currentLocalDateLabel() {
+  const value = new Date();
+  return `${value.getMonth() + 1}.${value.getDate()}`;
+}
+
+const state = { date: "", pipelineDate: currentLocalDateLabel(), overview: null };
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? "")
   .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
@@ -97,6 +102,28 @@ function renderPipeline(pipeline = {}) {
   renderPipelineRows(pipeline);
 }
 
+function renderPipelinePayload(payload = {}) {
+  const pipeline = {};
+  (payload.items || []).forEach(item => { pipeline[item.key] = item; });
+  renderPipeline(pipeline);
+  renderPipelineDateOptions(payload.availableDates || [], payload.date);
+}
+
+function renderPipelineDateOptions(dates, selected) {
+  const select = $("pipelineDateSelect");
+  const today = currentLocalDateLabel();
+  const values = dates.includes(today) ? dates : [today, ...dates];
+  const signature = values.join("|");
+  if (select.dataset.signature !== signature) {
+    select.innerHTML = values.map(value =>
+      `<option value="${escapeHtml(value)}">${value === today ? `今天（${escapeHtml(value)}）` : escapeHtml(value)}</option>`
+    ).join("");
+    select.dataset.signature = signature;
+  }
+  select.value = values.includes(selected) ? selected : today;
+  state.pipelineDate = select.value;
+}
+
 function renderPipelineRows(pipeline = {}) {
   const order = ["download", "voice", "stitch", "capcut", "upload"];
   const rows = $("pipelineRows");
@@ -169,7 +196,6 @@ function renderOverview(data) {
     $("currentError").classList.toggle("hidden", !current.error);
   }
   renderMetrics(data.metrics);
-  renderPipeline(pipeline);
   renderDateOptions(data.dates || []);
 }
 
@@ -219,10 +245,13 @@ async function getJson(url) {
 async function refresh() {
   try {
     const query = state.date ? `?date=${encodeURIComponent(state.date)}` : "";
-    const [overview, tasks, events] = await Promise.all([
-      getJson("/api/overview"), getJson(`/api/tasks${query}`), getJson("/api/events?limit=30")
+    const pipelineQuery = state.pipelineDate ? `?date=${encodeURIComponent(state.pipelineDate)}` : "";
+    const [overview, pipeline, tasks, events] = await Promise.all([
+      getJson("/api/overview"), getJson(`/api/pipeline${pipelineQuery}`),
+      getJson(`/api/tasks${query}`), getJson("/api/events?limit=30")
     ]);
-    renderOverview(overview); renderTasks(tasks.items || []); renderEvents(events.items || []);
+    renderOverview(overview); renderPipelinePayload(pipeline);
+    renderTasks(tasks.items || []); renderEvents(events.items || []);
   } catch (error) {
     $("machineBadge").className = "status-badge offline";
     $("machineBadge").innerHTML = "<span></span>Dashboard 连接失败";
@@ -232,5 +261,9 @@ async function refresh() {
 }
 
 $("dateSelect").addEventListener("change", event => { state.date = event.target.value; refresh(); });
+$("pipelineDateSelect").addEventListener("change", event => {
+  state.pipelineDate = event.target.value;
+  refresh();
+});
 refresh();
 setInterval(refresh, 2000);
