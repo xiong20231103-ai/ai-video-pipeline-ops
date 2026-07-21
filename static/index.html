@@ -103,10 +103,13 @@
         <section class="panel upload-card">
           <div class="upload-icon">↥</div><div><p class="eyebrow">UPLOAD SERVICE</p><h2 id="uploadCardTitle">正在读取百度网盘状态</h2></div>
           <p id="uploadCardMessage">等待工作台上传服务写入状态。</p><span id="uploadCardBadge">检查中</span>
+          <button id="uploadRescanButton" class="primary wide" type="button">检查并补传未上传成片</button>
         </section>
         <section class="panel queue-control-card">
           <div class="section-heading compact"><div><p class="eyebrow">QUEUE CONTROL</p><h2>任务确认与撤回</h2></div></div>
           <p class="queue-control-note">只影响尚未开始的队列记录；不会删除视频、音频或素材。</p>
+          <button id="continueCurrentButton" class="primary wide" type="button">安全继续当前项目</button>
+          <p class="queue-control-note">由家里工作台先核对正式清单；已有有效产物会跳过，数量不一致时会安全暂停。</p>
           <details class="web-task-form"><summary>新建项目任务</summary>
             <form id="createTaskForm">
               <label>日期<input id="createDate" name="date" placeholder="例如 7.21" required></label>

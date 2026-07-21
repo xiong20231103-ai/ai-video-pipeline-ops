@@ -7,6 +7,35 @@ import app
 
 
 class OpsTests(unittest.TestCase):
+    def test_upload_backlog_finds_completed_local_outputs_only(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            records = root / "records" / "7.22"
+            records.mkdir(parents=True)
+            final_ready = root / "ready.mp4"
+            final_ready.write_bytes(b"video")
+            final_uploaded = root / "uploaded.mp4"
+            final_uploaded.write_bytes(b"video")
+            manifest = {
+                "tasks": [
+                    {"taskId": "ready", "status": "completed", "finalOutputPath": str(final_ready)},
+                    {"taskId": "uploaded", "status": "completed", "finalOutputPath": str(final_uploaded)},
+                    {"taskId": "waiting", "status": "waiting_client", "finalOutputPath": str(root / "waiting.mp4")},
+                    {"taskId": "missing", "status": "completed", "finalOutputPath": str(root / "missing.mp4")},
+                ]
+            }
+            (records / "第四步到第五步.json").write_text(
+                json.dumps(manifest, ensure_ascii=False), encoding="utf-8"
+            )
+            state = root / "upload_status.json"
+            state.write_text(json.dumps({"tasks": {"uploaded": {"status": "uploaded"}}}), encoding="utf-8")
+
+            audit = app.inspect_upload_backlog(root / "records", state)
+
+            self.assertEqual([item["taskId"] for item in audit["candidates"]], ["ready"])
+            self.assertEqual([item["taskId"] for item in audit["missing"]], ["missing"])
+            self.assertEqual(audit["scanned"], 3)
+
     def test_download_directory_fallback_finds_today_files(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -221,6 +250,76 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(task["project"], "云手机")
             self.assertEqual(task["state_text"], "2K导出")
             self.assertEqual(task["date_label"], "7.17")
+
+    def test_capcut_remote_contract_is_preserved_and_test_history_is_separate(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = app.Store(Path(folder) / "test.db")
+            collector = app.Collector(app.CONFIG, store)
+            collector.metadata = {
+                "production": {
+                    "date": "7.21", "project": "云手机", "material": "碳岩板",
+                    "remotePipelineTaskId": "remote-cloud", "expectedTaskCount": 24,
+                },
+                "legacy-test": {"date": "7.21", "project": "实体机", "material": "净白板"},
+            }
+            production = collector.normalize_task({"taskId": "production", "state": "Waiting"}, Path("p.json"), 1.0)
+            legacy = collector.normalize_task({"taskId": "legacy-test", "state": "Failed"}, Path("t.json"), 1.0)
+            store.upsert_task(production)
+            store.upsert_task(legacy)
+            rows = store.tasks("7.21")
+            formal = [row for row in rows if row["remote_pipeline_task_id"]]
+            history = [row for row in rows if not row["remote_pipeline_task_id"]]
+            self.assertEqual(1, len(formal))
+            self.assertEqual(24, formal[0]["expected_task_count"])
+            self.assertEqual(1, len(history))
+
+    def test_archived_remote_batch_is_excluded_from_formal_production(self):
+        previous = list(app.CONFIG.get("test_history_batch_ids", []))
+        try:
+            app.CONFIG["test_history_batch_ids"] = ["legacy-test-batch"]
+            self.assertTrue(app.is_test_history_task({"batch_id": "legacy-test-batch"}))
+            self.assertFalse(app.is_test_history_task({"batch_id": "production-batch"}))
+        finally:
+            app.CONFIG["test_history_batch_ids"] = previous
+
+    def test_production_task_filter_uses_only_authoritative_handoff_rows(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            handoff = root / "records"
+            handoff.mkdir()
+            previous_store = app.STORE
+            previous_metadata = app.COLLECTOR.metadata
+            previous_root = app.CONFIG.get("fourth_step_handoff_dir")
+            try:
+                app.STORE = app.Store(root / "test.db")
+                app.CONFIG["fourth_step_handoff_dir"] = str(handoff)
+                app.COLLECTOR.metadata = {
+                    "formal": {
+                        "_source": str(handoff / "7.21.json"),
+                        "remotePipelineTaskId": "parent-1",
+                    },
+                    "old-test": {
+                        "_source": str(root / "old-launch.json"),
+                        "remotePipelineTaskId": "legacy-1",
+                    },
+                }
+                for task_id, remote_id in (("formal", "parent-1"), ("old-test", "legacy-1")):
+                    app.STORE.upsert_task({
+                        "task_id": task_id, "batch_id": "batch", "date_label": "7.21",
+                        "project": "云手机", "material": "碳岩板", "language": "英语",
+                        "number": "001", "sequence": 1, "video_path": "", "audio_path": "",
+                        "output_path": "", "state": "Waiting", "state_text": "等待",
+                        "error": "", "source_file": "source.json", "source_timestamp": 1.0,
+                        "remote_pipeline_task_id": remote_id, "expected_task_count": 24,
+                    })
+
+                rows = app.production_capcut_tasks("7.21")
+
+                self.assertEqual(["formal"], [row["task_id"] for row in rows])
+            finally:
+                app.STORE = previous_store
+                app.COLLECTOR.metadata = previous_metadata
+                app.CONFIG["fourth_step_handoff_dir"] = previous_root
 
     def test_broken_json_keeps_previous_task(self):
         with tempfile.TemporaryDirectory() as folder:

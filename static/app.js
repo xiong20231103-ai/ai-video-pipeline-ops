@@ -94,7 +94,8 @@ function renderStage(name, data = {}) {
   card.querySelector(".stage-current").textContent = data.current || data.source || "暂无当前任务";
   card.querySelector(".stage-progress i").style.width = `${Math.max(0, Math.min(100, Number(data.progress || 0)))}%`;
   const today = data.todaySummary ? ` · 今日 ${data.todaySummary}` : "";
-  card.querySelector("small").textContent = `${Number(data.completed || 0)} 完成 / ${Number(data.failed || 0)} 失败 / ${Number(data.total || 0)} 总计${today}`;
+  const testHistory = Number(data.testHistoryCount || 0) ? ` · 测试历史 ${Number(data.testHistoryCount)} 条（不计生产）` : "";
+  card.querySelector("small").textContent = `${Number(data.completed || 0)} 完成 / ${Number(data.failed || 0)} 失败 / ${Number(data.total || 0)} 总计${today}${testHistory}`;
 }
 
 function renderPipeline(pipeline = {}) {
@@ -150,13 +151,14 @@ function renderPipelineRows(pipeline = {}) {
       : (item.programOnline ? "程序运行中" : "程序未运行");
     const onlineClass = item.programOnline ? "online" : "offline";
     const current = item.current || item.todaySummary || item.source || "暂无当前任务";
+    const testHistory = Number(item.testHistoryCount || 0) ? `；测试历史 ${Number(item.testHistoryCount)} 条（不计生产）` : "";
     const liveText = item.state === "running"
       ? (item.isLive ? "实时更新" : "状态未刷新")
       : formatAge(item.ageSeconds);
     return `<tr>
       <td><span class="step-name"><i class="step-number">${escapeHtml(item.step || "")}</i>${escapeHtml(item.name || key)}</span></td>
       <td>${escapeHtml(item.program || "--")}<span class="program-state ${onlineClass}">${escapeHtml(onlineText)}</span></td>
-      <td>${escapeHtml(current)}<span class="subtext">${escapeHtml(item.source || "")}</span></td>
+      <td>${escapeHtml(current)}<span class="subtext">${escapeHtml((item.source || "") + testHistory)}</span></td>
       <td><div class="table-progress"><div class="bar"><i style="width:${Math.max(0, Math.min(100, Number(item.progress || 0)))}%"></i></div><small>${Number(item.progress || 0)}%</small></div></td>
       <td>${Number(item.completed || 0)} / ${Number(item.failed || 0)} / ${Number(item.total || 0)}</td>
       <td class="update-time">${escapeHtml(formatDateTime(item.updatedAt))}<small>${escapeHtml(liveText)}</small></td>
@@ -274,8 +276,9 @@ function renderProjectGaps(items) {
     const missing = Number(storedMissing !== undefined && storedMissing !== null && storedMissing !== ""
       ? storedMissing
       : Math.max(0, expected - completed));
+    const notStarted = Boolean(item.notStarted);
     const activelyRunning = String(item.status || "").toLowerCase() === "running";
-    const blocked = !activelyRunning && (missing > 0 || item.status === "blocked_missing_links" || Number(item.failed || 0) > 0);
+    const blocked = !notStarted && !activelyRunning && (missing > 0 || item.status === "blocked_missing_links" || Number(item.failed || 0) > 0);
     const current = item.currentTask ? ` · 当前 ${item.currentTask}` : "";
     const error = item.error ? ` · 错误 ${item.error}` : "";
     const videos = Object.values(item.videos || {});
@@ -286,7 +289,7 @@ function renderProjectGaps(items) {
     ).join("")}</ul></details>` : "";
     return `<div class="project-gap ${blocked ? "blocked" : "ok"}">
       <div><strong>${escapeHtml(item.project || "未分类")} / ${escapeHtml(item.material || "--")}</strong><span>${escapeHtml(item.date || "--")}</span></div>
-      <p>总数 ${expected} · 已完成 ${completed} · 剩余 ${missing} · 失败 ${Number(item.failed || 0)}</p>
+      <p>${notStarted ? `计划 ${expected} · 尚未开始` : `总数 ${expected} · 已完成 ${completed} · 剩余 ${missing} · 失败 ${Number(item.failed || 0)}`}</p>
       <small>${escapeHtml((item.stateText || item.status || "--") + current + error)}</small>
       ${blocked && taskId ? `<div class="queue-actions"><button class="start" data-task-id="${escapeHtml(taskId)}" onclick="openReplenishment(this.dataset.taskId)">按此缺口补链</button></div>` : ""}
       ${taskRows}
@@ -439,6 +442,38 @@ $("dateSelect").addEventListener("change", event => { state.date = event.target.
 $("pipelineDateSelect").addEventListener("change", event => {
   state.pipelineDate = event.target.value;
   refresh();
+});
+$("continueCurrentButton")?.addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  if (!window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")) return;
+  button.disabled = true;
+  button.textContent = "正在发送继续指令…";
+  try {
+    const result = await postJson("/api/controls/continue-current", {});
+    window.alert(result.message || "继续指令已发送");
+    await refresh();
+  } catch (error) {
+    window.alert(error.message || "发送继续指令失败");
+  } finally {
+    button.disabled = false;
+    button.textContent = "安全继续当前项目";
+  }
+});
+$("uploadRescanButton")?.addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  if (!window.confirm("确认检查所有正式清单，并自动补传已完成但尚未上传的成片吗？不会重新剪辑等待中的任务。")) return;
+  button.disabled = true;
+  button.textContent = "正在检查上传缺口…";
+  try {
+    const result = await postJson("/api/controls/upload/rescan", {});
+    window.alert(result.message || "上传检查已完成");
+    await refresh();
+  } catch (error) {
+    window.alert(error.message || "上传检查失败");
+  } finally {
+    button.disabled = false;
+    button.textContent = "检查并补传未上传成片";
+  }
 });
 $("createDate").value = currentLocalDateLabel();
 $("createTemplate").addEventListener("change", updateMaterialOptions);
