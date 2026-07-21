@@ -193,7 +193,7 @@ function renderOverview(data) {
     ? (upload.state === "running" ? "百度网盘上传中" : upload.message || "百度网盘上传服务")
     : "百度网盘未配置";
   $("uploadCardMessage").textContent = upload.configured
-    ? `完成 ${upload.completed || 0} / ${upload.total || 0}，失败 ${upload.failed || 0}。本地成片会继续保留。`
+    ? `完成 ${upload.completed || 0} / ${upload.total || 0}，失败 ${upload.failed || 0}。云端存在且大小一致后清理本地：已清理 ${upload.localCleaned || 0}，待核验 ${upload.cleanupPending || 0}，保留/阻止 ${upload.cleanupBlocked || 0}。`
     : "请先在TikHub工作台配置并授权百度网盘。";
   $("uploadCardBadge").textContent = upload.configured
     ? (upload.state === "failed" ? "上传失败" : upload.state === "completed" ? "上传完成" : upload.state === "running" ? "上传中" : "等待成片")
@@ -269,7 +269,10 @@ function renderProjectGaps(items) {
   node.innerHTML = items.slice(0, 8).map(item => {
     const expected = Number(item.expectedCount || 0);
     const completed = Number(item.completed || 0);
-    const missing = Number(item.missingCount || Math.max(0, expected - completed));
+    const storedMissing = item.missingCount;
+    const missing = Number(storedMissing !== undefined && storedMissing !== null && storedMissing !== ""
+      ? storedMissing
+      : Math.max(0, expected - completed));
     const blocked = missing > 0 || item.status === "blocked_missing_links";
     return `<div class="project-gap ${blocked ? "blocked" : "ok"}">
       <div><strong>${escapeHtml(item.project || "未分类")} / ${escapeHtml(item.material || "--")}</strong><span>${escapeHtml(item.date || "--")}</span></div>
@@ -296,6 +299,10 @@ async function refresh() {
     renderOverview(overview); renderPipelinePayload(pipeline);
     renderTasks(tasks.items || []); renderEvents(events.items || []); renderProjectGaps(projectGaps.items || []);
   } catch (error) {
+    // Do not leave an old "gap" card visible when another dashboard request
+    // momentarily fails. The card is operationally significant, so stale data
+    // is worse than showing the empty state until the next two-second refresh.
+    renderProjectGaps([]);
     $("machineBadge").className = "status-badge offline";
     $("machineBadge").innerHTML = "<span></span>Dashboard 连接失败";
     $("heroTitle").textContent = "暂时无法读取状态";

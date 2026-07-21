@@ -43,8 +43,9 @@ CAPCUT_STATE_TEXT = {
     "TrimmingFirstCaption": "检查首帧字幕",
     "ReplacingMainVideo": "替换主视频",
     "Exporting": "2K导出",
+    "PostProcessing": "FFmpeg替换第0帧",
     "CleaningDraft": "清理草稿",
-    "RecyclingSource": "回收原视频",
+    "RecyclingSource": "等待云端核验与清理",
     "Completed": "剪辑完成",
     "Failed": "剪辑失败",
 }
@@ -674,9 +675,14 @@ class Collector:
                 expected = max(0, int(item.get("expectedCount") or 0))
                 completed = max(0, int(item.get("completed") or 0))
                 failed = max(0, int(item.get("failed") or 0))
-                missing = max(0, int(item.get("missingCount") or expected - completed))
+                stored_missing = item.get("missingCount")
+                missing = max(0, int(stored_missing)) if stored_missing not in (None, "") else max(0, expected - completed)
             except (TypeError, ValueError):
                 expected, completed, failed, missing = 0, 0, 0, 0
+            # A workbench may be upgraded while a batch is already running.
+            # Never render unfinished work as a missing-link alert.
+            if str(item.get("status") or "").lower() == "running":
+                missing = 0
             item.update({"expectedCount": expected, "completed": completed, "failed": failed, "missingCount": missing})
             records.append(item)
         self.project_download_statuses = sorted(
@@ -999,6 +1005,15 @@ class Collector:
             total = len(items)
             completed = sum(1 for item in items if item.get("status") == "uploaded")
             failed = sum(1 for item in items if item.get("status") == "failed")
+            local_cleaned = sum(
+                1 for item in items
+                if (item.get("cleanup") or {}).get("state") == "local_media_deleted"
+            )
+            cleanup_blocked = sum(
+                1 for item in items
+                if str((item.get("cleanup") or {}).get("state") or "").startswith("blocked_")
+            )
+            cleanup_pending = max(0, completed - local_cleaned - cleanup_blocked)
             active = [item for item in items if item.get("status") == "uploading"]
             if active:
                 state, text, current = "running", "正在上传最终成片", active[0]
@@ -1009,7 +1024,7 @@ class Collector:
                 state, text, current = "completed", f"{completed} 条上传完成", items[-1]
             else:
                 state, text, current = "idle", f"{total - completed} 条等待上传", {}
-            history[date_label] = self.normalize_stage(
+            stage = self.normalize_stage(
                 {
                     "state": state,
                     "stateText": text,
@@ -1032,6 +1047,14 @@ class Collector:
                 },
                 "百度网盘上传状态",
             )
+            stage.update(
+                {
+                    "localCleaned": local_cleaned,
+                    "cleanupPending": cleanup_pending,
+                    "cleanupBlocked": cleanup_blocked,
+                }
+            )
+            history[date_label] = stage
         self.pipeline_history["upload"] = history
         today = current_date_label()
         if today in history:
@@ -1380,6 +1403,9 @@ def overview_payload() -> dict[str, Any]:
             "completed": COLLECTOR.pipeline["upload"].get("completed", 0),
             "failed": COLLECTOR.pipeline["upload"].get("failed", 0),
             "total": COLLECTOR.pipeline["upload"].get("total", 0),
+            "localCleaned": COLLECTOR.pipeline["upload"].get("localCleaned", 0),
+            "cleanupPending": COLLECTOR.pipeline["upload"].get("cleanupPending", 0),
+            "cleanupBlocked": COLLECTOR.pipeline["upload"].get("cleanupBlocked", 0),
         },
         "sourceErrors": STORE.source_errors(),
         "updatedAt": COLLECTOR.last_scan_at,

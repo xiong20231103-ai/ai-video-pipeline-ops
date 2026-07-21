@@ -111,6 +111,8 @@ class OpsTests(unittest.TestCase):
     def test_state_categories(self):
         self.assertEqual(app.task_category("Waiting"), "waiting")
         self.assertEqual(app.task_category("Exporting"), "running")
+        self.assertEqual(app.task_category("PostProcessing"), "running")
+        self.assertEqual(app.CAPCUT_STATE_TEXT["PostProcessing"], "FFmpeg替换第0帧")
         self.assertEqual(app.task_category("Completed"), "completed")
         self.assertEqual(app.task_category("Failed"), "failed")
 
@@ -159,6 +161,40 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(2, stage["total"])
             self.assertEqual(1, stage["completed"])
             self.assertEqual(75, stage["progress"])
+
+    def test_upload_pipeline_exposes_cloud_cleanup_status(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            status = root / "upload_status.json"
+            status.write_text(json.dumps({
+                "configured": True,
+                "authorized": True,
+                "updatedAt": "2026-07-21T12:00:00+08:00",
+                "tasks": {
+                    "cleaned": {
+                        "date": "7.21", "status": "uploaded", "progress": 100,
+                        "cleanup": {"state": "local_media_deleted"},
+                    },
+                    "pending": {
+                        "date": "7.21", "status": "uploaded", "progress": 100,
+                        "cleanup": {"state": "cloud_verified"},
+                    },
+                    "blocked": {
+                        "date": "7.21", "status": "uploaded", "progress": 100,
+                        "cleanup": {"state": "blocked_cloud_size_mismatch"},
+                    },
+                },
+            }, ensure_ascii=False), encoding="utf-8")
+            config = dict(app.CONFIG)
+            config["upload_status_file"] = str(status)
+            collector = app.Collector(config, app.Store(root / "ops.db"))
+
+            collector.scan_upload_pipeline()
+
+            stage = collector.pipeline_history["upload"]["7.21"]
+            self.assertEqual(1, stage["localCleaned"])
+            self.assertEqual(1, stage["cleanupPending"])
+            self.assertEqual(1, stage["cleanupBlocked"])
 
     def test_normalize_uses_metadata(self):
         with tempfile.TemporaryDirectory() as folder:
