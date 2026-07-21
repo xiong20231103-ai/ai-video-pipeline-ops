@@ -3,7 +3,7 @@ function currentLocalDateLabel() {
   return `${value.getMonth() + 1}.${value.getDate()}`;
 }
 
-const state = { date: "", pipelineDate: currentLocalDateLabel(), overview: null };
+const state = { date: "", pipelineDate: currentLocalDateLabel(), overview: null, templates: [], templateSignature: "", gaps: {} };
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? "")
   .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
@@ -266,20 +266,140 @@ function renderProjectGaps(items) {
   const node = $("projectGapList");
   if (!node) return;
   if (!items.length) { node.innerHTML = `<p class="empty">暂无项目级下载记录</p>`; return; }
-  node.innerHTML = items.slice(0, 8).map(item => {
+  state.gaps = {};
+  node.innerHTML = items.map(item => {
     const expected = Number(item.expectedCount || 0);
     const completed = Number(item.completed || 0);
     const storedMissing = item.missingCount;
     const missing = Number(storedMissing !== undefined && storedMissing !== null && storedMissing !== ""
       ? storedMissing
       : Math.max(0, expected - completed));
-    const blocked = missing > 0 || item.status === "blocked_missing_links";
+    const activelyRunning = String(item.status || "").toLowerCase() === "running";
+    const blocked = !activelyRunning && (missing > 0 || item.status === "blocked_missing_links" || Number(item.failed || 0) > 0);
+    const current = item.currentTask ? ` · 当前 ${item.currentTask}` : "";
+    const error = item.error ? ` · 错误 ${item.error}` : "";
+    const videos = Object.values(item.videos || {});
+    const taskId = String(item.taskId || "");
+    if (taskId) state.gaps[taskId] = item;
+    const taskRows = videos.length ? `<details class="project-task-details"><summary>查看 ${videos.length} 条任务状态</summary><ul>${videos.map(video =>
+      `<li><span>${escapeHtml(video.url || "--")}</span><b>${escapeHtml(video.stage || "waiting")}</b><em>${escapeHtml(video.error || video.message || video.status || "等待")}</em></li>`
+    ).join("")}</ul></details>` : "";
     return `<div class="project-gap ${blocked ? "blocked" : "ok"}">
       <div><strong>${escapeHtml(item.project || "未分类")} / ${escapeHtml(item.material || "--")}</strong><span>${escapeHtml(item.date || "--")}</span></div>
-      <p>${completed} / ${expected} 完成 · 失败 ${Number(item.failed || 0)} · ${blocked ? `还差 ${missing} 条` : "数量已齐"}</p>
-      <small>${escapeHtml(item.stateText || item.status || "--")}</small>
+      <p>总数 ${expected} · 已完成 ${completed} · 剩余 ${missing} · 失败 ${Number(item.failed || 0)}</p>
+      <small>${escapeHtml((item.stateText || item.status || "--") + current + error)}</small>
+      ${blocked && taskId ? `<div class="queue-actions"><button class="start" data-task-id="${escapeHtml(taskId)}" onclick="openReplenishment(this.dataset.taskId)">按此缺口补链</button></div>` : ""}
+      ${taskRows}
     </div>`;
   }).join("");
+}
+
+function renderTemplates(items) {
+  const nextTemplates = Array.isArray(items) ? items : [];
+  const signature = JSON.stringify(nextTemplates);
+  const select = $("createTemplate");
+  if (!select) return;
+  if (signature === state.templateSignature && select.options.length > 1) return;
+  state.templates = nextTemplates;
+  state.templateSignature = signature;
+  const previous = select.value;
+  select.innerHTML = `<option value="">请选择项目</option>${state.templates.map(item =>
+    `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label || `${item.project} / ${item.material}`)}</option>`
+  ).join("")}`;
+  if (previous && state.templates.some(item => String(item.id) === previous)) select.value = previous;
+  updateMaterialOptions();
+}
+
+function updateMaterialOptions() {
+  const template = state.templates.find(item => String(item.id) === String($("createTemplate")?.value || ""));
+  const select = $("createMaterial");
+  const count = $("createExpectedCount");
+  if (!select) return;
+  const materials = template?.materials?.length ? template.materials : (template?.material ? [template.material] : []);
+  select.innerHTML = materials.map(item => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
+  if (count && template?.expectedCount) count.value = template.expectedCount;
+}
+
+async function postJson(url, payload) {
+  const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.detail || "操作失败");
+  return result;
+}
+
+function openReplenishment(taskId) {
+  const item = state.gaps[String(taskId)];
+  const panel = $("replenishPanel");
+  if (!item || !panel) return;
+  const expected = Number(item.expectedCount || 0);
+  const completed = Number(item.completed || 0);
+  const missing = Number(item.missingCount ?? Math.max(0, expected - completed));
+  panel.classList.remove("hidden");
+  panel.innerHTML = `<strong>补链：${escapeHtml(item.project)} / ${escapeHtml(item.material)}</strong>
+    <p>原计划 ${expected} 条，已完成 ${completed} 条；请只粘贴 ${missing} 条新链接。</p>
+    <form id="replenishForm"><label class="wide">新链接（每行一条）<textarea id="replenishUrls" rows="4" required></textarea></label>
+    <label class="wide checkbox"><input id="replenishStartNow" type="checkbox" checked>补链后继续当前项目</label>
+    <button class="primary wide" type="submit">提交补链</button></form>`;
+  $("replenishForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button");
+    button.disabled = true;
+    try {
+      await postJson(`/api/controls/tasks/${encodeURIComponent(taskId)}/replenish`, {
+        urls: $("replenishUrls").value,
+        startNow: $("replenishStartNow").checked,
+      });
+      panel.classList.add("hidden"); panel.innerHTML = ""; await refresh();
+    } catch (error) { window.alert(error.message || "补链失败"); button.disabled = false; }
+  });
+  panel.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function renderReceiverQueue(items) {
+  const node = $("receiverQueue");
+  if (!node) return;
+  if (!items.length) {
+    node.innerHTML = `<p class="empty">暂无可确认或撤回的队列任务</p>`;
+    return;
+  }
+  node.innerHTML = items.map(item => {
+    const taskId = String(item.taskId || "");
+    const status = String(item.status || "");
+    const canStart = status === "pending_confirmation" && !["auto_start_first", "auto_start_sequential"].includes(String(item.startMode || ""));
+    const canCancel = status === "pending_confirmation" || status === "imported_waiting_start";
+    const sequence = item.batchId ? `第 ${item.batchSequence || 1} / ${item.batchSize || 1} 项` : "单条任务";
+    const actions = [
+      canStart ? `<button class="start" data-task-id="${escapeHtml(taskId)}" onclick="controlTask(this, 'start')">启动首项</button>` : "",
+      canCancel ? `<button class="cancel" data-task-id="${escapeHtml(taskId)}" onclick="controlTask(this, 'cancel')">撤回</button>` : "",
+    ].join("");
+    return `<article class="receiver-queue-item">
+      <div><strong>${escapeHtml(item.project || "未分类")} / ${escapeHtml(item.material || "--")}</strong><span class="task-state neutral">${escapeHtml(status)}</span></div>
+      <small>${escapeHtml(item.date || "--")} · ${escapeHtml(sequence)} · ${Number((item.urls || []).length)} 条链接</small>
+      ${actions ? `<div class="queue-actions">${actions}</div>` : ""}
+    </article>`;
+  }).join("");
+}
+
+async function controlTask(button, action) {
+  const taskId = String(button.dataset.taskId || "");
+  if (!taskId) return;
+  const isStart = action === "start";
+  const question = isStart
+    ? "确认启动这个批次的首项吗？工作台会继续按原有顺序处理。"
+    : "确认撤回这个尚未开始的任务吗？不会删除任何视频、音频或素材。";
+  if (!window.confirm(question)) return;
+  button.disabled = true;
+  button.textContent = isStart ? "正在启动…" : "正在撤回…";
+  try {
+    const response = await fetch(`/api/controls/tasks/${encodeURIComponent(taskId)}/${action}`, { method: "POST" });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "操作失败");
+    await refresh();
+  } catch (error) {
+    window.alert(error.message || "操作失败");
+    button.disabled = false;
+    button.textContent = isStart ? "启动首项" : "撤回";
+  }
 }
 
 async function getJson(url) {
@@ -292,17 +412,22 @@ async function refresh() {
   try {
     const query = state.date ? `?date=${encodeURIComponent(state.date)}` : "";
     const pipelineQuery = state.pipelineDate ? `?date=${encodeURIComponent(state.pipelineDate)}` : "";
-    const [overview, pipeline, tasks, events, projectGaps] = await Promise.all([
+    const [overview, pipeline, tasks, events, projectGaps, receiverQueue, templates] = await Promise.all([
       getJson("/api/overview"), getJson(`/api/pipeline${pipelineQuery}`),
-      getJson(`/api/tasks${query}`), getJson("/api/events?limit=30"), getJson("/api/project-gaps")
+      getJson(`/api/tasks${query}`), getJson("/api/events?limit=30"), getJson("/api/project-gaps"),
+      getJson("/api/controls/tasks").catch(() => ({ items: [] })),
+      getJson("/api/controls/templates").catch(() => ({ items: [] }))
     ]);
     renderOverview(overview); renderPipelinePayload(pipeline);
     renderTasks(tasks.items || []); renderEvents(events.items || []); renderProjectGaps(projectGaps.items || []);
+    renderReceiverQueue(receiverQueue.items || []);
+    renderTemplates(templates.items || []);
   } catch (error) {
     // Do not leave an old "gap" card visible when another dashboard request
     // momentarily fails. The card is operationally significant, so stale data
     // is worse than showing the empty state until the next two-second refresh.
     renderProjectGaps([]);
+    renderReceiverQueue([]);
     $("machineBadge").className = "status-badge offline";
     $("machineBadge").innerHTML = "<span></span>Dashboard 连接失败";
     $("heroTitle").textContent = "暂时无法读取状态";
@@ -314,6 +439,29 @@ $("dateSelect").addEventListener("change", event => { state.date = event.target.
 $("pipelineDateSelect").addEventListener("change", event => {
   state.pipelineDate = event.target.value;
   refresh();
+});
+$("createDate").value = currentLocalDateLabel();
+$("createTemplate").addEventListener("change", updateMaterialOptions);
+$("createTaskForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = event.currentTarget.querySelector("button[type='submit']");
+  button.disabled = true;
+  try {
+    await postJson("/api/controls/tasks/create", {
+      date: $("createDate").value.trim(),
+      templateId: $("createTemplate").value,
+      material: $("createMaterial").value,
+      audioBatch: $("createAudioBatch").value.trim(),
+      voicePlan: $("createVoicePlan").value,
+      expectedCount: $("createExpectedCount").value,
+      urls: $("createUrls").value,
+      startNow: $("createStartNow").checked,
+    });
+    event.currentTarget.reset();
+    $("createDate").value = currentLocalDateLabel();
+    await refresh();
+  } catch (error) { window.alert(error.message || "提交失败"); }
+  finally { button.disabled = false; }
 });
 refresh();
 setInterval(refresh, 2000);

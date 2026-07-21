@@ -26,7 +26,7 @@
         <h2 id="heroTitle">正在读取生产线</h2>
         <p id="heroSubtitle">请稍候，Dashboard 正在汇总全部环节状态。</p>
       </div>
-      <div class="hero-side"><div class="readonly-pill">只读模式</div><p>不会操作鼠标、键盘或生产程序</p></div>
+      <div class="hero-side"><div class="readonly-pill">远程总控</div><p>可确认队列启动或撤回未开始任务</p></div>
     </section>
 
     <section class="metrics-grid" aria-label="系统资源">
@@ -104,7 +104,26 @@
           <div class="upload-icon">↥</div><div><p class="eyebrow">UPLOAD SERVICE</p><h2 id="uploadCardTitle">正在读取百度网盘状态</h2></div>
           <p id="uploadCardMessage">等待工作台上传服务写入状态。</p><span id="uploadCardBadge">检查中</span>
         </section>
-        <section class="panel project-gaps-card"><div class="section-heading compact"><div><p class="eyebrow">PROJECT GAPS</p><h2>下载 / 去字幕缺口</h2></div></div><div id="projectGapList" class="project-gap-list"><p class="empty">正在读取项目状态…</p></div></section>
+        <section class="panel queue-control-card">
+          <div class="section-heading compact"><div><p class="eyebrow">QUEUE CONTROL</p><h2>任务确认与撤回</h2></div></div>
+          <p class="queue-control-note">只影响尚未开始的队列记录；不会删除视频、音频或素材。</p>
+          <details class="web-task-form"><summary>新建项目任务</summary>
+            <form id="createTaskForm">
+              <label>日期<input id="createDate" name="date" placeholder="例如 7.21" required></label>
+              <label>项目<select id="createTemplate" name="templateId" required></select></label>
+              <label>材料<select id="createMaterial" name="material"></select></label>
+              <label>音频批次<input id="createAudioBatch" name="audioBatch" placeholder="默认使用日期"></label>
+              <label>语音策略<select id="createVoicePlan" name="voicePlan"><option value="">按项目默认</option><option value="reuse_existing">复用已有语音</option><option value="create_new">新建语音</option></select></label>
+              <label>计划视频数<input id="createExpectedCount" name="expectedCount" type="number" min="1"></label>
+              <label class="wide">视频链接（每行一条）<textarea id="createUrls" name="urls" rows="4" required></textarea></label>
+              <label class="wide checkbox"><input id="createStartNow" type="checkbox">提交并启动首项</label>
+              <button class="primary wide" type="submit">提交任务</button>
+            </form>
+          </details>
+          <div id="replenishPanel" class="replenish-panel hidden"></div>
+          <div id="receiverQueue" class="receiver-queue"><p class="empty">正在读取接收器队列…</p></div>
+        </section>
+        <section class="panel project-gaps-card"><div class="section-heading compact"><div><p class="eyebrow">BATCH STATUS</p><h2>9 个批次实时状态</h2></div></div><div id="projectGapList" class="project-gap-list"><p class="empty">正在读取项目状态…</p></div></section>
         <section class="panel events-card"><div class="section-heading compact"><div><p class="eyebrow">RECENT EVENTS</p><h2>最近事件</h2></div></div><div id="eventList" class="event-list"><p class="empty">正在读取事件…</p></div></section>
       </aside>
     </section>

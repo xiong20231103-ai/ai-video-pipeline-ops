@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import ipaddress
 import json
 import os
 import socket
@@ -8,6 +9,9 @@ import sqlite3
 import subprocess
 import threading
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,7 +19,7 @@ from typing import Any
 
 import psutil
 import uvicorn
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -82,6 +86,7 @@ def load_config() -> dict[str, Any]:
         "workbench_ops_status": "../TikHub_AI_视频工作台/ops_pipeline_status.json",
         "download_state_file": "../TikHub_AI_视频工作台/handoff/download/download_batch_state.json",
         "download_project_status_file": "../TikHub_AI_视频工作台/handoff/download/project_status.json",
+        "receiver_status_url": "http://127.0.0.1:8766/api/pipeline/snapshot",
         "download_root": "",
         "voice_handoff_file": "../TikHub_AI_视频工作台/tools/BatchVoiceClient-Portable/data/last_batch_handoff.json",
         "generation_output_root": "E:/生成视频",
@@ -101,6 +106,54 @@ def load_config() -> dict[str, Any]:
         except (OSError, json.JSONDecodeError):
             pass
     return defaults
+
+
+def receiver_base_url() -> str:
+    """Return the local receiver origin without exposing its sender token."""
+    status_url = str(CONFIG.get("receiver_status_url") or "http://127.0.0.1:8766/api/pipeline/snapshot")
+    parts = urllib.parse.urlsplit(status_url)
+    if not parts.scheme or not parts.netloc:
+        raise ValueError("任务接收器地址无效")
+    return f"{parts.scheme}://{parts.netloc}"
+
+
+def _is_tailnet_or_local(request: Request) -> bool:
+    host = str(request.client.host if request.client else "")
+    if host in {"127.0.0.1", "::1"}:
+        return True
+    try:
+        address = ipaddress.ip_address(host)
+        return (
+            address in ipaddress.ip_network("100.64.0.0/10")
+            or address in ipaddress.ip_network("fd7a:115c:a1e0::/48")
+        )
+    except ValueError:
+        return False
+
+
+def require_control_permission(request: Request) -> None:
+    if not _is_tailnet_or_local(request):
+        raise HTTPException(status_code=403, detail="控制操作仅允许通过 Tailscale 或家里电脑本机执行")
+
+
+def receiver_json(path: str, *, method: str = "GET", payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    request = urllib.request.Request(
+        receiver_base_url().rstrip("/") + path,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8") if payload is not None else None,
+        method=method,
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=3) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise HTTPException(status_code=exc.code, detail=detail) from exc
+    except (OSError, ValueError, urllib.error.URLError) as exc:
+        raise HTTPException(status_code=503, detail=f"任务接收器不可用：{exc}") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=502, detail="任务接收器返回无效数据")
+    return payload
 
 
 class Store:
@@ -657,11 +710,22 @@ class Collector:
 
     def scan_project_download_statuses(self) -> None:
         """Expose one durable status card per submitted project to remote clients."""
-        path = self.project_download_status_file()
-        if not path.exists():
-            self.project_download_statuses = []
-            return
-        payload = self._json(path)
+        payload = None
+        receiver_url = str(self.config.get("receiver_status_url") or "").strip()
+        if receiver_url:
+            try:
+                with urllib.request.urlopen(receiver_url, timeout=1.5) as response:
+                    candidate = json.loads(response.read().decode("utf-8"))
+                    if isinstance(candidate, dict):
+                        payload = {"items": candidate.get("projects") or {}}
+            except (OSError, ValueError, urllib.error.URLError):
+                payload = None
+        if payload is None:
+            path = self.project_download_status_file()
+            if not path.exists():
+                self.project_download_statuses = []
+                return
+            payload = self._json(path)
         if not payload:
             return
         raw_items = payload.get("items") if isinstance(payload.get("items"), dict) else {}
@@ -675,7 +739,7 @@ class Collector:
                 expected = max(0, int(item.get("expectedCount") or 0))
                 completed = max(0, int(item.get("completed") or 0))
                 failed = max(0, int(item.get("failed") or 0))
-                stored_missing = item.get("missingCount")
+                stored_missing = item.get("remaining", item.get("missingCount"))
                 missing = max(0, int(stored_missing)) if stored_missing not in (None, "") else max(0, expected - completed)
             except (TypeError, ValueError):
                 expected, completed, failed, missing = 0, 0, 0, 0
@@ -683,6 +747,9 @@ class Collector:
             # Never render unfinished work as a missing-link alert.
             if str(item.get("status") or "").lower() == "running":
                 missing = 0
+            item["stateText"] = str(item.get("stateText") or "")
+            item["currentTask"] = str(item.get("currentTask") or "")
+            item["error"] = str(item.get("error") or "")
             item.update({"expectedCount": expected, "completed": completed, "failed": failed, "missingCount": missing})
             records.append(item)
         self.project_download_statuses = sorted(
@@ -1466,6 +1533,55 @@ def project_gaps(date: str = ""):
     if date:
         items = [item for item in items if str(item.get("date") or "") == date]
     return {"items": items, "updatedAt": COLLECTOR.last_scan_at}
+
+
+@app.get("/api/controls/tasks")
+def control_tasks(request: Request):
+    """Expose the receiver queue to every trusted Dashboard device."""
+    require_control_permission(request)
+    return receiver_json("/api/tasks")
+
+
+@app.get("/api/controls/templates")
+def control_templates(request: Request):
+    require_control_permission(request)
+    return receiver_json("/api/templates")
+
+
+@app.post("/api/controls/tasks/create")
+async def control_create_task(request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="任务不是有效 JSON") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="任务不是有效 JSON")
+    return receiver_json("/api/tasks/create", method="POST", payload=payload)
+
+
+@app.post("/api/controls/tasks/{task_id}/replenish")
+async def control_replenish_task(task_id: str, request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="补链不是有效 JSON") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="补链不是有效 JSON")
+    return receiver_json(f"/api/tasks/replenish/{task_id}", method="POST", payload=payload)
+
+
+@app.post("/api/controls/tasks/{task_id}/start")
+def control_start_task(task_id: str, request: Request):
+    require_control_permission(request)
+    return receiver_json(f"/api/tasks/{task_id}/start", method="POST")
+
+
+@app.post("/api/controls/tasks/{task_id}/cancel")
+def control_cancel_task(task_id: str, request: Request):
+    require_control_permission(request)
+    return receiver_json(f"/api/tasks/{task_id}/cancel", method="POST")
 
 
 @app.get("/api/pipeline")

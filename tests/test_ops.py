@@ -100,6 +100,8 @@ class OpsTests(unittest.TestCase):
             store = app.Store(root / "ops.db")
             config = dict(app.CONFIG)
             config["download_project_status_file"] = str(status)
+            # This fixture verifies file fallback, not the live home receiver.
+            config["receiver_status_url"] = ""
             collector = app.Collector(config, store)
 
             collector.scan_project_download_statuses()
