@@ -338,6 +338,11 @@ tr:hover td { background: #fafcff; }
 .taskbox-item p { margin: 8px 0 5px; color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
 .taskbox-item small { color: var(--muted); font-size: 9px; }
 .taskbox-sequence { width: 22px; height: 22px; flex: 0 0 22px; display: grid; place-items: center; border-radius: 7px; background: var(--blue-soft); color: var(--blue); font-size: 10px; font-weight: 800; }
+.taskbox-history { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.taskbox-history summary { cursor: pointer; color: var(--muted); font-size: 11px; font-weight: 800; }
+.taskbox-history-items { display: grid; gap: 7px; margin-top: 9px; }
+.taskbox-history-item { padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; background: #f7f9fc; font-size: 10px; color: var(--muted); }
+.taskbox-history-item strong { color: var(--text); margin-right: 8px; }
 
 .service-health-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
 .service-health { display: grid; grid-template-columns: 8px minmax(0, 1fr); column-gap: 7px; row-gap: 2px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fafbfd; }

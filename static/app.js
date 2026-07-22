@@ -417,6 +417,14 @@ function renderReceiverQueue(items) {
 
 function renderTaskBoxes(payload = {}) {
   const boxes = Array.isArray(payload.items) ? payload.items : [];
+  const history = Array.isArray(payload.history) ? payload.history : [];
+  const historyPanel = $("taskBoxHistory");
+  historyPanel.classList.toggle("hidden", !history.length);
+  $("taskBoxHistoryCount").textContent = String(history.length);
+  $("taskBoxHistoryItems").innerHTML = history.map(item => `<article class="taskbox-history-item">
+    <strong>${escapeHtml(item.project || "未分类")} / ${escapeHtml(item.material || "--")}</strong>
+    <span>${escapeHtml(item.productionDate || "--")} · ${escapeHtml(item.status || "cancelled")} · ${escapeHtml(item.reason || "已撤回")}</span>
+  </article>`).join("");
   const selected = payload.selected || boxes.find(item => item.batchId === state.batchId) || boxes[0];
   const select = $("taskBoxSelect");
   const signature = boxes.map(item => `${item.batchId}:${item.updatedAt}`).join("|");
@@ -492,6 +500,11 @@ function renderContinueResult(result = {}) {
   node.innerHTML = `<div class="reconcile-head"><strong>${escapeHtml(stateLabel)}${result.stale ? " · 结果已过期" : ""}</strong><span>${escapeHtml(formatDateTime(result.finishedAt || result.requestedAt))}</span></div>
     <p>${escapeHtml(result.message || "尚未执行安全继续对账")}</p>
     ${rows.length ? `<div class="reconcile-steps">${rows.map(item => `<div><span>${item.step}. ${escapeHtml(item.name)}</span><b>${Number(item.actual || 0)} / ${Number(item.expected || 0)}</b></div>`).join("")}</div>` : ""}`;
+  const button = $("continueCurrentButton");
+  const allowed = result.allowed !== false;
+  button.dataset.allowed = allowed ? "true" : "false";
+  button.disabled = !allowed;
+  button.title = allowed ? "" : (result.message || "接收器状态未对账");
 }
 
 function renderActionResult(id, result = {}) {
@@ -583,6 +596,7 @@ $("taskBoxSelect")?.addEventListener("change", event => {
 });
 $("continueCurrentButton")?.addEventListener("click", async (event) => {
   const button = event.currentTarget;
+  if (button.dataset.allowed === "false") return;
   if (!window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")) return;
   button.disabled = true;
   button.textContent = "正在发送继续指令…";
@@ -598,7 +612,7 @@ $("continueCurrentButton")?.addEventListener("click", async (event) => {
   } catch (error) {
     renderContinueResult({ state: "failed", message: error.message || "发送继续指令失败" });
   } finally {
-    button.disabled = false;
+    button.disabled = button.dataset.allowed === "false";
     button.textContent = "安全继续当前项目";
   }
 });

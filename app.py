@@ -148,7 +148,7 @@ def receiver_base_url() -> str:
     return f"{parts.scheme}://{parts.netloc}"
 
 
-def request_workbench_continue() -> dict[str, Any]:
+def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
     """Queue one safe-resume request for the local workbench."""
     workbench_dir = resolve_path(str(CONFIG.get("workbench_dir") or ""))
     # The deployed Dashboard config points at the suite root while the desktop
@@ -164,6 +164,18 @@ def request_workbench_continue() -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         existing = {}
     if isinstance(existing, dict) and existing.get("state") in {"requested", "running"}:
+        existing_target = (
+            str(existing.get("batchId") or ""),
+            str(existing.get("taskId") or ""),
+            str(existing.get("productionDate") or ""),
+        )
+        requested_target = (
+            str(target.get("batchId") or ""),
+            str(target.get("taskId") or ""),
+            str(target.get("productionDate") or ""),
+        )
+        if existing_target != requested_target:
+            raise HTTPException(status_code=409, detail="已有另一项目的安全继续命令正在处理")
         return {
             "accepted": True,
             "commandId": str(existing.get("commandId") or ""),
@@ -176,6 +188,10 @@ def request_workbench_continue() -> dict[str, Any]:
         "state": "requested",
         "requestedAt": now_iso(),
         "requestedBy": "dashboard",
+        "batchId": str(target.get("batchId") or ""),
+        "taskId": str(target.get("taskId") or ""),
+        "productionDate": str(target.get("productionDate") or ""),
+        "snapshotUpdatedAt": str(target.get("snapshotUpdatedAt") or ""),
     }
     temp = command_file.with_suffix(".tmp")
     temp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -214,7 +230,11 @@ def continue_command_status() -> dict[str, Any]:
         "startedAt": str(payload.get("startedAt") or ""),
         "finishedAt": str(payload.get("finishedAt") or ""),
         "requestedBy": str(payload.get("requestedBy") or ""),
-        "stale": False,
+        "batchId": str(payload.get("batchId") or ""),
+        "taskId": str(payload.get("taskId") or ""),
+        "productionDate": str(payload.get("productionDate") or ""),
+        "snapshotUpdatedAt": str(payload.get("snapshotUpdatedAt") or ""),
+        "stale": bool(payload.get("stale", False)),
     }
     latest_project_update = max(
         (parse_time(item.get("updatedAt")) for item in COLLECTOR.project_download_statuses),
@@ -677,10 +697,16 @@ class Collector:
         self.last_generation_scan_epoch = 0.0
         self.last_download_scan_epoch = 0.0
         self.project_download_statuses: list[dict[str, Any]] = []
+        self.archived_project_statuses: list[dict[str, Any]] = []
         self.receiver_snapshot: dict[str, Any] = {}
         self.receiver_snapshot_at = ""
         self.receiver_data_updated_at = ""
         self.receiver_error = ""
+        self.receiver_schema_version = 0
+        self.receiver_reconciled_at = ""
+        self.receiver_reconciliation_state = "unknown"
+        self.receiver_reconciliation_message = "等待接收器对账"
+        self.receiver_control_ready = False
 
     @staticmethod
     def empty_stage(state_text: str = "等待任务") -> dict[str, Any]:
@@ -1002,8 +1028,10 @@ class Collector:
     def scan_project_download_statuses(self) -> None:
         """Expose one durable status card per submitted project to remote clients."""
         payload = None
+        receiver_attempted = False
         receiver_url = str(self.config.get("receiver_status_url") or "").strip()
         if receiver_url:
+            receiver_attempted = True
             try:
                 with urllib.request.urlopen(receiver_url, timeout=1.5) as response:
                     candidate = json.loads(response.read().decode("utf-8"))
@@ -1011,11 +1039,33 @@ class Collector:
                         self.receiver_snapshot = candidate
                         self.receiver_snapshot_at = now_iso()
                         self.receiver_data_updated_at = str(candidate.get("updatedAt") or "")
-                        self.receiver_error = ""
-                        payload = {"items": candidate.get("projects") or {}}
+                        self.receiver_schema_version = safe_int(candidate.get("schemaVersion"))
+                        self.receiver_reconciled_at = str(candidate.get("reconciledAt") or "")
+                        self.receiver_reconciliation_state = str(candidate.get("reconciliationState") or "unknown")
+                        self.receiver_reconciliation_message = str(candidate.get("reconciliationMessage") or "")
+                        self.receiver_control_ready = bool(
+                            self.receiver_schema_version >= 2
+                            and self.receiver_reconciliation_state == "healthy"
+                        )
+                        archived = candidate.get("archivedProjects")
+                        self.archived_project_statuses = [
+                            dict(item, taskId=str(item.get("taskId") or task_id))
+                            for task_id, item in (archived.items() if isinstance(archived, dict) else [])
+                            if isinstance(item, dict)
+                        ]
+                        if self.receiver_control_ready:
+                            self.receiver_error = ""
+                            payload = {"items": candidate.get("projects") or {}}
+                        else:
+                            self.receiver_error = "接收器状态未对账"
             except (OSError, ValueError, urllib.error.URLError) as exc:
                 self.receiver_error = str(exc)
+                self.receiver_control_ready = False
                 payload = None
+        if receiver_attempted and payload is None and self.project_download_statuses:
+            # Keep the last trusted active view when only the receiver source
+            # is unavailable/unreconciled; never replace it with a ghost v1 snapshot.
+            return
         if payload is None:
             path = self.project_download_status_file()
             if not path.exists():
@@ -1955,6 +2005,25 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
     return sorted(boxes, key=lambda item: parse_time(item.get("updatedAt")), reverse=True)
 
 
+def archived_task_payloads() -> list[dict[str, Any]]:
+    """Return cancelled/merged audit rows without production totals."""
+    items = []
+    for raw in COLLECTOR.archived_project_statuses:
+        if not isinstance(raw, dict):
+            continue
+        items.append({
+            "taskId": str(raw.get("taskId") or ""),
+            "batchId": str(raw.get("batchId") or ""),
+            "productionDate": str(raw.get("productionDate") or raw.get("date") or ""),
+            "project": str(raw.get("project") or "未分类"),
+            "material": str(raw.get("material") or ""),
+            "status": str(raw.get("status") or "cancelled"),
+            "reason": str(raw.get("archiveReason") or raw.get("cancelReason") or "已撤回"),
+            "archivedAt": str(raw.get("archivedAt") or raw.get("cancelledAt") or raw.get("updatedAt") or ""),
+        })
+    return sorted(items, key=lambda item: parse_time(item.get("archivedAt")), reverse=True)
+
+
 def pipeline_for_date(date_label: str) -> dict[str, dict[str, Any]]:
     selected = date_label or current_date_label()
     stages: dict[str, dict[str, Any]] = {}
@@ -2189,6 +2258,11 @@ def source_status_payload() -> dict[str, Any]:
         "receiverError": COLLECTOR.receiver_error,
         "receiverReachedAt": COLLECTOR.receiver_snapshot_at,
         "receiverUpdatedAt": COLLECTOR.receiver_data_updated_at,
+        "receiverSchemaVersion": COLLECTOR.receiver_schema_version,
+        "receiverReconciledAt": COLLECTOR.receiver_reconciled_at,
+        "receiverReconciliationState": COLLECTOR.receiver_reconciliation_state,
+        "receiverReconciliationMessage": COLLECTOR.receiver_reconciliation_message,
+        "receiverControlReady": COLLECTOR.receiver_control_ready,
         "dashboardUpdatedAt": COLLECTOR.last_scan_at,
         "watchdog": {
             "state": str(watchdog.get("state") or "unknown"),
@@ -2228,6 +2302,12 @@ def reconciliation_payload(boxes: list[dict[str, Any]]) -> dict[str, Any]:
     command["batchId"] = str((selected_box or {}).get("batchId") or "")
     command["taskId"] = remote_id
     command["productionDate"] = date_label
+    command["allowed"] = bool(COLLECTOR.receiver_control_ready and current and remote_id)
+    command["receiverReconciliationState"] = COLLECTOR.receiver_reconciliation_state
+    if not COLLECTOR.receiver_control_ready:
+        command["message"] = "接收器状态未对账，安全继续已禁用"
+    elif not current or not remote_id:
+        command["message"] = "暂无活动项目，无需安全继续"
     command["steps"] = [
         {"step": 1, "name": "下载 / 去字幕", "expected": expected, "actual": int((current or {}).get("downloadCompleted") or 0), "state": str((current or {}).get("status") or "idle")},
         {"step": 2, "name": "批量语音", "expected": int(stages["voice"].get("total") or 0), "actual": int(stages["voice"].get("completed") or 0), "state": str(stages["voice"].get("state") or "idle")},
@@ -2274,7 +2354,7 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
         "projectGaps": {"items": gaps},
         "receiverQueue": queue_payload,
         "templates": template_payload,
-        "taskBoxes": {"items": boxes, "selected": selected_box},
+        "taskBoxes": {"items": boxes, "selected": selected_box, "history": archived_task_payloads()},
         "controls": {
             "continue": reconciliation_payload(boxes),
             "uploadRescan": load_control_actions().get("uploadRescan") or {"state": "idle", "message": "尚未手动检查上传缺口"},
@@ -2400,7 +2480,22 @@ def control_cancel_task(task_id: str, request: Request):
 @app.post("/api/controls/continue-current")
 def control_continue_current(request: Request):
     require_control_permission(request)
-    return request_workbench_continue()
+    if not COLLECTOR.receiver_control_ready:
+        raise HTTPException(status_code=409, detail="接收器状态未对账，禁止安全继续")
+    boxes = task_box_payloads()
+    selected_box = next(
+        (box for box in boxes if box.get("state") in {"running", "blocked"}),
+        boxes[0] if boxes else None,
+    )
+    current = selected_box.get("current") if isinstance(selected_box, dict) else None
+    if not isinstance(current, dict) or not str(current.get("taskId") or ""):
+        raise HTTPException(status_code=409, detail="暂无活动项目，无需安全继续")
+    return request_workbench_continue({
+        "batchId": str(selected_box.get("batchId") or ""),
+        "taskId": str(current.get("taskId") or ""),
+        "productionDate": str(selected_box.get("productionDate") or current.get("productionDate") or ""),
+        "snapshotUpdatedAt": str(COLLECTOR.receiver_data_updated_at or ""),
+    })
 
 
 @app.get("/api/controls/continue-current/status")

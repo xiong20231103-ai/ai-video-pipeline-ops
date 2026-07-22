@@ -8,6 +8,87 @@ import app
 
 
 class OpsTests(unittest.TestCase):
+    def test_receiver_v2_reconciliation_clears_ghost_and_archives_history(self):
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self):
+                return json.dumps({
+                    "schemaVersion": 2,
+                    "updatedAt": "2026-07-22T10:00:00+08:00",
+                    "reconciledAt": "2026-07-22T10:00:00+08:00",
+                    "reconciliationState": "healthy",
+                    "projects": {},
+                    "archivedProjects": {
+                        "ghost": {
+                            "taskId": "ghost", "batchId": "box-1", "date": "7.21",
+                            "project": "实体机", "material": "净白板",
+                            "status": "cancelled", "archiveReason": "operator_cancelled",
+                        }
+                    },
+                }, ensure_ascii=False).encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as folder:
+            collector = app.Collector(dict(app.CONFIG, receiver_status_url="http://receiver/snapshot"), app.Store(Path(folder) / "ops.db"))
+            collector.project_download_statuses = [{"taskId": "ghost", "batchId": "box-1"}]
+            with patch("app.urllib.request.urlopen", return_value=Response()):
+                collector.scan_project_download_statuses()
+            self.assertTrue(collector.receiver_control_ready)
+            self.assertEqual([], collector.project_download_statuses)
+            self.assertEqual("ghost", collector.archived_project_statuses[0]["taskId"])
+
+    def test_receiver_v1_snapshot_is_not_trusted_for_controls(self):
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self):
+                return json.dumps({
+                    "schemaVersion": 1,
+                    "projects": {"ghost": {"taskId": "ghost", "batchId": "box-1"}},
+                }).encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            fallback = root / "project_status.json"
+            fallback.write_text(json.dumps({"items": {}}), encoding="utf-8")
+            collector = app.Collector(
+                dict(app.CONFIG, receiver_status_url="http://receiver/snapshot", download_project_status_file=str(fallback)),
+                app.Store(root / "ops.db"),
+            )
+            with patch("app.urllib.request.urlopen", return_value=Response()):
+                collector.scan_project_download_statuses()
+            self.assertFalse(collector.receiver_control_ready)
+            self.assertEqual([], collector.project_download_statuses)
+            self.assertEqual("接收器状态未对账", collector.receiver_error)
+
+    def test_continue_command_persists_exact_target_and_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "workbench").mkdir()
+            previous = app.CONFIG.get("workbench_dir")
+            app.CONFIG["workbench_dir"] = str(root)
+            target = {
+                "batchId": "box-1", "taskId": "task-1", "productionDate": "7.21",
+                "snapshotUpdatedAt": "2026-07-22T10:00:00+08:00",
+            }
+            try:
+                first = app.request_workbench_continue(target)
+                second = app.request_workbench_continue(target)
+                saved = json.loads((root / "workbench" / "handoff" / "control" / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8"))
+                self.assertEqual(first["commandId"], second["commandId"])
+                for key, value in target.items():
+                    self.assertEqual(value, saved[key])
+            finally:
+                app.CONFIG["workbench_dir"] = previous
+
     def test_upload_backlog_finds_completed_local_outputs_only(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
