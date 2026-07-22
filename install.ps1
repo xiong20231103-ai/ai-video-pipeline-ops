@@ -2,11 +2,12 @@ $ErrorActionPreference = "Stop"
 $project = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -LiteralPath $project
 $runtimeRoot = Join-Path $env:LOCALAPPDATA "TikHubOPS"
-$venvDir = Join-Path $runtimeRoot "venv"
+$venvDir = Join-Path $runtimeRoot "venv_cuda"
 
 Write-Host "Preparing AI Video Pipeline OPS Dashboard..." -ForegroundColor Cyan
 
 $pythonCandidates = @(
+    $env:TIKHUB_OPS_PYTHON,
     (Join-Path $env:LOCALAPPDATA "Programs\Python\Python313\python.exe"),
     (Join-Path $env:LOCALAPPDATA "Programs\Python\Python312\python.exe"),
     (Join-Path $env:LOCALAPPDATA "hermes\hermes-agent\venv\Scripts\python.exe")
@@ -31,5 +32,4 @@ $venvPython = Join-Path $venvDir "Scripts\python.exe"
 
 Write-Host ""
 Write-Host "Installation complete. Double-click Start Dashboard.cmd next time." -ForegroundColor Green
-Read-Host "Press Enter to close"
 

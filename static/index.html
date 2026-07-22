@@ -11,7 +11,7 @@
   <header class="topbar">
     <div class="brand">
       <div class="brand-mark">OP</div>
-      <div><h1>家庭 AI 视频生产线</h1><p>只读运行监控中心</p></div>
+      <div><h1>家庭 AI 视频生产线</h1><p>监控与安全控制中心</p></div>
     </div>
     <div class="header-status">
       <div id="machineBadge" class="status-badge neutral"><span></span>正在连接</div>
@@ -27,6 +27,21 @@
         <p id="heroSubtitle">请稍候，Dashboard 正在汇总全部环节状态。</p>
       </div>
       <div class="hero-side"><div class="readonly-pill">远程总控</div><p>可确认队列启动或撤回未开始任务</p></div>
+    </section>
+
+    <section class="panel taskbox-panel" aria-label="任务箱总览">
+      <div class="section-heading taskbox-heading">
+        <div><p class="eyebrow">TASK BOX</p><h2 id="taskBoxTitle">正在读取任务箱</h2></div>
+        <label class="taskbox-filter">任务箱<select id="taskBoxSelect" aria-label="选择任务箱"></select></label>
+      </div>
+      <div class="taskbox-summary">
+        <div><small>项目进度</small><strong id="taskBoxProjectProgress">0 / 0</strong></div>
+        <div><small>成片进度</small><strong id="taskBoxVideoProgress">0 / 0</strong></div>
+        <div><small>当前项目</small><strong id="taskBoxCurrent">--</strong></div>
+        <div><small>下一项目</small><strong id="taskBoxNext">--</strong></div>
+      </div>
+      <div class="bar taskbox-bar"><i id="taskBoxBar"></i></div>
+      <div id="taskBoxItems" class="taskbox-items"><p class="empty">正在读取任务箱项目…</p></div>
     </section>
 
     <section class="metrics-grid" aria-label="系统资源">
@@ -51,6 +66,8 @@
           </div>
         </div>
       </div>
+      <div id="serviceHealthGrid" class="service-health-grid" aria-label="服务运行状态"></div>
+      <div id="sourceWarningPanel" class="source-warning-panel hidden" aria-live="polite"></div>
       <div class="pipeline">
         <div id="pipeDownload" class="pipe-step"><span>1</span><div><strong>TikHub</strong><small id="pipeDownloadText">等待状态</small></div></div><i>→</i>
         <div id="pipeVoice" class="pipe-step"><span>2</span><div><strong>AI 配音</strong><small id="pipeVoiceText">等待状态</small></div></div><i>→</i>
@@ -82,7 +99,7 @@
       <div class="panel tasks-panel">
         <div class="section-heading table-heading">
           <div><p class="eyebrow">STEP 5 TASKS</p><h2>第五步任务与进度</h2></div>
-          <label class="date-filter">第五步日期 <select id="dateSelect" aria-label="第五步日期"><option value="">全部日期</option></select></label>
+          <span id="taskDateLabel" class="date-follow">跟随生产日期</span>
         </div>
         <div class="summary-grid">
           <div><small>总任务</small><strong id="countTotal">0</strong></div><div><small>等待</small><strong id="countWaiting">0</strong></div>
@@ -93,6 +110,7 @@
           <table><thead><tr><th>项目</th><th>材料 / 语言</th><th>编号</th><th>当前阶段</th><th>成片文件</th><th>状态</th></tr></thead>
           <tbody id="taskRows"><tr><td colspan="6" class="empty">正在加载任务…</td></tr></tbody></table>
         </div>
+        <div id="taskCards" class="task-cards"></div>
       </div>
       <aside class="side-column">
         <section class="panel current-card">
@@ -104,12 +122,17 @@
           <div class="upload-icon">↥</div><div><p class="eyebrow">UPLOAD SERVICE</p><h2 id="uploadCardTitle">正在读取百度网盘状态</h2></div>
           <p id="uploadCardMessage">等待工作台上传服务写入状态。</p><span id="uploadCardBadge">检查中</span>
           <button id="uploadRescanButton" class="primary wide" type="button">检查并补传未上传成片</button>
+          <div id="uploadActionResult" class="action-result neutral">尚未手动检查上传缺口</div>
         </section>
         <section class="panel queue-control-card">
           <div class="section-heading compact"><div><p class="eyebrow">QUEUE CONTROL</p><h2>任务确认与撤回</h2></div></div>
           <p class="queue-control-note">只影响尚未开始的队列记录；不会删除视频、音频或素材。</p>
+          <div id="queueActionResult" class="action-result neutral">尚无队列操作</div>
           <button id="continueCurrentButton" class="primary wide" type="button">安全继续当前项目</button>
           <p class="queue-control-note">由家里工作台先核对正式清单；已有有效产物会跳过，数量不一致时会安全暂停。</p>
+          <section id="continueResult" class="reconcile-result neutral">
+            <strong>尚未执行安全继续对账</strong>
+          </section>
           <details class="web-task-form"><summary>新建项目任务</summary>
             <form id="createTaskForm">
               <label>日期<input id="createDate" name="date" placeholder="例如 7.21" required></label>
@@ -126,12 +149,12 @@
           <div id="replenishPanel" class="replenish-panel hidden"></div>
           <div id="receiverQueue" class="receiver-queue"><p class="empty">正在读取接收器队列…</p></div>
         </section>
-        <section class="panel project-gaps-card"><div class="section-heading compact"><div><p class="eyebrow">BATCH STATUS</p><h2>9 个批次实时状态</h2></div></div><div id="projectGapList" class="project-gap-list"><p class="empty">正在读取项目状态…</p></div></section>
+        <section class="panel project-gaps-card"><div class="section-heading compact"><div><p class="eyebrow">PROJECT STATUS</p><h2 id="batchStatusTitle">项目状态</h2></div></div><div id="projectGapList" class="project-gap-list"><p class="empty">正在读取项目状态…</p></div></section>
         <section class="panel events-card"><div class="section-heading compact"><div><p class="eyebrow">RECENT EVENTS</p><h2>最近事件</h2></div></div><div id="eventList" class="event-list"><p class="empty">正在读取事件…</p></div></section>
       </aside>
     </section>
   </main>
-  <footer><span>AI视频生产线 OPS · 本地只读服务</span><span id="footerMachine">--</span></footer>
+  <footer><span>AI视频生产线 OPS · Tailscale安全控制</span><span id="footerMachine">--</span></footer>
   <script src="/static/app.js"></script>
 </body>
 </html>

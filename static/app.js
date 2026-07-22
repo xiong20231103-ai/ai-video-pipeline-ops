@@ -3,7 +3,10 @@ function currentLocalDateLabel() {
   return `${value.getMonth() + 1}.${value.getDate()}`;
 }
 
-const state = { date: "", pipelineDate: currentLocalDateLabel(), overview: null, templates: [], templateSignature: "", gaps: {} };
+const state = {
+  date: "", batchId: "", overview: null, templates: [], templateSignature: "",
+  gaps: {}, lastGoodDashboard: null, refreshBusy: false
+};
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? "")
   .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
@@ -34,6 +37,13 @@ function formatAge(seconds) {
   return `${Math.floor(seconds / 86400)}天前`;
 }
 
+function ageFromTime(value) {
+  if (!value) return "无成功更新时间";
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return "时间未知";
+  return formatAge(Math.max(0, Math.floor((Date.now() - timestamp) / 1000)));
+}
+
 function setBar(id, value) {
   const safe = Number.isFinite(Number(value)) ? Math.min(100, Math.max(0, Number(value))) : 0;
   $(id).style.width = `${safe}%`;
@@ -59,7 +69,7 @@ function renderMetrics(metrics = {}) {
   setBar("gpuBar", gpu.usage);
   const disk = metrics.disk || {};
   $("diskValue").textContent = disk.percent == null ? "--" : `${disk.percent}%`;
-  $("diskNote").textContent = disk.free_gb == null ? "目录暂不可用" : `${disk.path} 剩余 ${disk.free_gb} GB`;
+  $("diskNote").textContent = disk.free_gb == null ? "目录暂不可用" : `${disk.label || "成片磁盘"} 剩余 ${disk.free_gb} GB`;
   setBar("diskBar", disk.percent);
   const network = metrics.network || {};
   $("networkValue").textContent = network.online ? "在线" : "离线";
@@ -128,17 +138,17 @@ function renderPipelinePayload(payload = {}) {
 
 function renderPipelineDateOptions(dates, selected) {
   const select = $("pipelineDateSelect");
-  const today = currentLocalDateLabel();
-  const values = dates.includes(today) ? dates : [today, ...dates];
+  const values = Array.from(new Set([selected, ...dates].filter(Boolean)));
   const signature = values.join("|");
   if (select.dataset.signature !== signature) {
     select.innerHTML = values.map(value =>
-      `<option value="${escapeHtml(value)}">${value === today ? `今天（${escapeHtml(value)}）` : escapeHtml(value)}</option>`
+      `<option value="${escapeHtml(value)}">生产日期 ${escapeHtml(value)}</option>`
     ).join("");
     select.dataset.signature = signature;
   }
-  select.value = values.includes(selected) ? selected : today;
-  state.pipelineDate = select.value;
+  select.value = values.includes(selected) ? selected : (values[0] || "");
+  state.date = select.value;
+  $("taskDateLabel").textContent = state.date ? `生产日期 ${state.date}` : "跟随任务箱生产日期";
 }
 
 function renderPipelineRows(pipeline = {}) {
@@ -195,7 +205,7 @@ function renderOverview(data) {
     ? (upload.state === "running" ? "百度网盘上传中" : upload.message || "百度网盘上传服务")
     : "百度网盘未配置";
   $("uploadCardMessage").textContent = upload.configured
-    ? `完成 ${upload.completed || 0} / ${upload.total || 0}，失败 ${upload.failed || 0}。云端存在且大小一致后清理本地：已清理 ${upload.localCleaned || 0}，待核验 ${upload.cleanupPending || 0}，保留/阻止 ${upload.cleanupBlocked || 0}。`
+    ? `等待 ${upload.waiting || 0}，上传中 ${upload.uploading || 0}，云端已核验 ${upload.cloudVerified || upload.completed || 0}，失败 ${upload.failed || 0}。核验后已清理 ${upload.localCleaned || 0}，待清理 ${upload.cleanupPending || 0}，阻止 ${upload.cleanupBlocked || 0}。`
     : "请先在TikHub工作台配置并授权百度网盘。";
   $("uploadCardBadge").textContent = upload.configured
     ? (upload.state === "failed" ? "上传失败" : upload.state === "completed" ? "上传完成" : upload.state === "running" ? "上传中" : "等待成片")
@@ -224,27 +234,25 @@ function renderOverview(data) {
     $("currentError").classList.toggle("hidden", !current.error);
   }
   renderMetrics(data.metrics);
-  renderDateOptions(data.dates || []);
-}
-
-function renderDateOptions(dates) {
-  const select = $("dateSelect");
-  const current = select.value;
-  const values = ["", ...dates];
-  const signature = values.join("|");
-  if (select.dataset.signature === signature) return;
-  select.innerHTML = values.map(value => `<option value="${escapeHtml(value)}">${value ? escapeHtml(value) : "全部日期"}</option>`).join("");
-  select.value = values.includes(current) ? current : "";
-  select.dataset.signature = signature;
 }
 
 function renderTasks(items) {
   const rows = $("taskRows");
+  const cards = $("taskCards");
   if (!items.length) {
-    rows.innerHTML = `<tr><td colspan="6" class="empty">这个日期暂时没有任务</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="6" class="empty">这个生产日期暂时没有第五步任务</td></tr>`;
+    cards.innerHTML = `<p class="empty">这个生产日期暂时没有第五步任务</p>`;
     return;
   }
-  rows.innerHTML = items.map(item => `
+  const groups = new Map();
+  items.forEach(item => {
+    const key = `${item.project || "未分类"} / ${item.material || "--"}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  });
+  rows.innerHTML = Array.from(groups.entries()).map(([label, group]) => {
+    const done = group.filter(item => item.category === "completed").length;
+    return `<tr class="task-group-row"><td colspan="6"><strong>${escapeHtml(label)}</strong><span>${done} / ${group.length} 完成</span></td></tr>${group.map(item => `
     <tr>
       <td><strong>${escapeHtml(item.project || "未分类")}</strong><span class="subtext">${escapeHtml(item.date_label || "")}</span></td>
       <td>${escapeHtml(item.material || "--")}<span class="subtext">${escapeHtml(item.language || "--")}</span></td>
@@ -252,7 +260,18 @@ function renderTasks(items) {
       <td>${escapeHtml(item.state_text || item.state)}</td>
       <td>${escapeHtml(item.output_name || "尚未生成")}<span class="subtext">${escapeHtml(item.video_name || "")}</span></td>
       <td><span class="task-state ${escapeHtml(item.category)}">${escapeHtml(item.category === "running" ? "处理中" : item.state_text)}</span></td>
-    </tr>`).join("");
+    </tr>`).join("")}`;
+  }).join("");
+  cards.innerHTML = Array.from(groups.entries()).map(([label, group]) => {
+    const done = group.filter(item => item.category === "completed").length;
+    return `<details class="task-card-group" ${done < group.length ? "open" : ""}>
+      <summary><strong>${escapeHtml(label)}</strong><span>${done} / ${group.length}</span></summary>
+      ${group.map(item => `<article class="task-card-item">
+        <div><b>${escapeHtml(item.language || "--")} · ${escapeHtml(item.number || "--")}${item.sequence ? `-${escapeHtml(item.sequence)}` : ""}</b><span class="task-state ${escapeHtml(item.category)}">${escapeHtml(item.category === "running" ? "处理中" : item.state_text)}</span></div>
+        <p>${escapeHtml(item.state_text || item.state)}</p><small>${escapeHtml(item.output_name || "尚未生成")}</small>
+      </article>`).join("")}
+    </details>`;
+  }).join("");
 }
 
 function renderEvents(items) {
@@ -277,8 +296,8 @@ function renderProjectGaps(items) {
       ? storedMissing
       : Math.max(0, expected - completed));
     const notStarted = Boolean(item.notStarted);
-    const activelyRunning = String(item.status || "").toLowerCase() === "running";
-    const blocked = !notStarted && !activelyRunning && (missing > 0 || item.status === "blocked_missing_links" || Number(item.failed || 0) > 0);
+    const blocked = Boolean(item.gapActive);
+    const historicalFailed = Number(item.historicalFailed || 0);
     const current = item.currentTask ? ` · 当前 ${item.currentTask}` : "";
     const error = item.error ? ` · 错误 ${item.error}` : "";
     const videos = Object.values(item.videos || {});
@@ -289,8 +308,9 @@ function renderProjectGaps(items) {
     ).join("")}</ul></details>` : "";
     return `<div class="project-gap ${blocked ? "blocked" : "ok"}">
       <div><strong>${escapeHtml(item.project || "未分类")} / ${escapeHtml(item.material || "--")}</strong><span>${escapeHtml(item.date || "--")}</span></div>
-      <p>${notStarted ? `计划 ${expected} · 尚未开始` : `总数 ${expected} · 已完成 ${completed} · 剩余 ${missing} · 失败 ${Number(item.failed || 0)}`}</p>
+      <p>${notStarted ? `计划 ${expected} · 尚未开始` : `总数 ${expected} · 已完成 ${completed} · 剩余 ${missing} · 当前失败 ${Number(item.failed || 0)}`}</p>
       <small>${escapeHtml((item.stateText || item.status || "--") + current + error)}</small>
+      ${historicalFailed ? `<small class="history-note">历史失败 ${historicalFailed} 条，已被有效补链覆盖</small>` : ""}
       ${blocked && taskId ? `<div class="queue-actions"><button class="start" data-task-id="${escapeHtml(taskId)}" onclick="openReplenishment(this.dataset.taskId)">按此缺口补链</button></div>` : ""}
       ${taskRows}
     </div>`;
@@ -348,12 +368,24 @@ function openReplenishment(taskId) {
     const button = event.currentTarget.querySelector("button");
     button.disabled = true;
     try {
-      await postJson(`/api/controls/tasks/${encodeURIComponent(taskId)}/replenish`, {
+      const result = await postJson(`/api/controls/tasks/${encodeURIComponent(taskId)}/replenish`, {
         urls: $("replenishUrls").value,
         startNow: $("replenishStartNow").checked,
       });
+      renderActionResult("queueActionResult", {
+        state: "completed",
+        message: result.message || "补链任务已提交",
+        updatedAt: new Date().toISOString(),
+      });
       panel.classList.add("hidden"); panel.innerHTML = ""; await refresh();
-    } catch (error) { window.alert(error.message || "补链失败"); button.disabled = false; }
+    } catch (error) {
+      renderActionResult("queueActionResult", {
+        state: "failed",
+        message: error.message || "补链失败",
+        updatedAt: new Date().toISOString(),
+      });
+      button.disabled = false;
+    }
   });
   panel.scrollIntoView({ behavior: "smooth", block: "center" });
 }
@@ -383,6 +415,92 @@ function renderReceiverQueue(items) {
   }).join("");
 }
 
+function renderTaskBoxes(payload = {}) {
+  const boxes = Array.isArray(payload.items) ? payload.items : [];
+  const selected = payload.selected || boxes.find(item => item.batchId === state.batchId) || boxes[0];
+  const select = $("taskBoxSelect");
+  const signature = boxes.map(item => `${item.batchId}:${item.updatedAt}`).join("|");
+  if (select.dataset.signature !== signature) {
+    select.innerHTML = boxes.length ? boxes.map(item =>
+      `<option value="${escapeHtml(item.batchId)}">${escapeHtml(item.productionDate || "未定日期")} · ${item.completedProjects}/${item.projectCount} 项 · ${escapeHtml(item.batchId.slice(-8))}</option>`
+    ).join("") : `<option value="">暂无任务箱</option>`;
+    select.dataset.signature = signature;
+  }
+  if (!selected) {
+    state.batchId = "";
+    $("taskBoxTitle").textContent = "暂无任务箱";
+    $("taskBoxProjectProgress").textContent = "0 / 0";
+    $("taskBoxVideoProgress").textContent = "0 / 0";
+    $("taskBoxCurrent").textContent = "--";
+    $("taskBoxNext").textContent = "--";
+    $("taskBoxItems").innerHTML = `<p class="empty">等待公司投递器提交任务</p>`;
+    setBar("taskBoxBar", 0);
+    return;
+  }
+  state.batchId = selected.batchId;
+  select.value = selected.batchId;
+  const current = selected.current;
+  const next = selected.next;
+  const position = current ? `当前第 ${current.sequence} / ${selected.projectCount} 项` : "没有正在运行的项目";
+  $("taskBoxTitle").textContent = `${selected.productionDate || "未定日期"}任务箱 · 已完成 ${selected.completedProjects} / ${selected.projectCount}`;
+  $("taskBoxProjectProgress").textContent = `${selected.completedProjects} / ${selected.projectCount}`;
+  $("taskBoxVideoProgress").textContent = `${selected.completedVideos} / ${selected.totalVideos}`;
+  $("taskBoxCurrent").textContent = current ? `${current.sequence}/${selected.projectCount} ${current.project}/${current.material}` : position;
+  $("taskBoxNext").textContent = next ? `${next.sequence}/${selected.projectCount} ${next.project}/${next.material}` : "--";
+  setBar("taskBoxBar", selected.projectCount ? selected.completedProjects * 100 / selected.projectCount : 0);
+  $("batchStatusTitle").textContent = `${selected.projectCount}个项目实时状态`;
+  $("taskBoxItems").innerHTML = (selected.items || []).map(item => `
+    <article class="taskbox-item ${escapeHtml(item.status)} ${current && current.taskId === item.taskId ? "current" : ""}">
+      <div><span class="taskbox-sequence">${item.sequence}</span><strong>${escapeHtml(item.project)} / ${escapeHtml(item.material || "--")}</strong><span class="task-state ${item.status === "blocked" ? "failed" : item.status === "planned" ? "neutral" : escapeHtml(item.status)}">${escapeHtml(item.currentStep)}</span></div>
+      <p>${escapeHtml(item.stateText)}</p>
+      <small>成片 ${item.finalCompleted} / ${item.expected}${item.historicalFailed ? ` · 历史失败 ${item.historicalFailed}` : ""}</small>
+    </article>`).join("");
+}
+
+function renderServices(items = []) {
+  const node = $("serviceHealthGrid");
+  node.innerHTML = items.map(item => `<div class="service-health ${item.online ? "online" : "offline"}">
+    <i></i><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.stateText || (item.online ? "运行中" : "未运行"))} · ${escapeHtml(ageFromTime(item.updatedAt))}</span>
+  </div>`).join("");
+}
+
+function renderSources(source = {}) {
+  const panel = $("sourceWarningPanel");
+  const errors = Array.isArray(source.errors) ? source.errors : [];
+  const messages = [];
+  if (source.stale) messages.push("Dashboard采集状态已经过期");
+  if (source.receiverError) messages.push(`接收器状态读取失败：${source.receiverError}`);
+  if (source.watchdog && source.watchdog.state === "failed") {
+    messages.push(`Dashboard守护启动失败：${source.watchdog.message || "原因未知"}`);
+  }
+  errors.slice(0, 5).forEach(item => messages.push(`${item.name}：${item.error}`));
+  panel.classList.toggle("hidden", !messages.length);
+  panel.innerHTML = messages.length
+    ? `<strong>状态源提醒</strong><ul>${messages.map(message => `<li>${escapeHtml(message)}</li>`).join("")}</ul>`
+    : "";
+}
+
+function renderContinueResult(result = {}) {
+  const node = $("continueResult");
+  const stateName = String(result.state || "idle");
+  const stateLabel = {
+    idle: "尚未对账", requested: "已发送", running: "对账中",
+    completed: "可以继续", blocked: "已阻止", failed: "执行失败"
+  }[stateName] || stateName;
+  const rows = Array.isArray(result.steps) ? result.steps : [];
+  node.className = `reconcile-result ${stateName === "completed" ? "completed" : ["blocked", "failed"].includes(stateName) ? "failed" : "neutral"}`;
+  node.innerHTML = `<div class="reconcile-head"><strong>${escapeHtml(stateLabel)}${result.stale ? " · 结果已过期" : ""}</strong><span>${escapeHtml(formatDateTime(result.finishedAt || result.requestedAt))}</span></div>
+    <p>${escapeHtml(result.message || "尚未执行安全继续对账")}</p>
+    ${rows.length ? `<div class="reconcile-steps">${rows.map(item => `<div><span>${item.step}. ${escapeHtml(item.name)}</span><b>${Number(item.actual || 0)} / ${Number(item.expected || 0)}</b></div>`).join("")}</div>` : ""}`;
+}
+
+function renderActionResult(id, result = {}) {
+  const node = $(id);
+  const stateName = String(result.state || "idle");
+  node.className = `action-result ${stateName === "completed" ? "completed" : stateName === "failed" ? "failed" : "neutral"}`;
+  node.textContent = `${result.message || "尚无操作记录"}${result.updatedAt ? ` · ${formatDateTime(result.updatedAt)}` : ""}`;
+}
+
 async function controlTask(button, action) {
   const taskId = String(button.dataset.taskId || "");
   if (!taskId) return;
@@ -397,9 +515,18 @@ async function controlTask(button, action) {
     const response = await fetch(`/api/controls/tasks/${encodeURIComponent(taskId)}/${action}`, { method: "POST" });
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || "操作失败");
+    renderActionResult("queueActionResult", {
+      state: "completed",
+      message: result.message || (isStart ? "启动命令已发送" : "撤回命令已发送"),
+      updatedAt: new Date().toISOString(),
+    });
     await refresh();
   } catch (error) {
-    window.alert(error.message || "操作失败");
+    renderActionResult("queueActionResult", {
+      state: "failed",
+      message: error.message || "操作失败",
+      updatedAt: new Date().toISOString(),
+    });
     button.disabled = false;
     button.textContent = isStart ? "启动首项" : "撤回";
   }
@@ -412,35 +539,46 @@ async function getJson(url) {
 }
 
 async function refresh() {
+  if (state.refreshBusy) return;
+  state.refreshBusy = true;
   try {
-    const query = state.date ? `?date=${encodeURIComponent(state.date)}` : "";
-    const pipelineQuery = state.pipelineDate ? `?date=${encodeURIComponent(state.pipelineDate)}` : "";
-    const [overview, pipeline, tasks, events, projectGaps, receiverQueue, templates] = await Promise.all([
-      getJson("/api/overview"), getJson(`/api/pipeline${pipelineQuery}`),
-      getJson(`/api/tasks${query}`), getJson("/api/events?limit=30"), getJson("/api/project-gaps"),
-      getJson("/api/controls/tasks").catch(() => ({ items: [] })),
-      getJson("/api/controls/templates").catch(() => ({ items: [] }))
-    ]);
-    renderOverview(overview); renderPipelinePayload(pipeline);
-    renderTasks(tasks.items || []); renderEvents(events.items || []); renderProjectGaps(projectGaps.items || []);
-    renderReceiverQueue(receiverQueue.items || []);
-    renderTemplates(templates.items || []);
+    const params = new URLSearchParams();
+    if (state.date) params.set("date", state.date);
+    if (state.batchId) params.set("batchId", state.batchId);
+    const data = await getJson(`/api/dashboard${params.toString() ? `?${params}` : ""}`);
+    state.lastGoodDashboard = data;
+    state.date = data.selectedDate || state.date;
+    renderOverview(data.overview || {});
+    renderPipelinePayload(data.pipeline || {});
+    renderTasks(data.tasks?.items || []);
+    renderEvents(data.events?.items || []);
+    renderProjectGaps(data.projectGaps?.items || []);
+    renderReceiverQueue(data.receiverQueue?.items || []);
+    renderTemplates(data.templates?.items || []);
+    renderTaskBoxes(data.taskBoxes || {});
+    renderServices(data.services || []);
+    renderSources(data.sources || {});
+    renderContinueResult(data.controls?.continue || {});
+    renderActionResult("uploadActionResult", data.controls?.uploadRescan || {});
   } catch (error) {
-    // Do not leave an old "gap" card visible when another dashboard request
-    // momentarily fails. The card is operationally significant, so stale data
-    // is worse than showing the empty state until the next two-second refresh.
-    renderProjectGaps([]);
-    renderReceiverQueue([]);
     $("machineBadge").className = "status-badge offline";
     $("machineBadge").innerHTML = "<span></span>Dashboard 连接失败";
-    $("heroTitle").textContent = "暂时无法读取状态";
-    $("heroSubtitle").textContent = "页面会继续自动重试，不影响正在运行的生产任务。";
+    $("heroTitle").textContent = "暂时无法读取新状态";
+    $("heroSubtitle").textContent = state.lastGoodDashboard
+      ? "正在显示上一次成功状态；页面会自动重试，不会清空已有信息。"
+      : "页面会继续自动重试，不影响正在运行的生产任务。";
+  } finally {
+    state.refreshBusy = false;
   }
 }
 
-$("dateSelect").addEventListener("change", event => { state.date = event.target.value; refresh(); });
 $("pipelineDateSelect").addEventListener("change", event => {
-  state.pipelineDate = event.target.value;
+  state.date = event.target.value;
+  refresh();
+});
+$("taskBoxSelect")?.addEventListener("change", event => {
+  state.batchId = event.target.value;
+  state.date = "";
   refresh();
 });
 $("continueCurrentButton")?.addEventListener("click", async (event) => {
@@ -450,10 +588,15 @@ $("continueCurrentButton")?.addEventListener("click", async (event) => {
   button.textContent = "正在发送继续指令…";
   try {
     const result = await postJson("/api/controls/continue-current", {});
-    window.alert(result.message || "继续指令已发送");
+    renderContinueResult({
+      state: "requested",
+      commandId: result.commandId,
+      message: result.message || "继续指令已发送，正在对账",
+      requestedAt: new Date().toISOString(),
+    });
     await refresh();
   } catch (error) {
-    window.alert(error.message || "发送继续指令失败");
+    renderContinueResult({ state: "failed", message: error.message || "发送继续指令失败" });
   } finally {
     button.disabled = false;
     button.textContent = "安全继续当前项目";
@@ -466,10 +609,18 @@ $("uploadRescanButton")?.addEventListener("click", async (event) => {
   button.textContent = "正在检查上传缺口…";
   try {
     const result = await postJson("/api/controls/upload/rescan", {});
-    window.alert(result.message || "上传检查已完成");
+    renderActionResult("uploadActionResult", {
+      state: "completed",
+      message: result.message || "上传检查已完成",
+      updatedAt: new Date().toISOString(),
+    });
     await refresh();
   } catch (error) {
-    window.alert(error.message || "上传检查失败");
+    renderActionResult("uploadActionResult", {
+      state: "failed",
+      message: error.message || "上传检查失败",
+      updatedAt: new Date().toISOString(),
+    });
   } finally {
     button.disabled = false;
     button.textContent = "检查并补传未上传成片";
@@ -482,7 +633,7 @@ $("createTaskForm").addEventListener("submit", async (event) => {
   const button = event.currentTarget.querySelector("button[type='submit']");
   button.disabled = true;
   try {
-    await postJson("/api/controls/tasks/create", {
+    const result = await postJson("/api/controls/tasks/create", {
       date: $("createDate").value.trim(),
       templateId: $("createTemplate").value,
       material: $("createMaterial").value,
@@ -494,9 +645,25 @@ $("createTaskForm").addEventListener("submit", async (event) => {
     });
     event.currentTarget.reset();
     $("createDate").value = currentLocalDateLabel();
+    renderActionResult("queueActionResult", {
+      state: "completed",
+      message: result.message || "任务已提交",
+      updatedAt: new Date().toISOString(),
+    });
     await refresh();
-  } catch (error) { window.alert(error.message || "提交失败"); }
+  } catch (error) {
+    renderActionResult("queueActionResult", {
+      state: "failed",
+      message: error.message || "提交失败",
+      updatedAt: new Date().toISOString(),
+    });
+  }
   finally { button.disabled = false; }
 });
-refresh();
-setInterval(refresh, 2000);
+
+async function refreshLoop() {
+  await refresh();
+  window.setTimeout(refreshLoop, document.hidden ? 15000 : 3000);
+}
+
+refreshLoop();

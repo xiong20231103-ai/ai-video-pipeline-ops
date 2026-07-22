@@ -319,6 +319,58 @@ tr:hover td { background: #fafcff; }
 .event-item strong { display: block; font-size: 11px; line-height: 1.5; }
 .event-item small { color: var(--muted); font-size: 10px; }
 
+.taskbox-panel { padding: 20px 24px; margin: 16px 0; }
+.taskbox-heading { margin-bottom: 12px; }
+.taskbox-filter { display: flex; align-items: center; color: var(--muted); font-size: 11px; font-weight: 700; }
+.taskbox-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.taskbox-summary div { min-width: 0; padding: 12px 15px; border-right: 1px solid var(--line); }
+.taskbox-summary div:last-child { border-right: 0; }
+.taskbox-summary small { display: block; margin-bottom: 5px; color: var(--muted); font-size: 10px; }
+.taskbox-summary strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.taskbox-bar { margin: 12px 0; }
+.taskbox-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 9px; }
+.taskbox-item { min-width: 0; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: #fafbfd; }
+.taskbox-item.current { border-color: #9bbcff; box-shadow: inset 3px 0 0 var(--blue); }
+.taskbox-item.completed { background: var(--green-soft); border-color: #bfe9d8; }
+.taskbox-item.blocked { background: var(--red-soft); border-color: #f3c5cb; }
+.taskbox-item > div { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.taskbox-item strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.taskbox-item p { margin: 8px 0 5px; color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+.taskbox-item small { color: var(--muted); font-size: 9px; }
+.taskbox-sequence { width: 22px; height: 22px; flex: 0 0 22px; display: grid; place-items: center; border-radius: 7px; background: var(--blue-soft); color: var(--blue); font-size: 10px; font-weight: 800; }
+
+.service-health-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.service-health { display: grid; grid-template-columns: 8px minmax(0, 1fr); column-gap: 7px; row-gap: 2px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fafbfd; }
+.service-health i { width: 7px; height: 7px; margin-top: 4px; border-radius: 50%; background: var(--red); }
+.service-health.online i { background: var(--green); }
+.service-health strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.service-health span { grid-column: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 9px; }
+.source-warning-panel { margin-bottom: 14px; padding: 11px 13px; border: 1px solid #f5d08d; border-radius: 10px; background: var(--amber-soft); color: #7b4b08; font-size: 11px; }
+.source-warning-panel ul { margin: 6px 0 0; padding-left: 18px; }
+.source-warning-panel li { margin: 3px 0; overflow-wrap: anywhere; }
+
+.date-follow { color: var(--muted); font-size: 11px; font-weight: 700; }
+.task-cards { display: none; }
+.task-group-row td { padding: 8px 12px; background: #f1f5fb; color: #3f536d; font-weight: 800; }
+.task-card-group { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+.task-card-group summary { display: flex; justify-content: space-between; gap: 10px; padding: 12px; cursor: pointer; background: #f7f9fc; }
+.task-card-group summary span { color: var(--muted); font-size: 11px; }
+.task-card-item { padding: 11px 12px; border-top: 1px solid var(--line); }
+.task-card-item > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.task-card-item p { margin: 8px 0 4px; color: var(--muted); font-size: 11px; }
+.task-card-item small { display: block; color: var(--muted); overflow-wrap: anywhere; }
+
+.action-result, .reconcile-result { margin: 10px 0; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; background: #f7f9fc; color: var(--muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.action-result.completed, .reconcile-result.completed { border-color: #bfe9d8; background: var(--green-soft); color: #08794f; }
+.action-result.failed, .reconcile-result.failed { border-color: #f3c5cb; background: var(--red-soft); color: #a32635; }
+.reconcile-head { display: flex; justify-content: space-between; gap: 10px; }
+.reconcile-head span { color: var(--muted); font-size: 9px; }
+.reconcile-result p { margin: 6px 0; }
+.reconcile-steps { display: grid; gap: 4px; }
+.reconcile-steps div { display: flex; justify-content: space-between; gap: 8px; }
+.primary.wide { width: 100%; border: 0; border-radius: 8px; padding: 9px 11px; background: var(--blue); color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.primary.wide:disabled { opacity: .55; cursor: wait; }
+
 footer {
   padding: 18px clamp(20px, 4vw, 64px);
   display: flex; justify-content: space-between;
@@ -333,6 +385,7 @@ footer {
   .pipe-step { min-width: 170px; }
   .stage-monitor-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .queue-control-card { grid-column: span 1; }
+  .service-health-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 720px) {
@@ -348,8 +401,12 @@ footer {
   .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .metric-card { padding: 13px; }
   .metric-card:last-child { grid-column: span 2; }
-  .pipeline-panel, .tasks-panel, .current-card, .upload-card, .events-card { padding: 16px; }
-  .process-pills { display: none; }
+  .taskbox-panel, .pipeline-panel, .tasks-panel, .current-card, .upload-card, .queue-control-card, .project-gaps-card, .events-card { padding: 16px; }
+  .taskbox-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .taskbox-summary div:nth-child(2) { border-right: 0; }
+  .taskbox-summary div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .taskbox-items { grid-template-columns: 1fr; }
+  .service-health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pipeline-head-actions { justify-content: flex-start; }
   .stage-monitor-grid { grid-template-columns: 1fr; }
   .summary-grid { grid-template-columns: repeat(5, 105px); overflow-x: auto; }
@@ -357,7 +414,8 @@ footer {
   .table-heading { align-items: flex-end; }
   .date-filter { font-size: 0; }
   .date-filter select { font-size: 12px; margin: 0; }
-  .table-wrap { min-height: 360px; }
+  .tasks-panel .table-wrap { display: none; }
+  .task-cards { display: grid; gap: 9px; max-height: 640px; overflow: auto; }
   .side-column { grid-template-columns: 1fr; }
   .web-task-form form, .replenish-panel form { grid-template-columns: 1fr; }
   footer { padding: 16px; display: block; }

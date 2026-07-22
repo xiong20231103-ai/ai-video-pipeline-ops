@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import app
 
@@ -139,6 +140,106 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(collector.project_download_statuses[0]["missingCount"], 5)
             self.assertEqual(collector.project_download_statuses[0]["project"], "云手机")
 
+    def test_completed_download_gap_is_canonicalized_to_history(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            status = root / "project_status.json"
+            status.write_text(json.dumps({
+                "items": {
+                    "cloud": {
+                        "taskId": "cloud", "date": "7.21", "project": "云手机",
+                        "material": "碳岩板", "expectedCount": 24, "completed": 24,
+                        "failed": 1, "missingCount": 23, "status": "blocked_missing_links",
+                        "stateText": "待补链：还差23条",
+                    }
+                }
+            }, ensure_ascii=False), encoding="utf-8")
+            config = dict(app.CONFIG)
+            config["receiver_status_url"] = ""
+            config["download_project_status_file"] = str(status)
+            collector = app.Collector(config, app.Store(root / "ops.db"))
+
+            collector.scan_project_download_statuses()
+
+            item = collector.project_download_statuses[0]
+            self.assertEqual("completed", item["status"])
+            self.assertEqual(0, item["missingCount"])
+            self.assertEqual(0, item["failed"])
+            self.assertEqual(1, item["historicalFailed"])
+            self.assertFalse(item["gapActive"])
+
+    def test_task_box_is_dynamic_and_advances_after_full_capcut_validation(self):
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            app.COLLECTOR.project_download_statuses = [
+                {
+                    "taskId": f"task-{sequence}", "batchId": "box-9",
+                    "batchSequence": sequence, "batchSize": 9, "date": "7.21",
+                    "project": "云手机" if sequence == 1 else f"项目{sequence}",
+                    "material": "碳岩板", "expectedCount": 24 if sequence == 1 else 1,
+                    "completed": 24 if sequence == 1 else 0, "failed": 0,
+                    "gapActive": False, "notStarted": sequence > 1, "status": "completed" if sequence == 1 else "planned",
+                }
+                for sequence in range(1, 10)
+            ]
+            capcut = {
+                "task-1": {
+                    "expected": 24, "total": 24, "completed": 24, "valid": 24,
+                    "failed": 0, "waiting": 0, "running": 0, "complete": True,
+                    "updatedAt": "2026-07-21T23:59:00+08:00",
+                }
+            }
+            with patch("app.remote_capcut_summaries", return_value=capcut):
+                box = app.task_box_payloads()[0]
+
+            self.assertEqual(9, box["projectCount"])
+            self.assertEqual(1, box["completedProjects"])
+            self.assertEqual("completed", box["items"][0]["status"])
+            self.assertEqual(2, box["currentSequence"])
+            self.assertEqual("task-2", box["current"]["taskId"])
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
+    def test_task_box_does_not_complete_at_23_of_24(self):
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            app.COLLECTOR.project_download_statuses = [{
+                "taskId": "cloud", "batchId": "box", "batchSequence": 1,
+                "batchSize": 1, "date": "7.21", "project": "云手机",
+                "material": "碳岩板", "expectedCount": 24, "completed": 24,
+                "gapActive": False, "status": "completed",
+            }]
+            capcut = {
+                "cloud": {
+                    "expected": 24, "total": 23, "completed": 23, "valid": 23,
+                    "failed": 0, "waiting": 0, "running": 0, "complete": False,
+                    "updatedAt": "2026-07-21T23:59:00+08:00",
+                }
+            }
+            with patch("app.remote_capcut_summaries", return_value=capcut):
+                box = app.task_box_payloads()[0]
+
+            self.assertEqual(0, box["completedProjects"])
+            self.assertEqual("running", box["items"][0]["status"])
+            self.assertEqual(23, box["items"][0]["finalCompleted"])
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
+    def test_dashboard_keeps_other_regions_when_receiver_api_fails(self):
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            app.COLLECTOR.project_download_statuses = []
+            with patch("app.receiver_json", side_effect=app.HTTPException(status_code=503, detail="receiver offline")):
+                payload = app.dashboard_payload("7.21")
+
+            self.assertEqual("receiver offline", payload["receiverQueue"]["error"])
+            self.assertEqual("receiver offline", payload["templates"]["error"])
+            self.assertIn("overview", payload)
+            self.assertIn("pipeline", payload)
+            self.assertIn("services", payload)
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
     def test_state_categories(self):
         self.assertEqual(app.task_category("Waiting"), "waiting")
         self.assertEqual(app.task_category("Exporting"), "running")
@@ -146,6 +247,18 @@ class OpsTests(unittest.TestCase):
         self.assertEqual(app.CAPCUT_STATE_TEXT["PostProcessing"], "FFmpeg替换第0帧")
         self.assertEqual(app.task_category("Completed"), "completed")
         self.assertEqual(app.task_category("Failed"), "failed")
+
+    def test_public_task_payload_removes_local_paths(self):
+        item = app.public_task_item({
+            "task_id": "task", "state": "Completed", "video_path": "E:/secret/source.mp4",
+            "audio_path": "C:/private/audio.wav", "output_path": "E:/final/result.mp4",
+            "source_file": "E:/handoff/task.json", "batch_id": "production",
+        })
+        serialized = json.dumps(item, ensure_ascii=False)
+        self.assertNotIn("E:/", serialized)
+        self.assertNotIn("C:/", serialized)
+        self.assertEqual("source.mp4", item["video_name"])
+        self.assertEqual("result.mp4", item["output_name"])
 
     def test_upload_pipeline_reads_real_status(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -204,7 +317,7 @@ class OpsTests(unittest.TestCase):
                 "tasks": {
                     "cleaned": {
                         "date": "7.21", "status": "uploaded", "progress": 100,
-                        "cleanup": {"state": "local_media_deleted"},
+                        "cleanup": {"state": "local_final_deleted"},
                     },
                     "pending": {
                         "date": "7.21", "status": "uploaded", "progress": 100,

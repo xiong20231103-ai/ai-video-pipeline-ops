@@ -4,6 +4,7 @@ import csv
 import ipaddress
 import json
 import os
+import re
 import socket
 import sqlite3
 import subprocess
@@ -12,6 +13,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,6 +32,9 @@ STATIC_DIR = BASE_DIR / "static"
 DB_PATH = DATA_DIR / "ops.db"
 CONFIG_PATH = BASE_DIR / "config.json"
 CONTINUE_COMMAND_NAME = "continue_current_project.json"
+CONTROL_ACTIONS_PATH = DATA_DIR / "control_actions.json"
+LOCAL_PATH_PATTERN = re.compile(r"(?i)(?<![A-Za-z0-9])[A-Z]:[\\/][^\"\r\n]*")
+SENSITIVE_KEY_PARTS = ("accesstoken", "access_token", "password", "secret", "authorization")
 
 CAPCUT_STATE_TEXT = {
     "Waiting": "等待剪辑",
@@ -71,6 +76,27 @@ def parse_time(value: Any, fallback: float = 0.0) -> float:
         return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
     except (ValueError, TypeError):
         return fallback
+
+
+def safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def sanitize_public_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            str(key): sanitize_public_value(item)
+            for key, item in value.items()
+            if not any(part in str(key).lower() for part in SENSITIVE_KEY_PARTS)
+        }
+    if isinstance(value, list):
+        return [sanitize_public_value(item) for item in value]
+    if isinstance(value, str):
+        return LOCAL_PATH_PATTERN.sub("[本机路径已隐藏]", value)
+    return value
 
 
 def resolve_path(value: str) -> Path:
@@ -138,9 +164,15 @@ def request_workbench_continue() -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         existing = {}
     if isinstance(existing, dict) and existing.get("state") in {"requested", "running"}:
-        return {"accepted": True, "state": existing.get("state"), "message": "继续指令已在处理"}
+        return {
+            "accepted": True,
+            "commandId": str(existing.get("commandId") or ""),
+            "state": existing.get("state"),
+            "message": "继续指令已在处理",
+        }
     payload = {
         "command": "continue_current_project",
+        "commandId": f"continue-{uuid.uuid4().hex[:12]}",
         "state": "requested",
         "requestedAt": now_iso(),
         "requestedBy": "dashboard",
@@ -148,7 +180,63 @@ def request_workbench_continue() -> dict[str, Any]:
     temp = command_file.with_suffix(".tmp")
     temp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     os.replace(temp, command_file)
-    return {"accepted": True, "state": "requested", "message": "已发送给家里工作台；将先对账再安全继续"}
+    payload = {
+        "accepted": True,
+        "commandId": payload["commandId"],
+        "state": "requested",
+        "message": "已发送给家里工作台；将先对账再安全继续",
+    }
+    return payload
+
+
+def continue_command_file() -> Path:
+    runtime = workbench_runtime_dir()
+    return runtime / "handoff" / "control" / CONTINUE_COMMAND_NAME
+
+
+def read_json_object(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def continue_command_status() -> dict[str, Any]:
+    payload = read_json_object(continue_command_file())
+    if not payload:
+        return {"state": "idle", "message": "尚未执行安全继续对账", "stale": False}
+    result = {
+        "commandId": str(payload.get("commandId") or ""),
+        "state": str(payload.get("state") or "idle"),
+        "message": str(payload.get("message") or ""),
+        "requestedAt": str(payload.get("requestedAt") or ""),
+        "startedAt": str(payload.get("startedAt") or ""),
+        "finishedAt": str(payload.get("finishedAt") or ""),
+        "requestedBy": str(payload.get("requestedBy") or ""),
+        "stale": False,
+    }
+    latest_project_update = max(
+        (parse_time(item.get("updatedAt")) for item in COLLECTOR.project_download_statuses),
+        default=0.0,
+    )
+    finished = parse_time(result["finishedAt"])
+    if finished and latest_project_update > finished:
+        result["stale"] = True
+    return result
+
+
+def load_control_actions() -> dict[str, Any]:
+    return read_json_object(CONTROL_ACTIONS_PATH)
+
+
+def save_control_action(name: str, payload: dict[str, Any]) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    actions = load_control_actions()
+    actions[name] = {**payload, "updatedAt": now_iso()}
+    temp = CONTROL_ACTIONS_PATH.with_suffix(".tmp")
+    temp.write_text(json.dumps(actions, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(temp, CONTROL_ACTIONS_PATH)
 
 
 def workbench_runtime_dir() -> Path:
@@ -247,13 +335,15 @@ def request_upload_rescan() -> dict[str, Any]:
     candidate_count = len(audit.get("candidates") or [])
     missing_count = len(audit.get("missing") or [])
     action = "上传服务正在运行" if running else "已重新启动上传服务"
-    return {
+    result = {
         "accepted": True,
         "running": True,
         "candidates": candidate_count,
         "missing": missing_count,
         "message": f"检查完成：发现 {candidate_count} 条可补传，{missing_count} 条成片不存在；{action}，将自动去重上传。",
     }
+    save_control_action("uploadRescan", {**result, "state": "completed"})
+    return result
 
 
 def is_test_history_task(item: dict[str, Any]) -> bool:
@@ -587,6 +677,10 @@ class Collector:
         self.last_generation_scan_epoch = 0.0
         self.last_download_scan_epoch = 0.0
         self.project_download_statuses: list[dict[str, Any]] = []
+        self.receiver_snapshot: dict[str, Any] = {}
+        self.receiver_snapshot_at = ""
+        self.receiver_data_updated_at = ""
+        self.receiver_error = ""
 
     @staticmethod
     def empty_stage(state_text: str = "等待任务") -> dict[str, Any]:
@@ -914,8 +1008,13 @@ class Collector:
                 with urllib.request.urlopen(receiver_url, timeout=1.5) as response:
                     candidate = json.loads(response.read().decode("utf-8"))
                     if isinstance(candidate, dict):
+                        self.receiver_snapshot = candidate
+                        self.receiver_snapshot_at = now_iso()
+                        self.receiver_data_updated_at = str(candidate.get("updatedAt") or "")
+                        self.receiver_error = ""
                         payload = {"items": candidate.get("projects") or {}}
-            except (OSError, ValueError, urllib.error.URLError):
+            except (OSError, ValueError, urllib.error.URLError) as exc:
+                self.receiver_error = str(exc)
                 payload = None
         if payload is None:
             path = self.project_download_status_file()
@@ -941,25 +1040,33 @@ class Collector:
             except (TypeError, ValueError):
                 expected, completed, failed, missing = 0, 0, 0, 0
             status = str(item.get("status") or "").lower()
+            historical_failed = failed
+            if expected and completed >= expected:
+                completed = expected
+                missing = 0
+                status = "completed"
+                item["stateText"] = f"已完成 {completed} / {expected}"
             # A submitted project has a target, but it is not a production
             # gap until the receiver/workbench has actually started it.
             # Pending confirmation must remain an informational plan card.
             not_started = status in {"pending_confirmation", "received", "queued"}
-            if not_started:
-                missing = 0
-            # A workbench may be upgraded while a batch is already running.
-            # Never render unfinished work as a missing-link alert.
-            if status == "running":
-                missing = 0
             item["stateText"] = str(item.get("stateText") or "")
             item["currentTask"] = str(item.get("currentTask") or "")
             item["error"] = str(item.get("error") or "")
             item.update({
                 "expectedCount": expected,
                 "completed": completed,
-                "failed": failed,
+                "failed": 0 if status == "completed" else failed,
+                "historicalFailed": historical_failed if status == "completed" else 0,
                 "missingCount": missing,
                 "notStarted": not_started,
+                "status": status,
+                "gapActive": bool(
+                    not not_started
+                    and status != "running"
+                    and status != "completed"
+                    and (missing > 0 or failed > 0 or status == "blocked_missing_links")
+                ),
             })
             records.append(item)
         # A completed supplement closes the original project's missing slot;
@@ -1059,7 +1166,9 @@ class Collector:
             "正在下载与 AI 去字幕" if running else
             (f"{failed} 条失败，等待补链重试" if failed else (f"{completed} 条已完成" if total else "等待下载任务"))
         )
-        date_label = str(context.get("date") or "").strip()
+        # A dispatched task owns an immutable production date.  A scan that
+        # crosses midnight must continue to appear under its submission date.
+        date_label = str(context.get("productionDate") or context.get("date") or "").strip()
         if not date_label:
             timestamp = parse_time(updated_at, path.stat().st_mtime)
             stamp = datetime.fromtimestamp(timestamp).astimezone()
@@ -1198,11 +1307,17 @@ class Collector:
         selected = data.get("selectedProjects") or []
         if selected:
             direct["current"] = "、".join(str(item) for item in selected)
-        history_date = ""
-        for completed_item in (data.get("completedItems") or []) + (data.get("failedItems") or []):
-            if isinstance(completed_item, dict) and completed_item.get("audioPath"):
-                history_date = Path(str(completed_item["audioPath"])).parent.name
-                break
+        # Prefer the immutable dispatch date.  Legacy voice handoffs did not
+        # carry it, so recover it from the registered audio directory only as
+        # a compatibility fallback.
+        history_date = str(
+            data.get("productionDate") or data.get("date") or data.get("audioBatch") or ""
+        ).strip()
+        if not history_date:
+            for completed_item in (data.get("completedItems") or []) + (data.get("failedItems") or []):
+                if isinstance(completed_item, dict) and completed_item.get("audioPath"):
+                    history_date = Path(str(completed_item["audioPath"])).parent.name
+                    break
         if not history_date:
             timestamp = parse_time(data.get("completedAt") or data.get("startedAt"))
             if timestamp:
@@ -1307,15 +1422,17 @@ class Collector:
         for item in (data.get("tasks") or {}).values():
             if not isinstance(item, dict):
                 continue
-            grouped.setdefault(str(item.get("date") or ""), []).append(item)
+            grouped.setdefault(str(item.get("productionDate") or item.get("date") or ""), []).append(item)
         history: dict[str, dict[str, Any]] = {}
         for date_label, items in grouped.items():
             total = len(items)
             completed = sum(1 for item in items if item.get("status") == "uploaded")
             failed = sum(1 for item in items if item.get("status") == "failed")
+            uploading = sum(1 for item in items if item.get("status") == "uploading")
+            waiting = max(0, total - completed - failed - uploading)
             local_cleaned = sum(
                 1 for item in items
-                if (item.get("cleanup") or {}).get("state") == "local_media_deleted"
+                if (item.get("cleanup") or {}).get("state") in {"local_media_deleted", "local_final_deleted"}
             )
             cleanup_blocked = sum(
                 1 for item in items
@@ -1360,6 +1477,9 @@ class Collector:
                     "localCleaned": local_cleaned,
                     "cleanupPending": cleanup_pending,
                     "cleanupBlocked": cleanup_blocked,
+                    "waiting": waiting,
+                    "uploading": uploading,
+                    "cloudVerified": completed,
                 }
             )
             history[date_label] = stage
@@ -1628,6 +1748,213 @@ def production_capcut_tasks(date_label: str = "", state: str = "") -> list[dict[
     ]
 
 
+def upload_task_index() -> dict[str, dict[str, Any]]:
+    path = resolve_path(str(CONFIG.get("upload_status_file") or ""))
+    payload = read_json_object(path)
+    tasks = payload.get("tasks") if isinstance(payload.get("tasks"), dict) else {}
+    return {
+        str(task_id): item
+        for task_id, item in tasks.items()
+        if isinstance(item, dict)
+    }
+
+
+def _local_or_cloud_final_is_valid(
+    task: dict[str, Any], upload_tasks: dict[str, dict[str, Any]]
+) -> bool:
+    output = Path(str(task.get("output_path") or ""))
+    try:
+        if output.is_file() and output.stat().st_size > 0:
+            return True
+    except OSError:
+        pass
+    upload = upload_tasks.get(str(task.get("task_id") or ""), {})
+    if str(upload.get("status") or "") != "uploaded":
+        return False
+    cleanup = upload.get("cleanup") if isinstance(upload.get("cleanup"), dict) else {}
+    try:
+        cloud_size = int(
+            upload.get("cloudSize")
+            or cleanup.get("cloudVerifiedSize")
+            or 0
+        )
+    except (TypeError, ValueError):
+        cloud_size = 0
+    return cloud_size > 0
+
+
+def remote_capcut_summaries() -> dict[str, dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for item in production_capcut_tasks():
+        remote_id = str(item.get("remote_pipeline_task_id") or "")
+        if remote_id:
+            grouped.setdefault(remote_id, []).append(item)
+    upload_tasks = upload_task_index()
+    summaries: dict[str, dict[str, Any]] = {}
+    for remote_id, rows in grouped.items():
+        unique = {str(row.get("task_id") or ""): row for row in rows}
+        items = list(unique.values())
+        expected = max((safe_int(row.get("expected_task_count")) for row in items), default=0)
+        completed = sum(1 for row in items if row.get("state") in COMPLETED_STATES)
+        failed = sum(1 for row in items if row.get("state") in FAILED_STATES)
+        valid = sum(
+            1 for row in items
+            if row.get("state") in COMPLETED_STATES
+            and _local_or_cloud_final_is_valid(row, upload_tasks)
+        )
+        total = len(items)
+        summaries[remote_id] = {
+            "expected": expected,
+            "total": total,
+            "completed": completed,
+            "valid": valid,
+            "failed": failed,
+            "waiting": sum(1 for row in items if task_category(str(row.get("state") or "")) == "waiting"),
+            "running": sum(1 for row in items if task_category(str(row.get("state") or "")) == "running"),
+            "complete": bool(
+                expected > 0
+                and total == expected
+                and completed == expected
+                and valid == expected
+                and failed == 0
+            ),
+            "updatedAt": max((str(row.get("updated_at") or "") for row in items), default=""),
+        }
+    return summaries
+
+
+def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
+    capcut = remote_capcut_summaries()
+    projects = [
+        dict(item) for item in COLLECTOR.project_download_statuses
+        if not date_label or str(item.get("date") or "") == date_label
+    ]
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for item in projects:
+        batch_id = str(item.get("batchId") or item.get("taskId") or "")
+        if batch_id:
+            grouped.setdefault(batch_id, []).append(item)
+    boxes: list[dict[str, Any]] = []
+    for batch_id, rows in grouped.items():
+        normalized: list[dict[str, Any]] = []
+        for raw in rows:
+            task_id = str(raw.get("taskId") or "")
+            expected = max(0, safe_int(raw.get("expectedCount")))
+            download_completed = min(expected, max(0, safe_int(raw.get("completed"))))
+            capcut_state = dict(capcut.get(task_id) or {})
+            if not capcut_state:
+                capcut_state = {
+                    "expected": expected, "total": 0, "completed": 0,
+                    "valid": 0, "failed": 0, "waiting": 0,
+                    "running": 0, "complete": False, "updatedAt": "",
+                }
+            source_status = str(raw.get("status") or "").lower()
+            if capcut_state.get("complete"):
+                status = "completed"
+                current_step = "第5步完成，最终成片已验证"
+                state_text = f"完整流程完成 {expected} / {expected}"
+            elif safe_int(capcut_state.get("failed")) > 0 or safe_int(capcut_state.get("total")) > expected:
+                status = "blocked"
+                current_step = "第5步被阻止"
+                state_text = (
+                    f"CapCut清单 {capcut_state.get('total', 0)} / {expected}，"
+                    f"失败 {capcut_state.get('failed', 0)}"
+                )
+            elif safe_int(capcut_state.get("total")) > 0:
+                status = "running"
+                current_step = "第5步剪辑"
+                state_text = (
+                    f"有效成片 {capcut_state.get('valid', 0)} / {expected}，"
+                    f"等待或处理中 {expected - safe_int(capcut_state.get('valid'))}"
+                )
+            elif bool(raw.get("gapActive")):
+                status = "blocked"
+                current_step = "第1/2步等待补链"
+                state_text = str(raw.get("stateText") or "下载存在缺口")
+            elif bool(raw.get("notStarted")):
+                status = "planned"
+                current_step = "等待启动"
+                state_text = f"计划 {expected} 条，尚未开始"
+            elif source_status in {"cancelled", "canceled"}:
+                status = "cancelled"
+                current_step = "已撤回"
+                state_text = "任务尚未生产并已撤回"
+            elif download_completed >= expected and expected:
+                status = "running"
+                current_step = "第1/2步完成，等待后续步骤"
+                state_text = f"下载与去字幕完成 {download_completed} / {expected}"
+            else:
+                status = "running"
+                current_step = "第1/2步处理中"
+                state_text = str(raw.get("stateText") or "正在处理")
+            normalized.append({
+                "taskId": task_id,
+                "batchId": batch_id,
+                "sequence": max(1, safe_int(raw.get("batchSequence"), 1)),
+                "batchSize": max(1, safe_int(raw.get("batchSize"), len(rows) or 1)),
+                "productionDate": str(raw.get("date") or ""),
+                "project": str(raw.get("project") or "未分类"),
+                "material": str(raw.get("material") or ""),
+                "expected": expected,
+                "downloadCompleted": download_completed,
+                "finalCompleted": min(expected, safe_int(capcut_state.get("valid"))),
+                "historicalFailed": safe_int(raw.get("historicalFailed")),
+                "status": status,
+                "stateText": state_text,
+                "currentStep": current_step,
+                "currentTask": str(raw.get("currentTask") or ""),
+                "error": str(raw.get("error") or ""),
+                "updatedAt": max(
+                    (str(raw.get("updatedAt") or ""), str(capcut_state.get("updatedAt") or "")),
+                    key=parse_time,
+                ),
+                "capcut": capcut_state,
+            })
+        normalized.sort(key=lambda item: (item["sequence"], item["taskId"]))
+        current = next(
+            (item for item in normalized if item["status"] not in {"completed", "cancelled"}),
+            None,
+        )
+        next_item = next(
+            (
+                item for item in normalized
+                if current and item["sequence"] > current["sequence"]
+                and item["status"] not in {"completed", "cancelled"}
+            ),
+            None,
+        )
+        completed_projects = sum(1 for item in normalized if item["status"] == "completed")
+        cancelled_projects = sum(1 for item in normalized if item["status"] == "cancelled")
+        project_count = max(
+            len(normalized),
+            max((safe_int(item.get("batchSize")) for item in normalized), default=0),
+        )
+        total_videos = sum(safe_int(item.get("expected")) for item in normalized)
+        completed_videos = sum(safe_int(item.get("finalCompleted")) for item in normalized)
+        box_state = (
+            "completed" if project_count and completed_projects == project_count
+            else "blocked" if current and current["status"] == "blocked"
+            else "cancelled" if project_count and cancelled_projects == project_count
+            else "running" if current else "idle"
+        )
+        boxes.append({
+            "batchId": batch_id,
+            "productionDate": next((item["productionDate"] for item in normalized if item["productionDate"]), ""),
+            "projectCount": project_count,
+            "completedProjects": completed_projects,
+            "cancelledProjects": cancelled_projects,
+            "totalVideos": total_videos,
+            "completedVideos": completed_videos,
+            "state": box_state,
+            "currentSequence": current["sequence"] if current else 0,
+            "current": current,
+            "next": next_item,
+            "items": normalized,
+            "updatedAt": max((item["updatedAt"] for item in normalized), default="", key=parse_time),
+        })
+    return sorted(boxes, key=lambda item: parse_time(item.get("updatedAt")), reverse=True)
+
+
 def pipeline_for_date(date_label: str) -> dict[str, dict[str, Any]]:
     selected = date_label or current_date_label()
     stages: dict[str, dict[str, Any]] = {}
@@ -1656,6 +1983,7 @@ def pipeline_for_date(date_label: str) -> dict[str, dict[str, Any]]:
                 "failed": 0,
                 "progress": 100,
                 "current": "按第4步到第5步正式清单统计",
+                "historyDate": selected,
                 "updatedAt": max(
                     (str(item.get("updated_at") or "") for item in formal_capcut_tasks),
                     default="",
@@ -1688,8 +2016,8 @@ def pipeline_for_date(date_label: str) -> dict[str, dict[str, Any]]:
     return decorate_pipeline_stages(stages)
 
 
-def overview_payload() -> dict[str, Any]:
-    tasks = production_capcut_tasks()
+def overview_payload(date_label: str = "") -> dict[str, Any]:
+    tasks = production_capcut_tasks(date_label)
     counts = {"total": len(tasks), "waiting": 0, "running": 0, "completed": 0, "failed": 0}
     for item in tasks:
         counts[task_category(item["state"])] += 1
@@ -1751,21 +2079,21 @@ def overview_payload() -> dict[str, Any]:
         "capcut": capcut_stage,
     }
     pipeline = decorate_pipeline_stages(pipeline)
-    return {
+    payload = {
         "machine": {
             "name": CONFIG["machine_name"],
             "online": online,
             "status": "Alive" if online else "Machine Offline",
             "lastHeartbeat": heartbeat["created_at"] if heartbeat else None,
         },
-        "metrics": COLLECTOR.last_metrics,
+        "metrics": public_metrics_payload(),
         "counts": counts,
         "testHistoryCount": sum(
             1 for metadata in COLLECTOR.metadata.values()
             if is_test_history_task(metadata)
         ),
         "dates": dates,
-        "current": latest,
+        "current": public_task_item(latest) if latest else None,
         "pipeline": pipeline,
         "upload": {
             "configured": COLLECTOR.pipeline["upload"].get("state") != "unconfigured",
@@ -1777,10 +2105,185 @@ def overview_payload() -> dict[str, Any]:
             "localCleaned": COLLECTOR.pipeline["upload"].get("localCleaned", 0),
             "cleanupPending": COLLECTOR.pipeline["upload"].get("cleanupPending", 0),
             "cleanupBlocked": COLLECTOR.pipeline["upload"].get("cleanupBlocked", 0),
+            "waiting": COLLECTOR.pipeline["upload"].get("waiting", 0),
+            "uploading": COLLECTOR.pipeline["upload"].get("uploading", 0),
+            "cloudVerified": COLLECTOR.pipeline["upload"].get("cloudVerified", 0),
         },
         "sourceErrors": STORE.source_errors(),
         "updatedAt": COLLECTOR.last_scan_at,
     }
+    return sanitize_public_value(payload)
+
+
+def public_task_items(date_label: str = "") -> list[dict[str, Any]]:
+    items = production_capcut_tasks(date_label)
+    return [public_task_item(item) for item in items]
+
+
+def public_task_item(raw: dict[str, Any]) -> dict[str, Any]:
+    item = dict(raw)
+    item["category"] = task_category(str(item.get("state") or ""))
+    item["video_name"] = Path(str(item.get("video_path") or "")).name
+    item["audio_name"] = Path(str(item.get("audio_path") or "")).name
+    item["output_name"] = Path(str(item.get("output_path") or "")).name
+    item["isTestHistory"] = is_test_history_task(item)
+    item.pop("video_path", None)
+    item.pop("audio_path", None)
+    item.pop("output_path", None)
+    item.pop("source_file", None)
+    return item
+
+
+def public_metrics_payload() -> dict[str, Any]:
+    metrics = json.loads(json.dumps(COLLECTOR.last_metrics or {}))
+    disk = metrics.get("disk") if isinstance(metrics.get("disk"), dict) else {}
+    if disk:
+        raw_path = str(disk.pop("path", "") or "")
+        disk["label"] = Path(raw_path).drive or "成片磁盘"
+    return metrics
+
+
+def service_health_payload() -> list[dict[str, Any]]:
+    metrics = COLLECTOR.last_metrics or {}
+    processes = metrics.get("processes") if isinstance(metrics.get("processes"), dict) else {}
+    overview = overview_payload()
+    current = overview.get("current") if isinstance(overview.get("current"), dict) else {}
+    receiver_updated = parse_time(COLLECTOR.receiver_snapshot_at)
+    receiver_online = bool(
+        COLLECTOR.receiver_snapshot
+        and receiver_updated
+        and time.time() - receiver_updated <= float(CONFIG.get("offline_after_seconds") or 180)
+    )
+    definitions = [
+        ("dashboard", "Dashboard", True, COLLECTOR.last_scan_at),
+        ("receiver", "任务接收器", receiver_online, COLLECTOR.receiver_snapshot_at),
+        ("workbench", "工作台", bool(processes.get("workbench")), COLLECTOR.pipeline.get("download", {}).get("updatedAt")),
+        ("voice", "语音客户端", bool(processes.get("voice")), COLLECTOR.pipeline.get("voice", {}).get("updatedAt")),
+        ("capcut", "CapCut客户端", bool(processes.get("capcut")), current.get("updated_at") or ""),
+        ("upload", "上传服务", bool(processes.get("upload")), COLLECTOR.pipeline.get("upload", {}).get("updatedAt")),
+    ]
+    return [
+        {
+            "key": key,
+            "name": name,
+            "online": online,
+            "stateText": "运行中" if online else "未运行",
+            "updatedAt": str(updated_at or ""),
+        }
+        for key, name, online, updated_at in definitions
+    ]
+
+
+def source_status_payload() -> dict[str, Any]:
+    errors = [
+        {
+            "name": Path(str(item.get("path") or "")).name or "未知状态源",
+            "error": str(item.get("error") or "读取失败"),
+            "updatedAt": str(item.get("updated_at") or ""),
+        }
+        for item in STORE.source_errors()[:20]
+    ]
+    watchdog = read_json_object(DATA_DIR / "dashboard_watchdog_status.json")
+    return {
+        "errors": errors,
+        "receiverError": COLLECTOR.receiver_error,
+        "receiverReachedAt": COLLECTOR.receiver_snapshot_at,
+        "receiverUpdatedAt": COLLECTOR.receiver_data_updated_at,
+        "dashboardUpdatedAt": COLLECTOR.last_scan_at,
+        "watchdog": {
+            "state": str(watchdog.get("state") or "unknown"),
+            "message": str(watchdog.get("message") or "尚无守护状态"),
+            "updatedAt": str(watchdog.get("updatedAt") or ""),
+        },
+        "stale": bool(
+            not COLLECTOR.last_scan_epoch
+            or time.time() - COLLECTOR.last_scan_epoch > float(CONFIG.get("offline_after_seconds") or 180)
+        ),
+    }
+
+
+def reconciliation_payload(boxes: list[dict[str, Any]]) -> dict[str, Any]:
+    command = continue_command_status()
+    selected_box = next(
+        (box for box in boxes if box.get("state") in {"running", "blocked"}),
+        boxes[0] if boxes else None,
+    )
+    current = selected_box.get("current") if selected_box else None
+    if not current and selected_box:
+        items = selected_box.get("items") if isinstance(selected_box.get("items"), list) else []
+        current = items[-1] if items else None
+    date_label = str((selected_box or {}).get("productionDate") or current_date_label())
+    stages = pipeline_for_date(date_label)
+    expected = int((current or {}).get("expected") or 0)
+    remote_id = str((current or {}).get("taskId") or "")
+    capcut_rows = [
+        item for item in production_capcut_tasks(date_label)
+        if str(item.get("remote_pipeline_task_id") or "") == remote_id
+    ]
+    upload = upload_task_index()
+    uploaded = sum(
+        1 for item in capcut_rows
+        if str((upload.get(str(item.get("task_id") or "")) or {}).get("status") or "") == "uploaded"
+    )
+    command["batchId"] = str((selected_box or {}).get("batchId") or "")
+    command["taskId"] = remote_id
+    command["productionDate"] = date_label
+    command["steps"] = [
+        {"step": 1, "name": "下载 / 去字幕", "expected": expected, "actual": int((current or {}).get("downloadCompleted") or 0), "state": str((current or {}).get("status") or "idle")},
+        {"step": 2, "name": "批量语音", "expected": int(stages["voice"].get("total") or 0), "actual": int(stages["voice"].get("completed") or 0), "state": str(stages["voice"].get("state") or "idle")},
+        {"step": 3, "name": "AI素材拼接", "expected": int(stages["stitch"].get("total") or 0), "actual": int(stages["stitch"].get("completed") or 0), "state": str(stages["stitch"].get("state") or "idle")},
+        {"step": 4, "name": "CapCut成片", "expected": expected, "actual": int((current or {}).get("finalCompleted") or 0), "state": "completed" if (current or {}).get("status") == "completed" else str((current or {}).get("status") or "idle")},
+        {"step": 5, "name": "百度网盘上传", "expected": len(capcut_rows), "actual": uploaded, "state": "completed" if capcut_rows and uploaded == len(capcut_rows) else "running" if uploaded else "idle"},
+    ]
+    return command
+
+
+def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any]:
+    boxes = task_box_payloads()
+    selected_box = next((box for box in boxes if box.get("batchId") == batch_id), None)
+    if not selected_box:
+        selected_box = next(
+            (box for box in boxes if box.get("state") in {"running", "blocked"}),
+            boxes[0] if boxes else None,
+        )
+    selected_date = str(date_label or (selected_box or {}).get("productionDate") or current_date_label())
+    stages = pipeline_for_date(selected_date)
+    tasks = public_task_items(selected_date)
+    gaps = [
+        item for item in COLLECTOR.project_download_statuses
+        if not selected_date or str(item.get("date") or "") == selected_date
+    ]
+    queue_payload: dict[str, Any] = {"items": [], "error": ""}
+    template_payload: dict[str, Any] = {"items": [], "error": ""}
+    try:
+        queue_payload = receiver_json("/api/tasks")
+    except HTTPException as exc:
+        queue_payload["error"] = str(exc.detail)
+    try:
+        template_payload = receiver_json("/api/templates")
+    except HTTPException as exc:
+        template_payload["error"] = str(exc.detail)
+    payload = {
+        "selectedDate": selected_date,
+        "selectedBatchId": str((selected_box or {}).get("batchId") or ""),
+        "availableDates": pipeline_dates(),
+        "overview": overview_payload(selected_date),
+        "pipeline": {"date": selected_date, "availableDates": pipeline_dates(), "items": list(stages.values())},
+        "tasks": {"items": tasks, "count": len(tasks)},
+        "events": {"items": STORE.events(30)},
+        "projectGaps": {"items": gaps},
+        "receiverQueue": queue_payload,
+        "templates": template_payload,
+        "taskBoxes": {"items": boxes, "selected": selected_box},
+        "controls": {
+            "continue": reconciliation_payload(boxes),
+            "uploadRescan": load_control_actions().get("uploadRescan") or {"state": "idle", "message": "尚未手动检查上传缺口"},
+        },
+        "services": service_health_payload(),
+        "sources": source_status_payload(),
+        "updatedAt": COLLECTOR.last_scan_at,
+    }
+    return sanitize_public_value(payload)
 
 
 @asynccontextmanager
@@ -1827,8 +2330,14 @@ def health():
 
 
 @app.get("/api/overview")
-def overview():
-    return overview_payload()
+def overview(date: str = ""):
+    return overview_payload(date)
+
+
+@app.get("/api/dashboard")
+def dashboard(request: Request, date: str = "", batchId: str = ""):
+    require_control_permission(request)
+    return dashboard_payload(date, batchId)
 
 
 @app.get("/api/project-gaps")
@@ -1894,10 +2403,23 @@ def control_continue_current(request: Request):
     return request_workbench_continue()
 
 
+@app.get("/api/controls/continue-current/status")
+def control_continue_current_status(request: Request):
+    require_control_permission(request)
+    return reconciliation_payload(task_box_payloads())
+
+
 @app.post("/api/controls/upload/rescan")
 def control_upload_rescan(request: Request):
     require_control_permission(request)
-    return request_upload_rescan()
+    try:
+        return request_upload_rescan()
+    except HTTPException as exc:
+        save_control_action(
+            "uploadRescan",
+            {"state": "failed", "accepted": False, "message": str(exc.detail)},
+        )
+        raise
 
 
 @app.get("/api/pipeline")
@@ -1914,17 +2436,22 @@ def pipeline(date: str = ""):
 
 @app.get("/api/tasks")
 def tasks(date: str = "", state: str = "", include_history: bool = False):
-    items = STORE.tasks(date, state) if include_history else production_capcut_tasks(date, state)
-    for item in items:
-        item["category"] = task_category(item["state"])
-        item["video_name"] = Path(item["video_path"]).name if item["video_path"] else ""
-        item["audio_name"] = Path(item["audio_path"]).name if item["audio_path"] else ""
-        item["output_name"] = Path(item["output_path"]).name if item["output_path"] else ""
-        item["isTestHistory"] = is_test_history_task(item)
-        item.pop("video_path", None)
-        item.pop("audio_path", None)
-        item.pop("output_path", None)
-        item.pop("source_file", None)
+    if include_history:
+        items = STORE.tasks(date, state)
+        for item in items:
+            item["category"] = task_category(item["state"])
+            item["video_name"] = Path(item["video_path"]).name if item["video_path"] else ""
+            item["audio_name"] = Path(item["audio_path"]).name if item["audio_path"] else ""
+            item["output_name"] = Path(item["output_path"]).name if item["output_path"] else ""
+            item["isTestHistory"] = is_test_history_task(item)
+            item.pop("video_path", None)
+            item.pop("audio_path", None)
+            item.pop("output_path", None)
+            item.pop("source_file", None)
+    else:
+        items = public_task_items(date)
+        if state:
+            items = [item for item in items if item.get("state") == state]
     return {"items": items, "count": len(items), "updatedAt": COLLECTOR.last_scan_at}
 
 
