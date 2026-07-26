@@ -201,6 +201,172 @@ class OpsTests(unittest.TestCase):
                 )
             self.assertEqual(1, result["removedCount"])
             self.assertFalse(audio.exists())
+
+    def _production_fixture(self, root: Path) -> tuple[dict, dict[str, Path]]:
+        paths = {
+            "download": root / "downloads" / "removed.mp4",
+            "stitch": root / "stitch" / "stitched.mp4",
+            "temporary": root / "capcut-temp" / "temporary.mp4",
+            "final": root / "final" / "final.mp4",
+            "prepared": root / "prepared-samples" / "prepared.mp4",
+            "test": root / "capcut-tests" / "test.mp4",
+        }
+        for index, path in enumerate(paths.values(), start=1):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(bytes([index]) * (100 + index))
+        workbench = root / "workbench"
+        checkpoint_root = workbench / "handoff" / "download" / "checkpoints"
+        checkpoint_root.mkdir(parents=True)
+        (checkpoint_root / "parent-task.json").write_text(json.dumps({
+            "taskId": "parent-task",
+            "items": {
+                "video-1": {
+                    "status": "completed",
+                    "outputPath": str(paths["download"]),
+                }
+            },
+        }), encoding="utf-8")
+        upload = {
+            "taskId": "capcut-task-1",
+            "canonicalTaskId": "parent-task",
+            "productionDate": "7.26",
+            "project": "SPC地板",
+            "material": "塑木地板",
+            "language": "英语",
+            "status": "uploaded",
+            "sourceVideoPath": str(paths["stitch"]),
+            "temporaryOutputPath": str(paths["temporary"]),
+            "localPath": str(paths["final"]),
+            "preparedSamplePath": str(paths["prepared"]),
+            "fsId": "cloud-file-1",
+            "cloudSize": 987,
+            "cleanup": {
+                "cloudVerifiedAt": "2026-07-26T12:00:00+08:00",
+                "cloudVerifiedSize": 987,
+            },
+        }
+        return upload, paths
+
+    def test_production_file_inventory_uses_exact_registered_paths_and_safe_defaults(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            upload, paths = self._production_fixture(root)
+            project = {
+                "pipelineStatus": "completed",
+                "productionDate": "7.26",
+                "project": "SPC地板",
+                "material": "塑木地板",
+            }
+            config = {
+                "download_root": str(paths["download"].parent),
+                "generation_output_root": str(paths["stitch"].parent),
+                "prepared_sample_roots": [str(paths["prepared"].parent)],
+                "capcut_test_roots": [str(paths["test"].parent)],
+                "baidu_sync_roots": [],
+            }
+            with (
+                patch.dict(app.CONFIG, config),
+                patch("app._workbench_root", return_value=root / "workbench"),
+                patch("app._canonical_task_aliases", return_value={}),
+                patch("app._project_status_records", return_value={"parent-task": project}),
+                patch("app._upload_task_records", return_value=[upload]),
+                patch("app._production_active_projects", return_value=(set(), {})),
+                patch("app._isolated_runtime_processes", return_value=[]),
+            ):
+                inventory = app._production_file_inventory()
+                public = app.production_file_inventory_public()
+
+            self.assertEqual(6, inventory["counts"]["total"])
+            self.assertEqual(6, inventory["counts"]["deletable"])
+            self.assertEqual(5, inventory["counts"]["defaultSelected"])
+            self.assertEqual(
+                {
+                    "subtitle_output", "stitch_output", "capcut_temporary",
+                    "local_final", "prepared_sample", "capcut_test",
+                },
+                {item["category"] for item in inventory["items"]},
+            )
+            test_item = next(item for item in inventory["items"] if item["category"] == "capcut_test")
+            self.assertFalse(test_item["defaultSelected"])
+            self.assertNotIn(str(root), json.dumps(public, ensure_ascii=False))
+
+    def test_production_file_inventory_protects_active_or_unverified_tasks(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            upload, paths = self._production_fixture(root)
+            upload["cleanup"] = {}
+            project = {
+                "pipelineStatus": "capcut_running",
+                "productionDate": "7.26",
+                "project": "SPC地板",
+                "material": "塑木地板",
+            }
+            config = {
+                "download_root": str(paths["download"].parent),
+                "generation_output_root": str(paths["stitch"].parent),
+                "prepared_sample_roots": [str(paths["prepared"].parent)],
+                "capcut_test_roots": [str(paths["test"].parent)],
+                "baidu_sync_roots": [],
+            }
+            with (
+                patch.dict(app.CONFIG, config),
+                patch("app._workbench_root", return_value=root / "workbench"),
+                patch("app._canonical_task_aliases", return_value={}),
+                patch("app._project_status_records", return_value={"parent-task": project}),
+                patch("app._upload_task_records", return_value=[upload]),
+                patch(
+                    "app._production_active_projects",
+                    return_value=({"parent-task"}, {"parent-task": "CapCut 正在处理"}),
+                ),
+                patch("app._isolated_runtime_processes", return_value=[]),
+            ):
+                inventory = app._production_file_inventory()
+
+            production_items = [item for item in inventory["items"] if item["category"] != "capcut_test"]
+            self.assertTrue(all(item["protected"] for item in production_items))
+            self.assertTrue(all(not item["defaultSelected"] for item in production_items))
+            self.assertTrue(any("活动" in item["protectedReason"] or "运行" in item["protectedReason"] for item in production_items))
+
+    def test_production_file_cleanup_recycles_exact_file_and_rejects_stale_snapshot(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            target = root / "registered" / "safe.mp4"
+            target.parent.mkdir(parents=True)
+            target.write_bytes(b"safe-production-file")
+            item = app._production_file_identity(
+                path=target,
+                category="capcut_test",
+                root=target.parent,
+            )
+            inventory = {
+                "available": True,
+                "snapshotToken": app._production_snapshot([item]),
+                "items": [item],
+            }
+            recycled = root / "recycled.mp4"
+
+            def fake_recycle(path: Path) -> None:
+                path.rename(recycled)
+
+            with (
+                patch("app._production_file_inventory", return_value=inventory),
+                patch("app._recycle_directory", side_effect=fake_recycle),
+                patch("app.PRODUCTION_FILE_CLEANUP_STATUS_PATH", root / "status.json"),
+                patch("app.PRODUCTION_FILE_CLEANUP_BACKUP_DIR", root / "records"),
+                patch("app.PRODUCTION_FILE_CLEANUP_INDEX_PATH", root / "index.json"),
+                patch("app.save_control_action"),
+            ):
+                with self.assertRaises(app.HTTPException) as context:
+                    app.execute_production_file_cleanup([item["fileId"]], "stale-token")
+                self.assertEqual(409, context.exception.status_code)
+                self.assertTrue(target.exists())
+                result = app.execute_production_file_cleanup(
+                    [item["fileId"]], inventory["snapshotToken"]
+                )
+
+            self.assertEqual(1, result["removedCount"])
+            self.assertFalse(target.exists())
+            self.assertTrue(recycled.exists())
             self.assertTrue(recycled.exists())
             self.assertEqual("recycled", result["removed"][0]["state"])
 

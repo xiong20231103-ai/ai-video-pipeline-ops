@@ -46,6 +46,12 @@ AUDIO_CLEANUP_BACKUP_DIR = DATA_DIR / "audio-cleanup-records"
 AUDIO_CLEANUP_CONFIRM = "RECYCLE_SELECTED_AUDIO_FILES"
 AUDIO_CLEANUP_LOCK = threading.RLock()
 AUDIO_EXTENSIONS = {".aac", ".flac", ".m4a", ".mp3", ".ogg", ".wav"}
+PRODUCTION_FILE_CLEANUP_STATUS_PATH = DATA_DIR / "production_file_cleanup_status.json"
+PRODUCTION_FILE_CLEANUP_BACKUP_DIR = DATA_DIR / "production-file-cleanup-records"
+PRODUCTION_FILE_CLEANUP_INDEX_PATH = DATA_DIR / "production_file_cleanup_index.json"
+PRODUCTION_FILE_CLEANUP_CONFIRM = "RECYCLE_SELECTED_PRODUCTION_FILES"
+PRODUCTION_FILE_CLEANUP_LOCK = threading.RLock()
+PRODUCTION_VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
 LOCAL_PATH_PATTERN = re.compile(r"(?i)(?<![A-Za-z0-9])[A-Z]:[\\/][^\"\r\n]*")
 SENSITIVE_KEY_PARTS = ("accesstoken", "access_token", "password", "secret", "authorization")
 
@@ -136,6 +142,18 @@ def load_config() -> dict[str, Any]:
         "final_output_root": "E:/",
         "capcut_draft_root": "",
         "upload_status_file": "../TikHub_AI_视频工作台/handoff/upload/upload_status.json",
+        "prepared_sample_roots": [
+            str((BASE_DIR.parent / "capcut-auto-caption-client" / "bin" / "data" / "prepared-samples").resolve())
+        ],
+        "capcut_test_roots": [
+            str((BASE_DIR.parent / "capcut-auto-caption-client" / "bin" / "data" / "local-sample-e2e").resolve()),
+            str((BASE_DIR.parent / "capcut-auto-caption-client" / "bin" / "data" / "first-caption-e2e-output").resolve()),
+        ],
+        "isolated_runtime_markers": [
+            "AI视频工作台-内测版-20260724",
+            "isolated-subtitle-style-lab.profile",
+        ],
+        "baidu_sync_roots": [],
         "scan_interval_seconds": 2,
         "pipeline_live_after_seconds": 15,
         "heartbeat_interval_seconds": 60,
@@ -1193,6 +1211,642 @@ def execute_audio_cleanup(audio_ids: list[str], snapshot_token: str) -> dict[str
         }
         _write_json_atomic(AUDIO_CLEANUP_STATUS_PATH, result)
         save_control_action("audioCleanup", result)
+        return result
+
+
+PRODUCTION_FILE_CATEGORY_LABELS = {
+    "subtitle_output": "第1+2步去字幕视频",
+    "stitch_output": "第4步拼接视频",
+    "capcut_temporary": "第5步 CapCut 临时成片",
+    "local_final": "本地正式成片",
+    "prepared_sample": "任务专属预处理样品",
+    "capcut_test": "CapCut 测试及首帧文件",
+}
+
+
+def _configured_directory_list(name: str) -> list[Path]:
+    values = CONFIG.get(name)
+    if not isinstance(values, list):
+        return []
+    result: list[Path] = []
+    seen: set[str] = set()
+    for value in values:
+        if not str(value or "").strip():
+            continue
+        try:
+            path = resolve_path(str(value)).resolve()
+        except (OSError, ValueError):
+            continue
+        key = _path_key(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(path)
+    return result
+
+
+def _workbench_root() -> Path:
+    project_status = str(CONFIG.get("download_project_status_file") or "").strip()
+    if project_status:
+        try:
+            status_path = resolve_path(project_status).resolve()
+            if status_path.parent.name == "download" and status_path.parent.parent.name == "handoff":
+                return status_path.parent.parent.parent
+        except (OSError, ValueError):
+            pass
+    root = resolve_path(str(CONFIG.get("workbench_dir") or "")).resolve()
+    if (root / "handoff").is_dir():
+        return root
+    nested = root / "workbench"
+    return nested if (nested / "handoff").is_dir() else root
+
+
+def _canonical_task_aliases() -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    root = _workbench_root() / "handoff" / "task_inbox" / "imported"
+    if not root.is_dir():
+        return aliases
+    for path in root.glob("*.json"):
+        payload = read_json_object(path)
+        task_id = str(payload.get("taskId") or path.stem).strip()
+        canonical_id = str(
+            payload.get("canonicalTaskId")
+            or payload.get("replenishForTaskId")
+            or payload.get("mergedIntoParentTaskId")
+            or task_id
+        ).strip()
+        if task_id and canonical_id:
+            aliases[task_id] = canonical_id
+    return aliases
+
+
+def _canonical_task_id(item: dict[str, Any], aliases: dict[str, str] | None = None) -> str:
+    aliases = aliases or {}
+    direct = str(
+        item.get("canonicalTaskId")
+        or item.get("canonical_task_id")
+        or item.get("remotePipelineTaskId")
+        or item.get("remote_pipeline_task_id")
+        or ""
+    ).strip()
+    if direct:
+        return aliases.get(direct, direct)
+    for field in ("sourceVideoPath", "videoPath", "localPath", "generationIdentity"):
+        value = str(item.get(field) or "")
+        match = re.search(r"(?:remote-)?(inbox-\d{14}-[0-9a-fA-F]{8})", value)
+        if match:
+            found = match.group(1)
+            return aliases.get(found, found)
+    task_id = str(item.get("taskId") or item.get("task_id") or "").strip()
+    return aliases.get(task_id, task_id if task_id.startswith("inbox-") else "")
+
+
+def _project_status_records() -> dict[str, dict[str, Any]]:
+    payload = read_json_object(resolve_path(str(CONFIG.get("download_project_status_file") or "")))
+    items = payload.get("items") if isinstance(payload.get("items"), dict) else {}
+    return {
+        str(task_id): dict(item)
+        for task_id, item in items.items()
+        if isinstance(item, dict)
+    }
+
+
+def _upload_task_records() -> list[dict[str, Any]]:
+    payload = read_json_object(resolve_path(str(CONFIG.get("upload_status_file") or "")))
+    tasks = payload.get("tasks")
+    if isinstance(tasks, dict):
+        return [dict(item) for item in tasks.values() if isinstance(item, dict)]
+    if isinstance(tasks, list):
+        return [dict(item) for item in tasks if isinstance(item, dict)]
+    return []
+
+
+def _cloud_verification(item: dict[str, Any]) -> tuple[bool, str]:
+    if str(item.get("status") or "").casefold() != "uploaded":
+        return False, "对应成片尚未上传完成"
+    cleanup = item.get("cleanup") if isinstance(item.get("cleanup"), dict) else {}
+    verified_at = str(cleanup.get("cloudVerifiedAt") or "").strip()
+    verified_size = safe_int(cleanup.get("cloudVerifiedSize"))
+    cloud_size = safe_int(item.get("cloudSize"))
+    if not verified_at:
+        return False, "尚无云端实时核验记录"
+    if not str(item.get("fsId") or "").strip():
+        return False, "云端文件身份未登记"
+    if verified_size <= 0 or cloud_size <= 0 or verified_size != cloud_size:
+        return False, "云端文件大小核验不一致"
+    return True, ""
+
+
+def _production_active_projects() -> tuple[set[str], dict[str, str]]:
+    active: set[str] = set()
+    reasons: dict[str, str] = {}
+    aliases = _canonical_task_aliases()
+    for canonical_id, record in _project_status_records().items():
+        status = str(record.get("pipelineStatus") or record.get("status") or "").casefold()
+        if status != "completed":
+            active.add(canonical_id)
+            reasons[canonical_id] = str(record.get("pipelineStateText") or record.get("stateText") or "项目尚未完成")
+    try:
+        for item in STORE.tasks():
+            state = str(item.get("state") or "").strip()
+            if state in COMPLETED_STATES:
+                continue
+            canonical_id = _canonical_task_id(item, aliases)
+            if canonical_id:
+                active.add(canonical_id)
+                reasons[canonical_id] = str(item.get("phaseText") or item.get("error") or state or "任务正在等待或恢复")
+    except (OSError, sqlite3.Error):
+        pass
+    return active, reasons
+
+
+def _isolated_runtime_processes() -> list[dict[str, Any]]:
+    markers = [
+        str(value).casefold()
+        for value in (CONFIG.get("isolated_runtime_markers") or [])
+        if str(value or "").strip()
+    ]
+    active: list[dict[str, Any]] = []
+    if not markers:
+        return active
+    for process in psutil.process_iter(["pid", "name", "cmdline", "exe"]):
+        try:
+            command = " ".join(process.info.get("cmdline") or [])
+            haystack = f"{process.info.get('name') or ''} {process.info.get('exe') or ''} {command}".casefold()
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            continue
+        if any(marker in haystack for marker in markers):
+            active.append({
+                "pid": int(process.info.get("pid") or 0),
+                "name": str(process.info.get("name") or "隔离测试程序"),
+            })
+    return active
+
+
+def _is_baidu_sync_path(path: Path) -> bool:
+    key = _path_key(path)
+    for root in _configured_directory_list("baidu_sync_roots"):
+        try:
+            if path.is_relative_to(root):
+                return True
+        except (OSError, ValueError):
+            continue
+    return "baidunetdisk" in key or "百度网盘同步空间" in key
+
+
+def _production_file_identity(
+    *,
+    path: Path,
+    category: str,
+    root: Path,
+    task: dict[str, Any] | None = None,
+    canonical_task_id: str = "",
+    protected_reason: str = "",
+    default_selected: bool = False,
+    reference_count: int = 0,
+) -> dict[str, Any] | None:
+    try:
+        resolved = path.resolve()
+        root_resolved = root.resolve()
+        if not resolved.is_file() or not resolved.is_relative_to(root_resolved):
+            return None
+        stat = resolved.stat()
+        relative = resolved.relative_to(root_resolved)
+    except (OSError, ValueError):
+        return None
+    task = task or {}
+    if resolved.suffix.casefold() not in PRODUCTION_VIDEO_EXTENSIONS:
+        return None
+    if _is_baidu_sync_path(resolved):
+        protected_reason = "文件位于百度网盘同步目录，永久禁止清理"
+    task_state = str(task.get("status") or task.get("state") or "")
+    file_id = hashlib.sha256(
+        f"{category}\0{_path_key(resolved)}".encode("utf-8", errors="replace")
+    ).hexdigest()[:24]
+    return {
+        "fileId": file_id,
+        "name": resolved.name,
+        "relativePath": str(Path(root_resolved.name) / relative).replace("\\", "/"),
+        "rootLabel": root_resolved.name,
+        "category": category,
+        "categoryLabel": PRODUCTION_FILE_CATEGORY_LABELS[category],
+        "sizeBytes": stat.st_size,
+        "createdAt": datetime.fromtimestamp(stat.st_ctime).astimezone().isoformat(timespec="seconds"),
+        "updatedAt": datetime.fromtimestamp(stat.st_mtime).astimezone().isoformat(timespec="seconds"),
+        "date": str(task.get("productionDate") or task.get("date") or ""),
+        "project": str(task.get("project") or ""),
+        "material": str(task.get("material") or ""),
+        "language": str(task.get("language") or ""),
+        "taskId": str(task.get("taskId") or ""),
+        "canonicalTaskId": canonical_task_id,
+        "taskState": task_state or ("测试文件" if category == "capcut_test" else "已登记"),
+        "cloudVerified": not bool(protected_reason) and category != "capcut_test",
+        "referenceCount": reference_count,
+        "protected": bool(protected_reason),
+        "protectedReason": protected_reason,
+        "defaultSelected": bool(default_selected and not protected_reason and category != "capcut_test"),
+        "_path": str(resolved),
+        "_root": str(root_resolved),
+        "_mtimeNs": stat.st_mtime_ns,
+    }
+
+
+def _production_snapshot(items: list[dict[str, Any]]) -> str:
+    digest = hashlib.sha256()
+    for item in sorted(items, key=lambda value: str(value.get("fileId") or "")):
+        digest.update(
+            (
+                f"{item.get('fileId')}\0{item.get('sizeBytes')}\0{item.get('_mtimeNs')}\0"
+                f"{item.get('protected')}\0{item.get('protectedReason')}\0"
+                f"{item.get('referenceCount')}\0"
+            ).encode("utf-8", errors="replace")
+        )
+    return digest.hexdigest()
+
+
+def _production_file_inventory() -> dict[str, Any]:
+    aliases = _canonical_task_aliases()
+    projects = _project_status_records()
+    active_projects, active_reasons = _production_active_projects()
+    upload_tasks = _upload_task_records()
+    upload_by_canonical: dict[str, list[dict[str, Any]]] = {}
+    upload_by_path: dict[str, dict[str, Any]] = {}
+    for task in upload_tasks:
+        canonical_id = _canonical_task_id(task, aliases)
+        if canonical_id:
+            upload_by_canonical.setdefault(canonical_id, []).append(task)
+        for field in (
+            "sourceVideoPath", "temporaryOutputPath", "localPath",
+            "postProcessWorkingPath", "preparedSamplePath",
+        ):
+            value = str(task.get(field) or "").strip()
+            if value:
+                upload_by_path[_path_key(value)] = task
+
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def add(item: dict[str, Any] | None) -> None:
+        if not item:
+            return
+        path_key = _path_key(str(item.get("_path") or ""))
+        if path_key in seen:
+            return
+        seen.add(path_key)
+        items.append(item)
+
+    # Step 1+2 is registered by exact outputPath in the per-task download
+    # checkpoints. Replenishment checkpoints are folded into their parent ID.
+    checkpoint_root = _workbench_root() / "handoff" / "download" / "checkpoints"
+    if checkpoint_root.is_dir():
+        for checkpoint_path in checkpoint_root.glob("*.json"):
+            checkpoint = read_json_object(checkpoint_path)
+            source_task_id = str(checkpoint.get("taskId") or checkpoint_path.stem)
+            canonical_id = aliases.get(source_task_id, source_task_id)
+            project = projects.get(canonical_id, {})
+            related_uploads = upload_by_canonical.get(canonical_id, [])
+            cloud_results = [_cloud_verification(task) for task in related_uploads]
+            project_complete = str(project.get("pipelineStatus") or project.get("status") or "").casefold() == "completed"
+            shared_reason = ""
+            if not project:
+                shared_reason = "旧任务缺少完整项目身份，无法安全关联"
+            elif canonical_id in active_projects:
+                shared_reason = f"项目仍在活动或恢复：{active_reasons.get(canonical_id, '尚未结束')}"
+            elif not project_complete:
+                shared_reason = "项目尚未完成，共享去字幕视频仍可能被引用"
+            elif not related_uploads:
+                shared_reason = "没有找到该项目的正式上传清单"
+            elif any(not ok for ok, _ in cloud_results):
+                shared_reason = next(reason for ok, reason in cloud_results if not ok)
+            values = checkpoint.get("items") if isinstance(checkpoint.get("items"), dict) else {}
+            for record in values.values():
+                if not isinstance(record, dict) or str(record.get("status") or "").casefold() != "completed":
+                    continue
+                value = str(record.get("outputPath") or "").strip()
+                if not value:
+                    continue
+                path = Path(value)
+                root = resolve_path(str(CONFIG.get("download_root") or path.parent))
+                add(_production_file_identity(
+                    path=path,
+                    category="subtitle_output",
+                    root=root,
+                    task=project,
+                    canonical_task_id=canonical_id,
+                    protected_reason=shared_reason,
+                    default_selected=not shared_reason,
+                    reference_count=len(related_uploads),
+                ))
+
+    def registered_task_reason(task: dict[str, Any], canonical_id: str) -> str:
+        if not canonical_id:
+            return "旧任务缺少完整身份，无法安全关联"
+        if canonical_id in active_projects:
+            return f"任务正在运行、等待或恢复：{active_reasons.get(canonical_id, '尚未结束')}"
+        verified, reason = _cloud_verification(task)
+        return "" if verified else reason
+
+    # These paths are immutable fields in the upload task registry. We never
+    # discover them through filename similarity.
+    field_categories = (
+        ("sourceVideoPath", "stitch_output"),
+        ("temporaryOutputPath", "capcut_temporary"),
+        ("localPath", "local_final"),
+    )
+    for task in upload_tasks:
+        canonical_id = _canonical_task_id(task, aliases)
+        reason = registered_task_reason(task, canonical_id)
+        for field, category in field_categories:
+            value = str(task.get(field) or "").strip()
+            if not value:
+                continue
+            path = Path(value)
+            if category == "stitch_output":
+                root = resolve_path(str(CONFIG.get("generation_output_root") or path.parent))
+            else:
+                # final_output_root can be a broad drive. The exact registered
+                # path remains the real authorization boundary.
+                root = path.parent
+            add(_production_file_identity(
+                path=path,
+                category=category,
+                root=root,
+                task=task,
+                canonical_task_id=canonical_id,
+                protected_reason=reason,
+                default_selected=not reason,
+                reference_count=1,
+            ))
+
+    # Prepared samples are task-specific FFmpeg copies. Registered files inherit
+    # their upload verification; unregistered legacy copies stay visible but
+    # cannot be selected.
+    for root in _configured_directory_list("prepared_sample_roots"):
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if not path.is_file() or path.suffix.casefold() not in PRODUCTION_VIDEO_EXTENSIONS:
+                continue
+            task = upload_by_path.get(_path_key(path))
+            canonical_id = _canonical_task_id(task, aliases) if task else ""
+            reason = (
+                registered_task_reason(task, canonical_id)
+                if task else "专属样品缺少正式任务登记，无法安全关联"
+            )
+            add(_production_file_identity(
+                path=path,
+                category="prepared_sample",
+                root=root,
+                task=task,
+                canonical_task_id=canonical_id,
+                protected_reason=reason,
+                default_selected=bool(task) and not reason,
+                reference_count=1 if task else 0,
+            ))
+
+    # The two explicit test roots are intentionally never default-selected.
+    # They can be recycled only while the isolated workbench/client is stopped.
+    isolated_processes = _isolated_runtime_processes()
+    test_reason = ""
+    if isolated_processes:
+        pids = "、".join(str(item.get("pid")) for item in isolated_processes[:5])
+        test_reason = f"隔离工作台或隔离 CapCut 正在运行（PID {pids}）"
+    for root in _configured_directory_list("capcut_test_roots"):
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if not path.is_file() or path.suffix.casefold() not in PRODUCTION_VIDEO_EXTENSIONS:
+                continue
+            add(_production_file_identity(
+                path=path,
+                category="capcut_test",
+                root=root,
+                protected_reason=test_reason,
+                default_selected=False,
+                reference_count=0,
+            ))
+
+    items.sort(
+        key=lambda item: (
+            list(PRODUCTION_FILE_CATEGORY_LABELS).index(str(item.get("category"))),
+            -parse_time(item.get("updatedAt")),
+            str(item.get("name") or ""),
+        )
+    )
+    counts: dict[str, Any] = {
+        "total": len(items),
+        "protected": sum(bool(item.get("protected")) for item in items),
+        "deletable": sum(not item.get("protected") for item in items),
+        "defaultSelected": sum(bool(item.get("defaultSelected")) for item in items),
+        "sizeBytes": sum(safe_int(item.get("sizeBytes")) for item in items),
+        "categories": {},
+    }
+    for category, label in PRODUCTION_FILE_CATEGORY_LABELS.items():
+        category_items = [item for item in items if item.get("category") == category]
+        counts["categories"][category] = {
+            "label": label,
+            "total": len(category_items),
+            "sizeBytes": sum(safe_int(item.get("sizeBytes")) for item in category_items),
+            "protected": sum(bool(item.get("protected")) for item in category_items),
+            "deletable": sum(not item.get("protected") for item in category_items),
+        }
+    return {
+        "available": bool(items),
+        "message": "生产文件清单已读取" if items else "尚未发现已登记的生产文件",
+        "snapshotToken": _production_snapshot(items),
+        "items": items,
+        "counts": counts,
+        "isolatedProcesses": isolated_processes,
+    }
+
+
+def production_file_inventory_public() -> dict[str, Any]:
+    inventory = _production_file_inventory()
+    return {
+        key: value for key, value in inventory.items()
+        if not key.startswith("_") and key != "items"
+    } | {
+        "items": [
+            {key: value for key, value in item.items() if not key.startswith("_")}
+            for item in inventory.get("items", [])
+        ],
+        "updatedAt": now_iso(),
+    }
+
+
+def _selected_production_files(file_ids: list[str]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    normalized = list(dict.fromkeys(str(value or "").strip() for value in file_ids if str(value or "").strip()))
+    if not normalized:
+        raise HTTPException(status_code=400, detail="请至少选择一个生产文件")
+    if len(normalized) > 5000 or any(len(value) > 80 for value in normalized):
+        raise HTTPException(status_code=400, detail="选择的生产文件数量或标识无效")
+    inventory = _production_file_inventory()
+    if not inventory.get("available"):
+        raise HTTPException(status_code=503, detail=str(inventory.get("message") or "生产文件清单不可用"))
+    by_id = {str(item.get("fileId") or ""): item for item in inventory.get("items", [])}
+    missing = [value for value in normalized if value not in by_id]
+    if missing:
+        raise HTTPException(status_code=409, detail=f"有 {len(missing)} 个文件状态已变化，请刷新后重新对账")
+    return inventory, [by_id[value] for value in normalized]
+
+
+def preview_production_file_cleanup(file_ids: list[str]) -> dict[str, Any]:
+    inventory, selected = _selected_production_files(file_ids)
+    deletable = [item for item in selected if not item.get("protected")]
+    blocked = [item for item in selected if item.get("protected")]
+    categories: dict[str, dict[str, Any]] = {}
+    for item in deletable:
+        category = str(item.get("category") or "")
+        record = categories.setdefault(category, {
+            "label": PRODUCTION_FILE_CATEGORY_LABELS.get(category, category),
+            "count": 0,
+            "sizeBytes": 0,
+        })
+        record["count"] += 1
+        record["sizeBytes"] += safe_int(item.get("sizeBytes"))
+    return {
+        "state": "preview",
+        "snapshotToken": str(inventory.get("snapshotToken") or ""),
+        "selectedCount": len(selected),
+        "deletableCount": len(deletable),
+        "blockedCount": len(blocked),
+        "sizeBytes": sum(safe_int(item.get("sizeBytes")) for item in deletable),
+        "categories": list(categories.values()),
+        "containsTestFiles": any(item.get("category") == "capcut_test" for item in deletable),
+        "deletable": [
+            {
+                "fileId": item["fileId"],
+                "name": item["name"],
+                "category": item["category"],
+                "categoryLabel": item["categoryLabel"],
+            }
+            for item in deletable
+        ],
+        "blocked": [
+            {
+                "fileId": item["fileId"],
+                "name": item["name"],
+                "reason": item.get("protectedReason") or "文件受生产任务保护",
+            }
+            for item in blocked
+        ],
+        "message": f"可移入回收站 {len(deletable)} 个文件；受保护 {len(blocked)} 个",
+    }
+
+
+def execute_production_file_cleanup(file_ids: list[str], snapshot_token: str) -> dict[str, Any]:
+    with PRODUCTION_FILE_CLEANUP_LOCK:
+        inventory, selected = _selected_production_files(file_ids)
+        if str(inventory.get("snapshotToken") or "") != str(snapshot_token or ""):
+            result = {
+                "state": "blocked",
+                "message": "生产文件状态已变化，请刷新清单并重新预览",
+                "removedCount": 0,
+                "blockedCount": len(selected),
+                "updatedAt": now_iso(),
+            }
+            _write_json_atomic(PRODUCTION_FILE_CLEANUP_STATUS_PATH, result)
+            save_control_action("productionFileCleanup", result)
+            raise HTTPException(status_code=409, detail=result["message"])
+
+        cleanup_id = f"production-cleanup-{uuid.uuid4().hex[:12]}"
+        PRODUCTION_FILE_CLEANUP_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        manifest = {
+            "cleanupId": cleanup_id,
+            "createdAt": now_iso(),
+            "snapshotToken": snapshot_token,
+            "files": [
+                {
+                    "fileId": item["fileId"],
+                    "name": item["name"],
+                    "relativePath": item["relativePath"],
+                    "category": item["category"],
+                    "path": item["_path"],
+                    "sizeBytes": item["sizeBytes"],
+                    "taskId": item.get("taskId") or "",
+                    "canonicalTaskId": item.get("canonicalTaskId") or "",
+                }
+                for item in selected
+            ],
+        }
+        _write_json_atomic(PRODUCTION_FILE_CLEANUP_BACKUP_DIR / f"{cleanup_id}.json", manifest)
+
+        removed: list[dict[str, Any]] = []
+        blocked: list[dict[str, Any]] = []
+        failed: list[dict[str, Any]] = []
+        for item in selected:
+            if item.get("protected"):
+                blocked.append({
+                    "fileId": item["fileId"],
+                    "name": item["name"],
+                    "reason": item.get("protectedReason") or "文件受生产任务保护",
+                })
+                continue
+            try:
+                path = Path(str(item.get("_path") or "")).resolve()
+                root = Path(str(item.get("_root") or "")).resolve()
+                if (
+                    not path.is_relative_to(root)
+                    or path.suffix.casefold() not in PRODUCTION_VIDEO_EXTENSIONS
+                    or _is_baidu_sync_path(path)
+                ):
+                    raise OSError("文件路径不在登记目录、类型不受支持或位于保护目录")
+                if not path.exists():
+                    removed.append({
+                        "fileId": item["fileId"],
+                        "name": item["name"],
+                        "state": "already_missing",
+                    })
+                    continue
+                if not path.is_file():
+                    raise OSError("目标不是生产视频文件")
+                _recycle_directory(path)
+                removed.append({
+                    "fileId": item["fileId"],
+                    "name": item["name"],
+                    "state": "recycled",
+                })
+            except OSError as exc:
+                failed.append({
+                    "fileId": item["fileId"],
+                    "name": item["name"],
+                    "reason": str(exc),
+                })
+
+        index = read_json_object(PRODUCTION_FILE_CLEANUP_INDEX_PATH)
+        records = index.get("items") if isinstance(index.get("items"), dict) else {}
+        for item in removed:
+            records[str(item["fileId"])] = {
+                "state": item["state"],
+                "cleanupId": cleanup_id,
+                "updatedAt": now_iso(),
+            }
+        index["schemaVersion"] = 1
+        index["updatedAt"] = now_iso()
+        index["items"] = records
+        _write_json_atomic(PRODUCTION_FILE_CLEANUP_INDEX_PATH, index)
+
+        result = {
+            "cleanupId": cleanup_id,
+            "state": (
+                "completed" if not blocked and not failed
+                else ("partial" if removed else "blocked" if blocked and not failed else "failed")
+            ),
+            "message": (
+                f"已移入回收站 {sum(item['state'] == 'recycled' for item in removed)} 个文件；"
+                f"此前已清理 {sum(item['state'] == 'already_missing' for item in removed)} 个；"
+                f"受保护 {len(blocked)} 个；失败 {len(failed)} 个"
+            ),
+            "removedCount": len(removed),
+            "blockedCount": len(blocked),
+            "failedCount": len(failed),
+            "removed": removed,
+            "blocked": blocked,
+            "failed": failed,
+            "updatedAt": now_iso(),
+        }
+        _write_json_atomic(PRODUCTION_FILE_CLEANUP_STATUS_PATH, result)
+        save_control_action("productionFileCleanup", result)
         return result
 
 
@@ -3762,6 +4416,7 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
             "uploadRescan": load_control_actions().get("uploadRescan") or {"state": "idle", "message": "尚未手动检查上传缺口"},
             "capcutDraftCleanup": load_control_actions().get("capcutDraftCleanup") or {"state": "idle", "message": "尚未手动清理 CapCut 草稿"},
             "audioCleanup": load_control_actions().get("audioCleanup") or {"state": "idle", "message": "尚未手动清理音频"},
+            "productionFileCleanup": load_control_actions().get("productionFileCleanup") or {"state": "idle", "message": "尚未手动清理生产文件"},
             "resetRecords": load_control_actions().get("resetRecords") or {"state": "idle", "message": "尚未重置测试记录"},
         },
         "services": service_health_payload(),
@@ -4008,6 +4663,51 @@ def control_audio_files_recycle_status(request: Request):
     require_control_permission(request)
     status = read_json_object(AUDIO_CLEANUP_STATUS_PATH)
     return status or {"state": "idle", "message": "尚未手动清理音频"}
+
+
+@app.get("/api/controls/production-files")
+def control_production_files(request: Request):
+    require_control_permission(request)
+    return production_file_inventory_public()
+
+
+@app.post("/api/controls/production-files/preview")
+async def control_production_files_preview(request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="生产文件选择不是有效 JSON") from exc
+    if not isinstance(payload, dict) or not isinstance(payload.get("fileIds"), list):
+        raise HTTPException(status_code=400, detail="请提交要删除的生产文件 ID")
+    return sanitize_public_value(preview_production_file_cleanup(payload["fileIds"]))
+
+
+@app.post("/api/controls/production-files/recycle")
+async def control_production_files_recycle(request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="生产文件删除请求不是有效 JSON") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="生产文件删除请求无效")
+    if payload.get("confirm") != PRODUCTION_FILE_CLEANUP_CONFIRM:
+        raise HTTPException(status_code=400, detail="必须明确确认将生产文件移入 Windows 回收站")
+    file_ids = payload.get("fileIds")
+    if not isinstance(file_ids, list):
+        raise HTTPException(status_code=400, detail="请提交要删除的生产文件 ID")
+    return sanitize_public_value(execute_production_file_cleanup(
+        file_ids,
+        str(payload.get("snapshotToken") or ""),
+    ))
+
+
+@app.get("/api/controls/production-files/recycle/status")
+def control_production_files_recycle_status(request: Request):
+    require_control_permission(request)
+    status = read_json_object(PRODUCTION_FILE_CLEANUP_STATUS_PATH)
+    return sanitize_public_value(status or {"state": "idle", "message": "尚未手动清理生产文件"})
 
 
 @app.post("/api/controls/testing/reset")

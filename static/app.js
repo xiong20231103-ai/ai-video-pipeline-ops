@@ -8,7 +8,9 @@ const state = {
   gaps: {}, lastGoodDashboard: null, refreshBusy: false,
   step5Items: [], step5Filter: "",
   drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null,
-  audioFiles: [], audioSnapshot: "", selectedAudioIds: new Set(), audioPreview: null
+  audioFiles: [], audioSnapshot: "", selectedAudioIds: new Set(), audioPreview: null,
+  productionFiles: [], productionSnapshot: "", selectedProductionIds: new Set(),
+  productionPreview: null, productionCounts: {}
 };
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? "")
@@ -313,6 +315,205 @@ async function loadAudioManager() {
     $("audioManagerList").innerHTML = `<p class="empty">${escapeHtml(error.message || "读取音频失败")}</p>`;
   } finally {
     if (button) { button.disabled = false; button.textContent = "管理音频文件"; }
+    if (refreshButton) refreshButton.disabled = false;
+  }
+}
+
+function populateProductionFilter(id, values, label) {
+  const select = $(id);
+  if (!select) return;
+  const selected = select.value || "";
+  const counts = new Map();
+  values.filter(Boolean).forEach(value => counts.set(value, (counts.get(value) || 0) + 1));
+  const options = [...counts.keys()].sort((a, b) => a.localeCompare(b, "zh-CN"));
+  select.innerHTML = [
+    `<option value="">全部${escapeHtml(label)}（${state.productionFiles.length}）</option>`,
+    ...options.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}（${counts.get(value)}）</option>`)
+  ].join("");
+  select.value = options.includes(selected) ? selected : "";
+}
+
+function renderProductionFilters() {
+  populateProductionFilter(
+    "productionDateFilter",
+    state.productionFiles.map(item => item.date || draftDateKey(item.updatedAt)),
+    "日期"
+  );
+  populateProductionFilter("productionProjectFilter", state.productionFiles.map(item => item.project), "项目");
+  populateProductionFilter("productionMaterialFilter", state.productionFiles.map(item => item.material), "材料");
+  const select = $("productionCategoryFilter");
+  if (select) {
+    const selected = select.value || "";
+    const categories = state.productionCounts?.categories || {};
+    select.innerHTML = [
+      `<option value="">全部类型（${state.productionFiles.length}）</option>`,
+      ...Object.entries(categories).map(([key, value]) =>
+        `<option value="${escapeHtml(key)}">${escapeHtml(value.label || key)}（${Number(value.total || 0)}）</option>`
+      )
+    ].join("");
+    select.value = Object.hasOwn(categories, selected) ? selected : "";
+  }
+}
+
+function renderProductionCategorySummary() {
+  const node = $("productionCategorySummary");
+  if (!node) return;
+  const categories = state.productionCounts?.categories || {};
+  const rows = Object.entries(categories);
+  if (!rows.length) {
+    node.innerHTML = `<p class="empty">没有发现已登记的生产文件</p>`;
+    return;
+  }
+  node.innerHTML = rows.map(([key, value]) =>
+    `<button type="button" class="production-category-card" data-production-category="${escapeHtml(key)}">
+      <span>${escapeHtml(value.label || key)}</span>
+      <strong>${Number(value.total || 0)} 个 · ${escapeHtml(formatBytes(value.sizeBytes))}</strong>
+      <small>可清理 ${Number(value.deletable || 0)} · 保护 ${Number(value.protected || 0)}</small>
+    </button>`
+  ).join("");
+  node.querySelectorAll("[data-production-category]").forEach(button => {
+    button.addEventListener("click", () => {
+      const select = $("productionCategoryFilter");
+      if (select) select.value = button.dataset.productionCategory || "";
+      resetProductionPreview();
+      renderProductionManager();
+    });
+  });
+}
+
+function filteredProductionFiles() {
+  const date = $("productionDateFilter")?.value || "";
+  const project = $("productionProjectFilter")?.value || "";
+  const material = $("productionMaterialFilter")?.value || "";
+  const category = $("productionCategoryFilter")?.value || "";
+  const taskState = $("productionStateFilter")?.value || "";
+  const query = ($("productionSearchFilter")?.value || "").trim().toLocaleLowerCase();
+  return state.productionFiles.filter(item => {
+    const itemDate = item.date || draftDateKey(item.updatedAt);
+    if (date && itemDate !== date) return false;
+    if (project && item.project !== project) return false;
+    if (material && item.material !== material) return false;
+    if (category && item.category !== category) return false;
+    if (taskState === "deletable" && item.protected) return false;
+    if (taskState === "protected" && !item.protected) return false;
+    const haystack = [
+      item.name, item.relativePath, item.categoryLabel, item.project,
+      item.material, item.language, item.taskState
+    ].join(" ").toLocaleLowerCase();
+    if (query && !haystack.includes(query)) return false;
+    return true;
+  });
+}
+
+function resetProductionPreview() {
+  state.productionPreview = null;
+  $("productionCleanupPreview")?.classList.add("hidden");
+  $("confirmProductionCleanupButton")?.classList.add("hidden");
+}
+
+function updateProductionSelectionSummary() {
+  const selected = state.productionFiles.filter(item => state.selectedProductionIds.has(item.fileId));
+  const size = selected.reduce((total, item) => total + Number(item.sizeBytes || 0), 0);
+  const testCount = selected.filter(item => item.category === "capcut_test").length;
+  const node = $("productionSelectionSummary");
+  if (node) {
+    node.textContent = `已选择 ${selected.length} 个 · ${formatBytes(size)}${testCount ? ` · 含测试 ${testCount}` : ""}`;
+  }
+}
+
+function productionIdentity(item) {
+  return [item.project, item.material, item.language].filter(Boolean).join(" / ")
+    || (item.category === "capcut_test" ? "隔离测试文件" : "历史或未登记任务");
+}
+
+function showProductionProtection(item) {
+  $("productionProtectionName").textContent = item.name || "--";
+  $("productionProtectionIdentity").textContent = productionIdentity(item);
+  $("productionProtectionState").textContent = item.taskState || "受保护";
+  $("productionProtectionReason").textContent = item.protectedReason || "当前文件禁止清理";
+  const dialog = $("productionProtectionDialog");
+  if (dialog && !dialog.open) dialog.showModal();
+}
+
+function renderProductionManager() {
+  const node = $("productionManagerList");
+  if (!node) return;
+  const items = filteredProductionFiles();
+  if (!items.length) {
+    node.innerHTML = `<p class="empty">当前筛选条件下没有生产文件</p>`;
+    updateProductionSelectionSummary();
+    return;
+  }
+  node.innerHTML = items.map(item => {
+    const checked = state.selectedProductionIds.has(item.fileId) ? "checked" : "";
+    const disabled = item.protected ? "disabled" : "";
+    const stateLabel = item.protected ? "受保护" : (item.category === "capcut_test" ? "测试文件，可手动清理" : "云端已核验，可清理");
+    return `<div class="draft-manager-row production-manager-row ${item.protected ? "protected" : ""}"
+        data-production-row-id="${escapeHtml(item.fileId)}" title="${escapeHtml(item.protectedReason || stateLabel)}">
+      <input type="checkbox" data-production-id="${escapeHtml(item.fileId)}" ${checked} ${disabled}>
+      <strong>${escapeHtml(item.name || "未命名文件")}</strong>
+      <span class="production-file-type">${escapeHtml(item.categoryLabel || item.category || "")}</span>
+      <span class="audio-protection ${item.protected ? "protected" : "deletable"}">${escapeHtml(stateLabel)}</span>
+      <span>${escapeHtml(item.date || "--")} · ${escapeHtml(formatBytes(item.sizeBytes))}</span>
+      <span class="audio-identity">${escapeHtml(productionIdentity(item))}</span>
+      <span class="draft-source">${escapeHtml(item.relativePath || "")}</span>
+    </div>`;
+  }).join("");
+  node.querySelectorAll("input[data-production-id]").forEach(input => {
+    input.addEventListener("change", event => {
+      const fileId = event.currentTarget.dataset.productionId;
+      if (event.currentTarget.checked) state.selectedProductionIds.add(fileId);
+      else state.selectedProductionIds.delete(fileId);
+      resetProductionPreview();
+      updateProductionSelectionSummary();
+    });
+  });
+  node.querySelectorAll("[data-production-row-id]").forEach(row => {
+    row.addEventListener("click", event => {
+      const item = state.productionFiles.find(value => value.fileId === row.dataset.productionRowId);
+      if (!item?.protected || event.target.matches("input:not(:disabled)")) return;
+      event.preventDefault();
+      showProductionProtection(item);
+    });
+  });
+  updateProductionSelectionSummary();
+}
+
+async function loadProductionManager({ applyDefaults = false } = {}) {
+  const button = $("openProductionManagerButton");
+  const refreshButton = $("refreshProductionManagerButton");
+  if (button) { button.disabled = true; button.textContent = "正在读取生产文件…"; }
+  if (refreshButton) refreshButton.disabled = true;
+  try {
+    const payload = await getJson("/api/controls/production-files");
+    state.productionFiles = payload.items || [];
+    state.productionCounts = payload.counts || {};
+    state.productionSnapshot = payload.snapshotToken || "";
+    renderProductionFilters();
+    if (applyDefaults) {
+      state.selectedProductionIds = new Set(
+        state.productionFiles.filter(item => item.defaultSelected && !item.protected).map(item => item.fileId)
+      );
+    } else {
+      state.selectedProductionIds = new Set(
+        [...state.selectedProductionIds].filter(id =>
+          state.productionFiles.some(item => item.fileId === id && !item.protected)
+        )
+      );
+    }
+    resetProductionPreview();
+    renderProductionCategorySummary();
+    renderProductionManager();
+    const count = $("productionManagerCount");
+    if (count) {
+      count.textContent = `${Number(payload.counts?.total || 0)} 个`;
+      count.className = `task-state ${Number(payload.counts?.protected || 0) ? "failed" : "neutral"}`;
+      count.title = `可清理 ${Number(payload.counts?.deletable || 0)} 个，受保护 ${Number(payload.counts?.protected || 0)} 个`;
+    }
+  } catch (error) {
+    $("productionManagerList").innerHTML = `<p class="empty">${escapeHtml(error.message || "读取生产文件失败")}</p>`;
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "管理生产文件"; }
     if (refreshButton) refreshButton.disabled = false;
   }
 }
@@ -957,6 +1158,7 @@ async function refresh() {
     renderActionResult("uploadActionResult", data.controls?.uploadRescan || {});
     renderActionResult("draftCleanupResult", data.controls?.capcutDraftCleanup || {});
     renderActionResult("audioCleanupResult", data.controls?.audioCleanup || {});
+    renderActionResult("productionCleanupResult", data.controls?.productionFileCleanup || {});
     renderActionResult("resetRecordsResult", data.controls?.resetRecords || {});
   } catch (error) {
     $("machineBadge").className = "status-badge offline";
@@ -1156,6 +1358,109 @@ $("confirmAudioCleanupButton")?.addEventListener("click", async event => {
     });
     $("audioCleanupPreview").classList.remove("hidden");
     $("audioCleanupPreview").innerHTML = `<strong>音频清理已停止</strong>${escapeHtml(message)}`;
+    window.alert(message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "确认移入回收站";
+  }
+});
+$("openProductionManagerButton")?.addEventListener("click", async () => {
+  const dialog = $("productionManagerDialog");
+  if (dialog && !dialog.open) dialog.showModal();
+  await loadProductionManager({ applyDefaults: true });
+});
+$("closeProductionManagerButton")?.addEventListener("click", () => $("productionManagerDialog")?.close());
+$("closeProductionProtectionButton")?.addEventListener("click", () => $("productionProtectionDialog")?.close());
+$("refreshProductionManagerButton")?.addEventListener("click", () => loadProductionManager());
+[
+  "productionDateFilter", "productionProjectFilter", "productionMaterialFilter",
+  "productionCategoryFilter", "productionStateFilter", "productionSearchFilter"
+].forEach(id => {
+  $(id)?.addEventListener(id === "productionSearchFilter" ? "input" : "change", () => {
+    resetProductionPreview();
+    renderProductionManager();
+  });
+});
+$("selectFilteredProductionButton")?.addEventListener("click", () => {
+  filteredProductionFiles()
+    .filter(item => !item.protected)
+    .forEach(item => state.selectedProductionIds.add(item.fileId));
+  resetProductionPreview();
+  renderProductionManager();
+});
+$("clearProductionSelectionButton")?.addEventListener("click", () => {
+  state.selectedProductionIds.clear();
+  resetProductionPreview();
+  renderProductionManager();
+});
+$("previewProductionCleanupButton")?.addEventListener("click", async event => {
+  const button = event.currentTarget;
+  const fileIds = [...state.selectedProductionIds];
+  if (!fileIds.length) {
+    $("productionCleanupPreview").classList.remove("hidden");
+    $("productionCleanupPreview").innerHTML = "<strong>尚未选择生产文件</strong>请先勾选要移入回收站的文件。";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "正在重新核验云端与引用…";
+  try {
+    const preview = await postJson("/api/controls/production-files/preview", { fileIds });
+    state.productionPreview = preview;
+    state.productionSnapshot = preview.snapshotToken || "";
+    const categories = (preview.categories || []).map(item =>
+      `<li>${escapeHtml(item.label)}：${Number(item.count || 0)} 个 · ${escapeHtml(formatBytes(item.sizeBytes))}</li>`
+    ).join("");
+    const blocked = (preview.blocked || []).slice(0, 30).map(item =>
+      `<li>${escapeHtml(item.name)}：${escapeHtml(item.reason)}</li>`
+    ).join("");
+    const blockedMore = Number(preview.blockedCount || 0) > 30
+      ? `<p>另有 ${Number(preview.blockedCount || 0) - 30} 个受保护文件，请返回清单查看。</p>`
+      : "";
+    $("productionCleanupPreview").classList.remove("hidden");
+    $("productionCleanupPreview").innerHTML = `<strong>${escapeHtml(preview.message)}</strong>
+      预计释放 ${escapeHtml(formatBytes(preview.sizeBytes))}。
+      ${categories ? `<ul>${categories}</ul>` : ""}
+      ${blocked ? `<p>以下文件不会删除：</p><ul>${blocked}</ul>${blockedMore}` : ""}`;
+    $("confirmProductionCleanupButton").classList.toggle("hidden", !preview.deletableCount);
+    if (preview.blockedCount) {
+      window.alert(`有 ${preview.blockedCount} 个文件被活动任务、云端核验或身份规则保护，已自动排除。`);
+    }
+  } catch (error) {
+    resetProductionPreview();
+    $("productionCleanupPreview").classList.remove("hidden");
+    $("productionCleanupPreview").innerHTML = `<strong>生产文件清理预览失败</strong>${escapeHtml(error.message || "请刷新后重试")}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = "预览清理";
+  }
+});
+$("confirmProductionCleanupButton")?.addEventListener("click", async event => {
+  const button = event.currentTarget;
+  const preview = state.productionPreview;
+  if (!preview?.deletableCount) return;
+  if (!window.confirm(`确认将 ${preview.deletableCount} 个生产文件（${formatBytes(preview.sizeBytes)}）移入 Windows 回收站吗？项目状态、上传记录及云端文件不会改变。`)) return;
+  if (preview.containsTestFiles && !window.confirm("选择中包含 CapCut 测试或首帧测试文件。再次确认仍要将这些测试文件移入回收站。")) return;
+  button.disabled = true;
+  button.textContent = "正在移入回收站…";
+  try {
+    const fileIds = (preview.deletable || []).map(item => item.fileId);
+    const result = await postJson("/api/controls/production-files/recycle", {
+      fileIds,
+      snapshotToken: preview.snapshotToken,
+      confirm: "RECYCLE_SELECTED_PRODUCTION_FILES",
+    });
+    renderActionResult("productionCleanupResult", result);
+    state.selectedProductionIds.clear();
+    await loadProductionManager();
+    await refresh();
+    window.alert(result.message || "生产文件清理已完成");
+  } catch (error) {
+    const message = error.message || "生产文件清理失败";
+    renderActionResult("productionCleanupResult", {
+      state: "failed", message, updatedAt: new Date().toISOString()
+    });
+    $("productionCleanupPreview").classList.remove("hidden");
+    $("productionCleanupPreview").innerHTML = `<strong>生产文件清理已停止</strong>${escapeHtml(message)}`;
     window.alert(message);
   } finally {
     button.disabled = false;

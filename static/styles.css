@@ -258,7 +258,7 @@ tr:hover td { background: #fafcff; }
 .empty { text-align: center; color: var(--muted); padding: 38px !important; }
 
 .side-column { display: grid; gap: 16px; }
-.current-card, .upload-card, .draft-manager-card, .queue-control-card, .project-gaps-card, .events-card { padding: 19px; }
+.current-card, .upload-card, .draft-manager-card, .audio-manager-card, .production-manager-card, .queue-control-card, .project-gaps-card, .events-card { padding: 19px; }
 .queue-control-note { color: var(--muted); font-size: 11px; line-height: 1.55; margin: 0 0 10px; }
 .receiver-queue { display: grid; gap: 8px; }
 .receiver-queue-item { border: 1px solid var(--line); border-radius: 9px; padding: 10px; }
@@ -381,7 +381,7 @@ tr:hover td { background: #fafcff; }
 .danger.wide { width: 100%; border: 1px solid #ef9aa5; border-radius: 8px; padding: 9px 11px; background: #fff1f3; color: #b42336; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .danger.wide:disabled { opacity: .55; cursor: wait; }
 
-.draft-manager-card h2, .audio-manager-card h2 { font-size: 16px; }
+.draft-manager-card h2, .audio-manager-card h2, .production-manager-card h2 { font-size: 16px; }
 .draft-manager-dialog {
   width: min(1040px, calc(100vw - 28px)); max-height: calc(100vh - 28px);
   padding: 0; border: 0; border-radius: 16px; color: var(--text);
@@ -454,6 +454,29 @@ tr:hover td { background: #fafcff; }
 .audio-manager-row.protected { cursor: help; }
 .audio-manager-row.protected:hover { background: #fff4f5; }
 .audio-manager-row .audio-identity { color: var(--text); font-weight: 700; }
+.production-category-summary {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px; padding: 12px 22px 0;
+}
+.production-category-card {
+  display: grid; gap: 4px; min-width: 0; padding: 10px 11px; text-align: left;
+  border: 1px solid var(--line); border-radius: 9px; background: #f8faff;
+  color: var(--text); font: inherit; cursor: pointer;
+}
+.production-category-card:hover { border-color: #99b9fb; background: var(--blue-soft); }
+.production-category-card span { font-size: 10px; font-weight: 800; }
+.production-category-card strong { color: var(--blue); font-size: 12px; }
+.production-category-card small { color: var(--muted); font-size: 9px; }
+.production-manager-filters { grid-template-columns: repeat(5, minmax(120px, 1fr)); }
+.production-manager-filters .draft-search { grid-column: span 2; }
+.production-manager-row {
+  grid-template-columns: 34px minmax(175px, 1.3fr) 150px 155px 125px minmax(135px, .85fr) minmax(185px, 1.15fr);
+  cursor: pointer;
+}
+.production-manager-row .production-file-type { color: var(--blue); font-weight: 800; }
+.production-manager-row .audio-identity { color: var(--text); font-weight: 700; }
+.production-manager-row.protected { cursor: help; }
+.production-manager-row.protected:hover { background: #fff4f5; }
 .audio-protection-dialog {
   width: min(440px, calc(100vw - 28px)); padding: 0; border: 0; border-radius: 14px;
   color: var(--text); box-shadow: 0 20px 60px rgba(21, 39, 68, .28);
@@ -515,7 +538,7 @@ footer {
   .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .metric-card { padding: 13px; }
   .metric-card:last-child { grid-column: span 2; }
-  .taskbox-panel, .pipeline-panel, .tasks-panel, .current-card, .upload-card, .draft-manager-card, .audio-manager-card, .queue-control-card, .project-gaps-card, .events-card { padding: 16px; }
+  .taskbox-panel, .pipeline-panel, .tasks-panel, .current-card, .upload-card, .draft-manager-card, .audio-manager-card, .production-manager-card, .queue-control-card, .project-gaps-card, .events-card { padding: 16px; }
   .taskbox-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .taskbox-summary div:nth-child(2) { border-right: 0; }
   .taskbox-summary div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
@@ -555,6 +578,14 @@ footer {
   .audio-manager-row > span:nth-of-type(3) { display: none; }
   .audio-manager-row .audio-identity,
   .audio-manager-row .draft-source { grid-column: 2 / -1; }
+  .production-category-summary { grid-template-columns: 1fr 1fr; padding-left: 14px; padding-right: 14px; }
+  .production-manager-filters { grid-template-columns: 1fr 1fr; }
+  .production-manager-filters .draft-search { grid-column: 1 / -1; }
+  .production-manager-row { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .production-manager-row > span:nth-of-type(2),
+  .production-manager-row > span:nth-of-type(3) { display: none; }
+  .production-manager-row .audio-identity,
+  .production-manager-row .draft-source { grid-column: 2 / -1; }
   footer { padding: 16px; display: block; }
   footer span { display: block; margin: 4px 0; }
 }
