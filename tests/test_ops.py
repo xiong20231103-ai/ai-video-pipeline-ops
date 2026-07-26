@@ -638,6 +638,90 @@ class OpsTests(unittest.TestCase):
             self.assertEqual([item["taskId"] for item in audit["missing"]], ["missing"])
             self.assertEqual(audit["scanned"], 3)
 
+    def test_historical_cloud_verification_request_targets_only_unverified_legacy_uploads(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            upload_root = root / "handoff" / "upload"
+            upload_root.mkdir(parents=True)
+            upload_state = upload_root / "upload_status.json"
+            upload_state.write_text(
+                json.dumps(
+                    {
+                        "tasks": {
+                            "legacy-pending": {
+                                "status": "uploaded",
+                                "cleanupPolicyVersion": 0,
+                                "cleanup": {"state": "legacy_retained"},
+                            },
+                            "legacy-verified": {
+                                "status": "uploaded",
+                                "cleanupPolicyVersion": 0,
+                                "cleanup": {"cloudVerifiedAt": "now"},
+                            },
+                            "current-policy": {
+                                "status": "uploaded",
+                                "cleanupPolicyVersion": 2,
+                                "cleanup": {},
+                            },
+                        }
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            with (
+                patch("app.workbench_runtime_dir", return_value=root),
+                patch.dict(app.CONFIG, {"upload_status_file": str(upload_state)}),
+                patch(
+                    "app._ensure_upload_service_running",
+                    return_value={"running": True, "started": False, "pid": 123},
+                ),
+                patch("app.save_control_action"),
+            ):
+                result = app.request_historical_cloud_verification()
+
+            request = json.loads(
+                (upload_root / "historical_cloud_verify_request.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual("requested", result["state"])
+            self.assertEqual(1, result["eligible"])
+            self.assertEqual(["legacy-pending"], request["taskIds"])
+
+    def test_historical_cloud_verification_status_hides_local_paths(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            status_path = (
+                root
+                / "handoff"
+                / "upload"
+                / "historical_cloud_verify_status.json"
+            )
+            status_path.parent.mkdir(parents=True)
+            status_path.write_text(
+                json.dumps(
+                    {
+                        "commandId": "verify-one",
+                        "state": "partial",
+                        "message": r"失败文件 E:\secret\final.mp4",
+                        "total": 2,
+                        "processed": 2,
+                        "verified": 1,
+                        "failed": 1,
+                        "failures": [{"taskId": "task-one", "message": r"E:\secret"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch("app.workbench_runtime_dir", return_value=root):
+                result = app.historical_cloud_verification_status()
+
+            serialized = json.dumps(result, ensure_ascii=False)
+            self.assertEqual("partial", result["state"])
+            self.assertNotIn(r"E:\secret", serialized)
+            self.assertNotIn("failures", result)
+
     def test_download_directory_fallback_finds_today_files(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

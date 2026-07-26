@@ -2016,16 +2016,12 @@ def inspect_upload_backlog(records_root: Path, upload_state_file: Path) -> dict[
     }
 
 
-def request_upload_rescan() -> dict[str, Any]:
-    """Audit completed outputs and ensure the existing upload worker is alive."""
+def _ensure_upload_service_running() -> dict[str, Any]:
     runtime = workbench_runtime_dir()
     upload_script = runtime / "upload_service.py"
     pythonw = runtime / ".venv" / "Scripts" / "pythonw.exe"
     if not upload_script.is_file() or not pythonw.is_file():
         raise HTTPException(status_code=503, detail="百度网盘上传服务运行文件不完整")
-    records_root = resolve_path(str(CONFIG.get("fourth_step_handoff_dir") or runtime / "交接记录"))
-    upload_state_file = resolve_path(str(CONFIG.get("upload_status_file") or runtime / "handoff" / "upload" / "upload_status.json"))
-    audit = inspect_upload_backlog(records_root, upload_state_file)
     pid_file = runtime / "handoff" / "upload" / "upload_service.pid"
     pid = 0
     try:
@@ -2041,6 +2037,123 @@ def request_upload_rescan() -> dict[str, Any]:
             creationflags=flags,
             close_fds=True,
         )
+    return {"running": running, "started": not running, "pid": pid if running else 0}
+
+
+def historical_cloud_verification_status() -> dict[str, Any]:
+    runtime = workbench_runtime_dir()
+    status_path = runtime / "handoff" / "upload" / "historical_cloud_verify_status.json"
+    status = read_json_object(status_path)
+    if not status:
+        return {
+            "state": "idle",
+            "message": "尚未核验历史百度云文件",
+            "eligible": 0,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+        }
+    public = {
+        key: status.get(key)
+        for key in (
+            "commandId",
+            "state",
+            "message",
+            "requestedAt",
+            "startedAt",
+            "finishedAt",
+            "updatedAt",
+            "total",
+            "processed",
+            "verified",
+            "failed",
+        )
+        if status.get(key) is not None
+    }
+    return sanitize_public_value(public)
+
+
+def request_historical_cloud_verification() -> dict[str, Any]:
+    runtime = workbench_runtime_dir()
+    upload_root = runtime / "handoff" / "upload"
+    upload_state_file = resolve_path(
+        str(CONFIG.get("upload_status_file") or upload_root / "upload_status.json")
+    )
+    upload_state = read_json_object(upload_state_file)
+    tasks = upload_state.get("tasks") if isinstance(upload_state.get("tasks"), dict) else {}
+    eligible_ids = []
+    for task_id, item in tasks.items():
+        if not isinstance(item, dict):
+            continue
+        cleanup = item.get("cleanup") if isinstance(item.get("cleanup"), dict) else {}
+        if (
+            str(item.get("status") or "") == "uploaded"
+            and int(item.get("cleanupPolicyVersion") or 0) < 2
+            and not cleanup.get("cloudVerifiedAt")
+        ):
+            eligible_ids.append(str(task_id))
+
+    current = historical_cloud_verification_status()
+    if str(current.get("state") or "") in {"requested", "running"}:
+        return {
+            **current,
+            "accepted": True,
+            "message": current.get("message") or "历史百度云核验正在进行，请勿重复点击",
+        }
+    if not eligible_ids:
+        result = {
+            "accepted": True,
+            "state": "completed",
+            "eligible": 0,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "没有需要补做云端核验的历史上传记录",
+        }
+        save_control_action("historicalCloudVerification", result)
+        return result
+
+    command_id = f"verify-history-{uuid.uuid4().hex[:12]}"
+    requested_at = now_iso()
+    request_payload = {
+        "schemaVersion": 1,
+        "commandId": command_id,
+        "requestedAt": requested_at,
+        "taskIds": eligible_ids,
+    }
+    _write_json_atomic(
+        upload_root / "historical_cloud_verify_request.json",
+        request_payload,
+    )
+    worker = _ensure_upload_service_running()
+    result = {
+        "accepted": True,
+        "state": "requested",
+        "commandId": command_id,
+        "requestedAt": requested_at,
+        "eligible": len(eligible_ids),
+        "total": len(eligible_ids),
+        "processed": 0,
+        "verified": 0,
+        "failed": 0,
+        "message": (
+            f"已提交 {len(eligible_ids)} 条历史百度云核验；"
+            "只查询云端文件和大小，不补传、不删除、不改变任务状态"
+        ),
+        "uploadWorkerStarted": bool(worker.get("started")),
+    }
+    save_control_action("historicalCloudVerification", result)
+    return result
+
+
+def request_upload_rescan() -> dict[str, Any]:
+    """Audit completed outputs and ensure the existing upload worker is alive."""
+    runtime = workbench_runtime_dir()
+    records_root = resolve_path(str(CONFIG.get("fourth_step_handoff_dir") or runtime / "交接记录"))
+    upload_state_file = resolve_path(str(CONFIG.get("upload_status_file") or runtime / "handoff" / "upload" / "upload_status.json"))
+    audit = inspect_upload_backlog(records_root, upload_state_file)
+    worker = _ensure_upload_service_running()
+    running = bool(worker.get("running"))
     candidate_count = len(audit.get("candidates") or [])
     missing_count = len(audit.get("missing") or [])
     action = "上传服务正在运行" if running else "已重新启动上传服务"
@@ -4414,6 +4527,7 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
         "controls": {
             "continue": reconciliation_payload(boxes),
             "uploadRescan": load_control_actions().get("uploadRescan") or {"state": "idle", "message": "尚未手动检查上传缺口"},
+            "historicalCloudVerification": historical_cloud_verification_status(),
             "capcutDraftCleanup": load_control_actions().get("capcutDraftCleanup") or {"state": "idle", "message": "尚未手动清理 CapCut 草稿"},
             "audioCleanup": load_control_actions().get("audioCleanup") or {"state": "idle", "message": "尚未手动清理音频"},
             "productionFileCleanup": load_control_actions().get("productionFileCleanup") or {"state": "idle", "message": "尚未手动清理生产文件"},
@@ -4575,6 +4689,25 @@ def control_upload_rescan(request: Request):
             {"state": "failed", "accepted": False, "message": str(exc.detail)},
         )
         raise
+
+
+@app.post("/api/controls/upload/verify-history")
+def control_upload_verify_history(request: Request):
+    require_control_permission(request)
+    try:
+        return request_historical_cloud_verification()
+    except HTTPException as exc:
+        save_control_action(
+            "historicalCloudVerification",
+            {"state": "failed", "accepted": False, "message": str(exc.detail)},
+        )
+        raise
+
+
+@app.get("/api/controls/upload/verify-history/status")
+def control_upload_verify_history_status(request: Request):
+    require_control_permission(request)
+    return historical_cloud_verification_status()
 
 
 @app.get("/api/controls/capcut-drafts")

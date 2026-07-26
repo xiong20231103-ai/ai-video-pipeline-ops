@@ -1096,6 +1096,28 @@ function renderActionResult(id, result = {}) {
   node.textContent = `${result.message || "尚无操作记录"}${result.updatedAt ? ` · ${formatDateTime(result.updatedAt)}` : ""}`;
 }
 
+function renderHistoricalCloudVerification(result = {}) {
+  const stateName = String(result.state || "idle");
+  const total = Number(result.total ?? result.eligible ?? 0);
+  const processed = Number(result.processed || 0);
+  const verified = Number(result.verified || 0);
+  const failed = Number(result.failed || 0);
+  const summary = total
+    ? ` · ${processed}/${total}，通过 ${verified}，失败 ${failed}`
+    : "";
+  renderActionResult("historicalCloudVerificationResult", {
+    ...result,
+    message: `${result.message || "尚未核验历史百度云文件"}${summary}`,
+  });
+  const button = $("historicalCloudVerifyButton");
+  if (!button) return;
+  const running = ["requested", "running"].includes(stateName);
+  button.disabled = running;
+  button.textContent = running
+    ? `正在核验历史云端文件 ${processed}/${total || "…"}`
+    : "核验历史云端文件";
+}
+
 async function controlTask(button, action) {
   const taskId = String(button.dataset.taskId || "");
   if (!taskId) return;
@@ -1156,6 +1178,7 @@ async function refresh() {
     renderSources(data.sources || {});
     renderContinueResult(data.controls?.continue || {});
     renderActionResult("uploadActionResult", data.controls?.uploadRescan || {});
+    renderHistoricalCloudVerification(data.controls?.historicalCloudVerification || {});
     renderActionResult("draftCleanupResult", data.controls?.capcutDraftCleanup || {});
     renderActionResult("audioCleanupResult", data.controls?.audioCleanup || {});
     renderActionResult("productionCleanupResult", data.controls?.productionFileCleanup || {});
@@ -1509,6 +1532,23 @@ $("uploadRescanButton")?.addEventListener("click", async (event) => {
   } finally {
     button.disabled = false;
     button.textContent = "重新对账、补传并清理";
+  }
+});
+$("historicalCloudVerifyButton")?.addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  if (!window.confirm("确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。")) return;
+  button.disabled = true;
+  button.textContent = "正在提交历史核验…";
+  try {
+    const result = await postJson("/api/controls/upload/verify-history", {});
+    renderHistoricalCloudVerification(result);
+    await refresh();
+  } catch (error) {
+    renderHistoricalCloudVerification({
+      state: "failed",
+      message: error.message || "历史百度云核验提交失败",
+      updatedAt: new Date().toISOString(),
+    });
   }
 });
 $("resetTestRecordsButton")?.addEventListener("click", async (event) => {
