@@ -41,6 +41,11 @@ CAPCUT_DRAFT_CLEANUP_STATUS_PATH = DATA_DIR / "capcut_draft_cleanup_status.json"
 CAPCUT_DRAFT_CLEANUP_BACKUP_DIR = DATA_DIR / "capcut-draft-cleanup-backups"
 CAPCUT_DRAFT_CLEANUP_CONFIRM = "RECYCLE_SELECTED_CAPCUT_DRAFTS"
 CAPCUT_DRAFT_LOCK = threading.RLock()
+AUDIO_CLEANUP_STATUS_PATH = DATA_DIR / "audio_cleanup_status.json"
+AUDIO_CLEANUP_BACKUP_DIR = DATA_DIR / "audio-cleanup-records"
+AUDIO_CLEANUP_CONFIRM = "RECYCLE_SELECTED_AUDIO_FILES"
+AUDIO_CLEANUP_LOCK = threading.RLock()
+AUDIO_EXTENSIONS = {".aac", ".flac", ".m4a", ".mp3", ".ogg", ".wav"}
 LOCAL_PATH_PATTERN = re.compile(r"(?i)(?<![A-Za-z0-9])[A-Z]:[\\/][^\"\r\n]*")
 SENSITIVE_KEY_PARTS = ("accesstoken", "access_token", "password", "secret", "authorization")
 
@@ -124,6 +129,7 @@ def load_config() -> dict[str, Any]:
         "receiver_status_url": "http://127.0.0.1:8766/api/pipeline/snapshot",
         "download_root": "",
         "voice_handoff_file": "../TikHub_AI_视频工作台/tools/BatchVoiceClient-Portable/data/last_batch_handoff.json",
+        "audio_roots": [],
         "generation_output_root": "E:/生成视频",
         "capcut_handoff_dir": "../TikHub_AI_视频工作台/handoff/capcut",
         "fourth_step_handoff_dir": "../TikHub_AI_视频工作台/交接记录",
@@ -785,6 +791,408 @@ def execute_capcut_draft_cleanup(
         }
         _write_json_atomic(CAPCUT_DRAFT_CLEANUP_STATUS_PATH, result)
         save_control_action("capcutDraftCleanup", result)
+        return result
+
+
+def _path_key(value: str | Path) -> str:
+    try:
+        return str(Path(value).resolve()).replace("/", "\\").casefold()
+    except (OSError, ValueError):
+        return str(value).replace("/", "\\").casefold()
+
+
+def _audio_producer_processes() -> list[dict[str, Any]]:
+    active: list[dict[str, Any]] = []
+    for process in psutil.process_iter(["pid", "name", "cmdline"]):
+        try:
+            name = str(process.info.get("name") or "")
+            command = " ".join(process.info.get("cmdline") or [])
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            continue
+        normalized = f"{name} {command}".casefold()
+        if "runbatch.js" in normalized or "batchvoiceclient" in normalized:
+            active.append({"pid": int(process.info.get("pid") or 0), "name": name or "Fish配音"})
+    return active
+
+
+def _audio_reference_inventory() -> dict[str, list[dict[str, Any]]]:
+    references: dict[str, list[dict[str, Any]]] = {}
+    seen: set[tuple[str, str, str]] = set()
+
+    def add(item: dict[str, Any], *, source: str, active: bool = False, state: str = "") -> None:
+        audio_path = str(item.get("audioPath") or item.get("audio_path") or "").strip()
+        if not audio_path:
+            return
+        key = _path_key(audio_path)
+        task_id = str(
+            item.get("taskId") or item.get("task_id")
+            or item.get("canonicalTaskId") or item.get("canonical_task_id") or ""
+        ).strip()
+        record_key = (key, task_id, source)
+        if record_key in seen:
+            return
+        seen.add(record_key)
+        references.setdefault(key, []).append({
+            "taskId": task_id,
+            "canonicalTaskId": str(
+                item.get("canonicalTaskId") or item.get("canonical_task_id")
+                or item.get("remotePipelineTaskId") or item.get("remote_pipeline_task_id") or ""
+            ).strip(),
+            "date": str(item.get("productionDate") or item.get("date") or item.get("date_label") or "").strip(),
+            "project": str(item.get("project") or "").strip(),
+            "material": str(item.get("material") or "").strip(),
+            "language": str(item.get("language") or "").strip(),
+            "audioBatch": str(item.get("audioBatch") or item.get("audio_batch") or "").strip(),
+            "state": state or str(item.get("state") or item.get("status") or "").strip(),
+            "phase": str(item.get("phaseText") or item.get("phase_text") or item.get("currentPhase") or "").strip(),
+            "active": bool(active),
+            "source": source,
+            "_path": audio_path,
+        })
+
+    # The task table is the authoritative source for active/waiting recovery
+    # references. Every non-completed row remains protected.
+    try:
+        for item in STORE.tasks():
+            task_state = str(item.get("state") or "")
+            add(
+                item,
+                source="当前第五步任务",
+                active=task_state not in COMPLETED_STATES,
+                state=task_state,
+            )
+    except (OSError, sqlite3.Error):
+        pass
+
+    # The immutable Step 4/5 metadata supplies project identity even after a
+    # task has left the current table.
+    try:
+        for item in COLLECTOR.metadata.values():
+            add(item, source="正式任务清单", active=False)
+    except (AttributeError, RuntimeError):
+        pass
+
+    handoff = read_json_object(resolve_path(str(CONFIG.get("voice_handoff_file") or "")))
+    handoff_state = str(handoff.get("status") or "").casefold()
+    handoff_active = handoff_state not in {"", "completed", "completed_with_errors", "failed", "cancelled"}
+    for field in ("completedItems", "failedItems", "items", "tasks"):
+        values = handoff.get(field)
+        if isinstance(values, list):
+            for item in values:
+                if isinstance(item, dict):
+                    add(item, source="Fish配音交接", active=handoff_active, state=handoff_state)
+
+    upload = read_json_object(resolve_path(str(CONFIG.get("upload_status_file") or "")))
+    upload_tasks = upload.get("tasks") if isinstance(upload.get("tasks"), dict) else {}
+    for item in upload_tasks.values():
+        if isinstance(item, dict):
+            add(item, source="上传登记", active=False)
+    return references
+
+
+def _registered_audio_roots(references: dict[str, list[dict[str, Any]]]) -> list[Path]:
+    roots: list[Path] = []
+    configured = CONFIG.get("audio_roots")
+    if isinstance(configured, list):
+        for value in configured:
+            if str(value or "").strip():
+                roots.append(resolve_path(str(value)))
+
+    if not roots:
+        for records in references.values():
+            for record in records:
+                path = Path(str(record.get("_path") or ""))
+                if not path.is_absolute():
+                    continue
+                chosen: Path | None = None
+                for parent in path.parents:
+                    if parent.name == "音频":
+                        chosen = parent
+                        break
+                if chosen is None and path.parent.name.endswith("音频"):
+                    chosen = path.parent.parent
+                roots.append(chosen or path.parent)
+
+    unique: dict[str, Path] = {}
+    for root in roots:
+        try:
+            resolved = root.resolve()
+        except (OSError, ValueError):
+            continue
+        if resolved.is_dir():
+            unique.setdefault(_path_key(resolved), resolved)
+    return list(unique.values())
+
+
+def _audio_snapshot(items: list[dict[str, Any]], roots: list[Path]) -> str:
+    digest = hashlib.sha256()
+    for root in sorted(roots, key=lambda value: _path_key(value)):
+        digest.update(f"root\0{_path_key(root)}\0".encode("utf-8", errors="replace"))
+    for item in sorted(items, key=lambda value: str(value.get("audioId") or "")):
+        digest.update(
+            (
+                f"{item.get('audioId')}\0{item.get('sizeBytes')}\0{item.get('_mtimeNs')}\0"
+                f"{item.get('protected')}\0{item.get('protectedReason')}\0"
+            ).encode("utf-8", errors="replace")
+        )
+    return digest.hexdigest()
+
+
+def _audio_inventory(
+    *,
+    roots: list[Path] | None = None,
+    references: dict[str, list[dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
+    references = references if references is not None else _audio_reference_inventory()
+    roots = roots if roots is not None else _registered_audio_roots(references)
+    if not roots:
+        return {
+            "available": False,
+            "message": "尚未从正式任务登记中找到音频目录",
+            "snapshotToken": "",
+            "items": [],
+            "counts": {"total": 0, "protected": 0, "deletable": 0},
+            "producerProcesses": _audio_producer_processes(),
+        }
+
+    producer_processes = _audio_producer_processes()
+    now_epoch = time.time()
+    items: list[dict[str, Any]] = []
+    visited: set[str] = set()
+    for root in roots:
+        try:
+            candidates = root.rglob("*")
+            for path in candidates:
+                if not path.is_file() or path.suffix.casefold() not in AUDIO_EXTENSIONS:
+                    continue
+                path_key = _path_key(path)
+                if path_key in visited:
+                    continue
+                visited.add(path_key)
+                try:
+                    stat = path.stat()
+                    relative = path.relative_to(root)
+                except (OSError, ValueError):
+                    continue
+                file_references = references.get(path_key, [])
+                active_references = [item for item in file_references if item.get("active")]
+                protected_reason = ""
+                if active_references:
+                    current = active_references[0]
+                    identity = " / ".join(
+                        value for value in (
+                            str(current.get("project") or ""),
+                            str(current.get("material") or ""),
+                            str(current.get("language") or ""),
+                        ) if value
+                    ) or str(current.get("taskId") or "当前任务")
+                    phase = str(current.get("phase") or current.get("state") or "等待恢复")
+                    protected_reason = f"任务正在使用，禁止删除：{identity} · {phase}"
+                elif producer_processes and now_epoch - stat.st_mtime < 900:
+                    protected_reason = "Fish配音正在运行，且该音频在最近15分钟内更新"
+
+                primary = file_references[0] if file_references else {}
+                date_label = str(primary.get("date") or "")
+                if not date_label:
+                    date_label = next(
+                        (part for part in relative.parts if re.fullmatch(r"\d{1,2}\.\d{1,2}", part)),
+                        "",
+                    )
+                audio_id = hashlib.sha256(path_key.encode("utf-8", errors="replace")).hexdigest()[:24]
+                items.append({
+                    "audioId": audio_id,
+                    "name": path.name,
+                    "relativePath": str(Path(root.name) / relative).replace("\\", "/"),
+                    "rootLabel": root.name,
+                    "sizeBytes": stat.st_size,
+                    "createdAt": datetime.fromtimestamp(stat.st_ctime).astimezone().isoformat(timespec="seconds"),
+                    "updatedAt": datetime.fromtimestamp(stat.st_mtime).astimezone().isoformat(timespec="seconds"),
+                    "date": date_label,
+                    "project": str(primary.get("project") or ""),
+                    "material": str(primary.get("material") or ""),
+                    "language": str(primary.get("language") or ""),
+                    "audioBatch": str(primary.get("audioBatch") or date_label),
+                    "taskState": str(primary.get("state") or ("历史/未引用" if not file_references else "已登记")),
+                    "referenceCount": len(file_references),
+                    "protected": bool(protected_reason),
+                    "protectedReason": protected_reason,
+                    "_path": str(path),
+                    "_root": str(root),
+                    "_mtimeNs": stat.st_mtime_ns,
+                })
+        except OSError:
+            continue
+
+    items.sort(key=lambda item: (parse_time(item.get("updatedAt")), item.get("name") or ""), reverse=True)
+    counts = {
+        "total": len(items),
+        "protected": sum(bool(item.get("protected")) for item in items),
+        "deletable": sum(not item.get("protected") for item in items),
+        "sizeBytes": sum(safe_int(item.get("sizeBytes")) for item in items),
+    }
+    return {
+        "available": True,
+        "message": "音频清单已读取",
+        "snapshotToken": _audio_snapshot(items, roots),
+        "items": items,
+        "counts": counts,
+        "producerProcesses": producer_processes,
+        "_roots": [str(root) for root in roots],
+    }
+
+
+def audio_inventory_public() -> dict[str, Any]:
+    inventory = _audio_inventory()
+    return {
+        key: value for key, value in inventory.items()
+        if not key.startswith("_") and key != "items"
+    } | {
+        "items": [
+            {key: value for key, value in item.items() if not key.startswith("_")}
+            for item in inventory.get("items", [])
+        ],
+        "updatedAt": now_iso(),
+    }
+
+
+def _selected_audio_files(audio_ids: list[str]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    normalized = list(dict.fromkeys(str(value or "").strip() for value in audio_ids if str(value or "").strip()))
+    if not normalized:
+        raise HTTPException(status_code=400, detail="请至少选择一个音频文件")
+    if len(normalized) > 2000 or any(len(value) > 80 for value in normalized):
+        raise HTTPException(status_code=400, detail="选择的音频数量或标识无效")
+    inventory = _audio_inventory()
+    if not inventory.get("available"):
+        raise HTTPException(status_code=503, detail=str(inventory.get("message") or "音频目录不可用"))
+    by_id = {str(item.get("audioId") or ""): item for item in inventory.get("items", [])}
+    missing = [value for value in normalized if value not in by_id]
+    if missing:
+        raise HTTPException(status_code=409, detail=f"有 {len(missing)} 个音频文件状态已变化，请刷新后重新对账")
+    return inventory, [by_id[value] for value in normalized]
+
+
+def preview_audio_cleanup(audio_ids: list[str]) -> dict[str, Any]:
+    inventory, selected = _selected_audio_files(audio_ids)
+    deletable = [item for item in selected if not item.get("protected")]
+    blocked = [item for item in selected if item.get("protected")]
+    return {
+        "state": "preview",
+        "snapshotToken": str(inventory.get("snapshotToken") or ""),
+        "selectedCount": len(selected),
+        "deletableCount": len(deletable),
+        "blockedCount": len(blocked),
+        "sizeBytes": sum(safe_int(item.get("sizeBytes")) for item in deletable),
+        "deletable": [
+            {"audioId": item["audioId"], "name": item["name"], "relativePath": item["relativePath"]}
+            for item in deletable
+        ],
+        "blocked": [
+            {
+                "audioId": item["audioId"],
+                "name": item["name"],
+                "reason": item.get("protectedReason") or "音频受活动任务保护",
+            }
+            for item in blocked
+        ],
+        "message": f"可移入回收站 {len(deletable)} 个音频；受活动任务保护 {len(blocked)} 个",
+    }
+
+
+def execute_audio_cleanup(audio_ids: list[str], snapshot_token: str) -> dict[str, Any]:
+    with AUDIO_CLEANUP_LOCK:
+        inventory, selected = _selected_audio_files(audio_ids)
+        blocked = [item for item in selected if item.get("protected")]
+        if blocked:
+            reason = str(blocked[0].get("protectedReason") or "任务正在使用，禁止删除")
+            result = {
+                "state": "blocked",
+                "message": reason,
+                "removedCount": 0,
+                "blockedCount": len(blocked),
+                "blocked": [
+                    {"name": item["name"], "reason": item.get("protectedReason") or reason}
+                    for item in blocked
+                ],
+                "updatedAt": now_iso(),
+            }
+            _write_json_atomic(AUDIO_CLEANUP_STATUS_PATH, result)
+            save_control_action("audioCleanup", result)
+            raise HTTPException(status_code=409, detail=reason)
+
+        if str(inventory.get("snapshotToken") or "") != str(snapshot_token or ""):
+            result = {
+                "state": "blocked",
+                "message": "音频状态已变化，请刷新清单并重新对账",
+                "removedCount": 0,
+                "blockedCount": len(selected),
+                "updatedAt": now_iso(),
+            }
+            _write_json_atomic(AUDIO_CLEANUP_STATUS_PATH, result)
+            save_control_action("audioCleanup", result)
+            raise HTTPException(status_code=409, detail=result["message"])
+
+        allowed_roots = [Path(value).resolve() for value in inventory.get("_roots", [])]
+        cleanup_id = f"audio-cleanup-{uuid.uuid4().hex[:12]}"
+        manifest = {
+            "cleanupId": cleanup_id,
+            "createdAt": now_iso(),
+            "snapshotToken": snapshot_token,
+            "files": [
+                {
+                    "audioId": item["audioId"],
+                    "name": item["name"],
+                    "relativePath": item["relativePath"],
+                    "path": item["_path"],
+                    "sizeBytes": item["sizeBytes"],
+                }
+                for item in selected
+            ],
+        }
+        AUDIO_CLEANUP_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        _write_json_atomic(AUDIO_CLEANUP_BACKUP_DIR / f"{cleanup_id}.json", manifest)
+
+        removed: list[dict[str, Any]] = []
+        failed: list[dict[str, Any]] = []
+        for item in selected:
+            path = Path(str(item.get("_path") or "")).resolve()
+            try:
+                root = next((value for value in allowed_roots if path.is_relative_to(value)), None)
+                if root is None or path.suffix.casefold() not in AUDIO_EXTENSIONS:
+                    raise OSError("音频路径不在登记目录或文件类型不受支持")
+                if not path.exists():
+                    removed.append({
+                        "audioId": item["audioId"],
+                        "name": item["name"],
+                        "state": "already_missing",
+                    })
+                    continue
+                if not path.is_file():
+                    raise OSError("目标不是音频文件")
+                _recycle_directory(path)
+                removed.append({
+                    "audioId": item["audioId"],
+                    "name": item["name"],
+                    "state": "recycled",
+                })
+            except OSError as exc:
+                failed.append({
+                    "audioId": item["audioId"],
+                    "name": item["name"],
+                    "reason": str(exc),
+                })
+
+        result = {
+            "cleanupId": cleanup_id,
+            "state": "completed" if not failed else ("partial" if removed else "failed"),
+            "message": f"已移入回收站 {sum(item['state'] == 'recycled' for item in removed)} 个音频；失败 {len(failed)} 个",
+            "removedCount": len(removed),
+            "failedCount": len(failed),
+            "removed": removed,
+            "failed": failed,
+            "updatedAt": now_iso(),
+        }
+        _write_json_atomic(AUDIO_CLEANUP_STATUS_PATH, result)
+        save_control_action("audioCleanup", result)
         return result
 
 
@@ -3353,6 +3761,7 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
             "continue": reconciliation_payload(boxes),
             "uploadRescan": load_control_actions().get("uploadRescan") or {"state": "idle", "message": "尚未手动检查上传缺口"},
             "capcutDraftCleanup": load_control_actions().get("capcutDraftCleanup") or {"state": "idle", "message": "尚未手动清理 CapCut 草稿"},
+            "audioCleanup": load_control_actions().get("audioCleanup") or {"state": "idle", "message": "尚未手动清理音频"},
             "resetRecords": load_control_actions().get("resetRecords") or {"state": "idle", "message": "尚未重置测试记录"},
         },
         "services": service_health_payload(),
@@ -3557,6 +3966,48 @@ def control_capcut_drafts_cleanup_status(request: Request):
     require_control_permission(request)
     status = read_json_object(CAPCUT_DRAFT_CLEANUP_STATUS_PATH)
     return status or {"state": "idle", "message": "尚未手动清理 CapCut 草稿"}
+
+
+@app.get("/api/controls/audio-files")
+def control_audio_files(request: Request):
+    require_control_permission(request)
+    return audio_inventory_public()
+
+
+@app.post("/api/controls/audio-files/preview")
+async def control_audio_files_preview(request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="音频选择不是有效 JSON") from exc
+    if not isinstance(payload, dict) or not isinstance(payload.get("audioIds"), list):
+        raise HTTPException(status_code=400, detail="请提交要删除的音频 ID")
+    return preview_audio_cleanup(payload["audioIds"])
+
+
+@app.post("/api/controls/audio-files/recycle")
+async def control_audio_files_recycle(request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="音频删除请求不是有效 JSON") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="音频删除请求无效")
+    if payload.get("confirm") != AUDIO_CLEANUP_CONFIRM:
+        raise HTTPException(status_code=400, detail="必须明确确认将音频移入 Windows 回收站")
+    audio_ids = payload.get("audioIds")
+    if not isinstance(audio_ids, list):
+        raise HTTPException(status_code=400, detail="请提交要删除的音频 ID")
+    return execute_audio_cleanup(audio_ids, str(payload.get("snapshotToken") or ""))
+
+
+@app.get("/api/controls/audio-files/recycle/status")
+def control_audio_files_recycle_status(request: Request):
+    require_control_permission(request)
+    status = read_json_object(AUDIO_CLEANUP_STATUS_PATH)
+    return status or {"state": "idle", "message": "尚未手动清理音频"}
 
 
 @app.post("/api/controls/testing/reset")

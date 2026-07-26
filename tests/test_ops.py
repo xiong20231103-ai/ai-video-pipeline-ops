@@ -113,6 +113,97 @@ class OpsTests(unittest.TestCase):
                     )
             self.assertEqual(409, context.exception.status_code)
 
+    def test_audio_inventory_protects_active_task_and_hides_absolute_path(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            audio = root / "voice.mp3"
+            audio.write_bytes(b"audio")
+            references = {
+                app._path_key(audio): [{
+                    "taskId": "task-1", "project": "云手机", "material": "碳岩板",
+                    "language": "英语", "state": "Waiting", "phase": "等待 CapCut",
+                    "active": True, "_path": str(audio),
+                }]
+            }
+            with patch("app._audio_producer_processes", return_value=[]):
+                inventory = app._audio_inventory(roots=[root], references=references)
+            self.assertEqual(1, inventory["counts"]["protected"])
+            self.assertEqual("云手机", inventory["items"][0]["project"])
+            self.assertIn("任务正在使用", inventory["items"][0]["protectedReason"])
+            public = {
+                key: value for key, value in inventory["items"][0].items()
+                if not key.startswith("_")
+            }
+            self.assertNotIn(str(root), json.dumps(public, ensure_ascii=False))
+
+    def test_audio_cleanup_direct_call_cannot_bypass_active_reference(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            audio = root / "voice.wav"
+            audio.write_bytes(b"audio")
+            references = {
+                app._path_key(audio): [{
+                    "taskId": "task-1", "project": "SPC墙板", "material": "晶岩墙板",
+                    "language": "德语", "state": "waiting_client", "phase": "等待恢复",
+                    "active": True, "_path": str(audio),
+                }]
+            }
+            with (
+                patch("app._audio_reference_inventory", return_value=references),
+                patch("app._audio_producer_processes", return_value=[]),
+                patch("app.AUDIO_CLEANUP_STATUS_PATH", root / "status.json"),
+                patch("app.AUDIO_CLEANUP_BACKUP_DIR", root / "records"),
+                patch("app.save_control_action"),
+            ):
+                inventory = app._audio_inventory(roots=[root], references=references)
+                with patch("app._registered_audio_roots", return_value=[root]):
+                    with self.assertRaises(app.HTTPException) as context:
+                        app.execute_audio_cleanup(
+                            [inventory["items"][0]["audioId"]],
+                            inventory["snapshotToken"],
+                        )
+            self.assertEqual(409, context.exception.status_code)
+            self.assertTrue(audio.exists())
+            self.assertIn("禁止删除", str(context.exception.detail))
+
+    def test_audio_cleanup_rechecks_snapshot_and_recycles_exact_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            audio = root / "completed.mp3"
+            audio.write_bytes(b"completed-audio")
+            references = {
+                app._path_key(audio): [{
+                    "taskId": "task-2", "project": "实体机", "material": "净白板",
+                    "language": "英语", "state": "Completed", "phase": "已完成",
+                    "active": False, "_path": str(audio),
+                }]
+            }
+            recycled = root / "recycled.completed.mp3"
+
+            def fake_recycle(path: Path) -> None:
+                path.rename(recycled)
+
+            with (
+                patch("app._audio_reference_inventory", return_value=references),
+                patch("app._registered_audio_roots", return_value=[root]),
+                patch("app._audio_producer_processes", return_value=[]),
+                patch("app._recycle_directory", side_effect=fake_recycle),
+                patch("app.AUDIO_CLEANUP_STATUS_PATH", root / "status.json"),
+                patch("app.AUDIO_CLEANUP_BACKUP_DIR", root / "records"),
+                patch("app.save_control_action"),
+            ):
+                preview = app.preview_audio_cleanup([
+                    app._audio_inventory(roots=[root], references=references)["items"][0]["audioId"]
+                ])
+                result = app.execute_audio_cleanup(
+                    [preview["deletable"][0]["audioId"]],
+                    preview["snapshotToken"],
+                )
+            self.assertEqual(1, result["removedCount"])
+            self.assertFalse(audio.exists())
+            self.assertTrue(recycled.exists())
+            self.assertEqual("recycled", result["removed"][0]["state"])
+
     def test_metadata_scan_ignores_handoff_backup_files(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

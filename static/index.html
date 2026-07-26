@@ -145,6 +145,15 @@
           <button id="openDraftManagerButton" class="primary wide" type="button">管理 CapCut 草稿</button>
           <div id="draftCleanupResult" class="action-result neutral">尚未手动清理 CapCut 草稿</div>
         </section>
+        <section class="panel audio-manager-card">
+          <div class="section-heading compact">
+            <div><p class="eyebrow">AUDIO FILES</p><h2>音频文件管理</h2></div>
+            <span id="audioManagerCount" class="task-state neutral">未读取</span>
+          </div>
+          <p class="queue-control-note">仅在你勾选并确认后移入 Windows 回收站；正在运行或等待恢复的任务音频禁止删除。</p>
+          <button id="openAudioManagerButton" class="primary wide" type="button">管理音频文件</button>
+          <div id="audioCleanupResult" class="action-result neutral">尚未手动清理音频</div>
+        </section>
         <section class="panel queue-control-card">
           <div class="section-heading compact"><div><p class="eyebrow">QUEUE CONTROL</p><h2>任务确认与撤回</h2></div></div>
           <p class="queue-control-note">只影响尚未开始的队列记录；不会删除视频、音频或素材。</p>
@@ -217,6 +226,58 @@
         <button id="previewDraftCleanupButton" class="primary" type="button">预览删除</button>
         <button id="confirmDraftCleanupButton" class="danger hidden" type="button">确认移入回收站</button>
       </footer>
+    </div>
+  </dialog>
+  <dialog id="audioManagerDialog" class="draft-manager-dialog audio-manager-dialog">
+    <div class="draft-manager-shell">
+      <header>
+        <div><p class="eyebrow">AUDIO FILES</p><h2>选择要移入回收站的音频</h2></div>
+        <button id="closeAudioManagerButton" class="icon-button" type="button" aria-label="关闭音频管理">×</button>
+      </header>
+      <p class="draft-manager-warning">活动、等待恢复、拼接中或 CapCut 处理中任务引用的音频会被锁定。点击受保护行可查看具体原因。</p>
+      <div class="draft-manager-filters audio-manager-filters">
+        <label>日期<select id="audioDateFilter"><option value="">全部日期</option></select></label>
+        <label>项目<select id="audioProjectFilter"><option value="">全部项目</option></select></label>
+        <label>材料<select id="audioMaterialFilter"><option value="">全部材料</option></select></label>
+        <label>语言<select id="audioLanguageFilter"><option value="">全部语言</option></select></label>
+        <label>音频批次<select id="audioBatchFilter"><option value="">全部批次</option></select></label>
+        <label>任务状态
+          <select id="audioStateFilter">
+            <option value="">全部状态</option>
+            <option value="deletable">可手动删除</option>
+            <option value="protected">任务正在使用</option>
+          </select>
+        </label>
+        <label class="draft-search">搜索<input id="audioSearchFilter" type="search" placeholder="文件名、项目、材料或语言"></label>
+        <button id="refreshAudioManagerButton" type="button">刷新</button>
+      </div>
+      <div class="draft-manager-toolbar">
+        <div>
+          <button id="selectFilteredAudioButton" type="button">全选当前筛选</button>
+          <button id="clearAudioSelectionButton" type="button">取消全选</button>
+        </div>
+        <strong id="audioSelectionSummary">已选择 0 个</strong>
+      </div>
+      <div id="audioManagerList" class="draft-manager-list audio-manager-list">
+        <p class="empty">点击“管理音频文件”后读取清单。</p>
+      </div>
+      <section id="audioCleanupPreview" class="draft-cleanup-preview hidden"></section>
+      <footer>
+        <button id="previewAudioCleanupButton" class="primary" type="button">预览删除</button>
+        <button id="confirmAudioCleanupButton" class="danger hidden" type="button">确认移入回收站</button>
+      </footer>
+    </div>
+  </dialog>
+  <dialog id="audioProtectionDialog" class="audio-protection-dialog">
+    <div>
+      <p class="eyebrow">AUDIO PROTECTED</p>
+      <h2>任务正在使用，禁止删除</h2>
+      <dl>
+        <div><dt>所属任务</dt><dd id="audioProtectionIdentity">--</dd></div>
+        <div><dt>当前状态</dt><dd id="audioProtectionState">--</dd></div>
+        <div><dt>保护原因</dt><dd id="audioProtectionReason">--</dd></div>
+      </dl>
+      <button id="closeAudioProtectionButton" class="primary" type="button">我知道了</button>
     </div>
   </dialog>
   <footer><span>AI视频生产线 OPS · Tailscale安全控制</span><span id="footerMachine">--</span></footer>

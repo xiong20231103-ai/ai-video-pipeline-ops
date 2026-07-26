@@ -7,7 +7,8 @@ const state = {
   date: "", batchId: "", overview: null, templates: [], templateSignature: "",
   gaps: {}, lastGoodDashboard: null, refreshBusy: false,
   step5Items: [], step5Filter: "",
-  drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null
+  drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null,
+  audioFiles: [], audioSnapshot: "", selectedAudioIds: new Set(), audioPreview: null
 };
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? "")
@@ -164,6 +165,154 @@ async function loadDraftManager() {
     $("draftManagerList").innerHTML = `<p class="empty">${escapeHtml(error.message || "读取草稿失败")}</p>`;
   } finally {
     if (button) { button.disabled = false; button.textContent = "管理 CapCut 草稿"; }
+    if (refreshButton) refreshButton.disabled = false;
+  }
+}
+
+function populateAudioFilter(id, values, label) {
+  const select = $(id);
+  if (!select) return;
+  const selected = select.value || "";
+  const counts = new Map();
+  values.filter(Boolean).forEach(value => counts.set(value, (counts.get(value) || 0) + 1));
+  const options = [...counts.keys()].sort((a, b) => a.localeCompare(b, "zh-CN"));
+  select.innerHTML = [
+    `<option value="">全部${escapeHtml(label)}（${state.audioFiles.length}）</option>`,
+    ...options.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}（${counts.get(value)}）</option>`)
+  ].join("");
+  select.value = options.includes(selected) ? selected : "";
+}
+
+function renderAudioFilters() {
+  populateAudioFilter("audioDateFilter", state.audioFiles.map(item => item.date || draftDateKey(item.updatedAt)), "日期");
+  populateAudioFilter("audioProjectFilter", state.audioFiles.map(item => item.project), "项目");
+  populateAudioFilter("audioMaterialFilter", state.audioFiles.map(item => item.material), "材料");
+  populateAudioFilter("audioLanguageFilter", state.audioFiles.map(item => item.language), "语言");
+  populateAudioFilter("audioBatchFilter", state.audioFiles.map(item => item.audioBatch), "批次");
+}
+
+function filteredAudioFiles() {
+  const date = $("audioDateFilter")?.value || "";
+  const project = $("audioProjectFilter")?.value || "";
+  const material = $("audioMaterialFilter")?.value || "";
+  const language = $("audioLanguageFilter")?.value || "";
+  const batch = $("audioBatchFilter")?.value || "";
+  const taskState = $("audioStateFilter")?.value || "";
+  const query = ($("audioSearchFilter")?.value || "").trim().toLocaleLowerCase();
+  return state.audioFiles.filter(item => {
+    const itemDate = item.date || draftDateKey(item.updatedAt);
+    if (date && itemDate !== date) return false;
+    if (project && item.project !== project) return false;
+    if (material && item.material !== material) return false;
+    if (language && item.language !== language) return false;
+    if (batch && item.audioBatch !== batch) return false;
+    if (taskState === "deletable" && item.protected) return false;
+    if (taskState === "protected" && !item.protected) return false;
+    const haystack = `${item.name || ""} ${item.relativePath || ""} ${item.project || ""} ${item.material || ""} ${item.language || ""}`.toLocaleLowerCase();
+    if (query && !haystack.includes(query)) return false;
+    return true;
+  });
+}
+
+function resetAudioPreview() {
+  state.audioPreview = null;
+  $("audioCleanupPreview")?.classList.add("hidden");
+  $("confirmAudioCleanupButton")?.classList.add("hidden");
+}
+
+function updateAudioSelectionSummary() {
+  const selected = state.audioFiles.filter(item => state.selectedAudioIds.has(item.audioId));
+  const size = selected.reduce((total, item) => total + Number(item.sizeBytes || 0), 0);
+  const node = $("audioSelectionSummary");
+  if (node) node.textContent = `已选择 ${selected.length} 个 · ${formatBytes(size)}`;
+}
+
+function audioIdentity(item) {
+  return [item.project, item.material, item.language].filter(Boolean).join(" / ") || "历史或未登记任务";
+}
+
+function showAudioProtection(item) {
+  const identity = audioIdentity(item);
+  const reason = item.protectedReason || "任务正在使用，禁止删除";
+  $("audioProtectionIdentity").textContent = identity;
+  $("audioProtectionState").textContent = item.taskState || "等待恢复";
+  $("audioProtectionReason").textContent = reason;
+  const dialog = $("audioProtectionDialog");
+  if (dialog && !dialog.open) dialog.showModal();
+}
+
+function renderAudioManager() {
+  const node = $("audioManagerList");
+  if (!node) return;
+  const items = filteredAudioFiles();
+  if (!items.length) {
+    node.innerHTML = `<p class="empty">当前筛选条件下没有音频文件</p>`;
+    updateAudioSelectionSummary();
+    return;
+  }
+  node.innerHTML = items.map(item => {
+    const checked = state.selectedAudioIds.has(item.audioId) ? "checked" : "";
+    const disabled = item.protected ? "disabled" : "";
+    const stateLabel = item.protected ? "任务正在使用，禁止删除" : "可手动删除";
+    return `<div class="draft-manager-row audio-manager-row ${item.protected ? "protected" : ""}"
+        data-audio-row-id="${escapeHtml(item.audioId)}" title="${escapeHtml(item.protectedReason || stateLabel)}">
+      <input type="checkbox" data-audio-id="${escapeHtml(item.audioId)}" ${checked} ${disabled}>
+      <strong>${escapeHtml(item.name || "未命名音频")}</strong>
+      <span class="audio-protection ${item.protected ? "protected" : "deletable"}">${escapeHtml(stateLabel)}</span>
+      <span>${escapeHtml(item.date || "--")} · ${escapeHtml(formatDateTime(item.updatedAt || item.createdAt))}</span>
+      <span>${escapeHtml(formatBytes(item.sizeBytes))}</span>
+      <span class="audio-identity">${escapeHtml(audioIdentity(item))}</span>
+      <span class="draft-source">${escapeHtml(item.relativePath || "")}</span>
+    </div>`;
+  }).join("");
+  node.querySelectorAll("input[data-audio-id]").forEach(input => {
+    input.addEventListener("change", event => {
+      const audioId = event.currentTarget.dataset.audioId;
+      if (event.currentTarget.checked) state.selectedAudioIds.add(audioId);
+      else state.selectedAudioIds.delete(audioId);
+      resetAudioPreview();
+      updateAudioSelectionSummary();
+    });
+  });
+  node.querySelectorAll("[data-audio-row-id]").forEach(row => {
+    row.addEventListener("click", event => {
+      const item = state.audioFiles.find(value => value.audioId === row.dataset.audioRowId);
+      if (!item?.protected || event.target.matches("input:not(:disabled)")) return;
+      event.preventDefault();
+      showAudioProtection(item);
+    });
+  });
+  updateAudioSelectionSummary();
+}
+
+async function loadAudioManager() {
+  const button = $("openAudioManagerButton");
+  const refreshButton = $("refreshAudioManagerButton");
+  if (button) { button.disabled = true; button.textContent = "正在读取音频…"; }
+  if (refreshButton) refreshButton.disabled = true;
+  try {
+    const payload = await getJson("/api/controls/audio-files");
+    state.audioFiles = payload.items || [];
+    state.audioSnapshot = payload.snapshotToken || "";
+    renderAudioFilters();
+    state.selectedAudioIds = new Set(
+      [...state.selectedAudioIds].filter(id =>
+        state.audioFiles.some(item => item.audioId === id && !item.protected)
+      )
+    );
+    resetAudioPreview();
+    renderAudioManager();
+    const count = $("audioManagerCount");
+    if (count) {
+      const protectedCount = Number(payload.counts?.protected || 0);
+      count.textContent = `${payload.counts?.total || 0} 个`;
+      count.className = `task-state ${protectedCount ? "failed" : "neutral"}`;
+      count.title = protectedCount ? `${protectedCount} 个正在被任务使用` : "当前没有受保护音频";
+    }
+  } catch (error) {
+    $("audioManagerList").innerHTML = `<p class="empty">${escapeHtml(error.message || "读取音频失败")}</p>`;
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "管理音频文件"; }
     if (refreshButton) refreshButton.disabled = false;
   }
 }
@@ -807,6 +956,7 @@ async function refresh() {
     renderContinueResult(data.controls?.continue || {});
     renderActionResult("uploadActionResult", data.controls?.uploadRescan || {});
     renderActionResult("draftCleanupResult", data.controls?.capcutDraftCleanup || {});
+    renderActionResult("audioCleanupResult", data.controls?.audioCleanup || {});
     renderActionResult("resetRecordsResult", data.controls?.resetRecords || {});
   } catch (error) {
     $("machineBadge").className = "status-badge offline";
@@ -913,6 +1063,100 @@ $("confirmDraftCleanupButton")?.addEventListener("click", async event => {
     });
     $("draftCleanupPreview").classList.remove("hidden");
     $("draftCleanupPreview").innerHTML = `<strong>草稿清理失败</strong>${escapeHtml(error.message || "请刷新后重试")}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = "确认移入回收站";
+  }
+});
+$("openAudioManagerButton")?.addEventListener("click", async () => {
+  const dialog = $("audioManagerDialog");
+  if (dialog && !dialog.open) dialog.showModal();
+  await loadAudioManager();
+});
+$("closeAudioManagerButton")?.addEventListener("click", () => $("audioManagerDialog")?.close());
+$("closeAudioProtectionButton")?.addEventListener("click", () => $("audioProtectionDialog")?.close());
+$("refreshAudioManagerButton")?.addEventListener("click", loadAudioManager);
+[
+  "audioDateFilter", "audioProjectFilter", "audioMaterialFilter", "audioLanguageFilter",
+  "audioBatchFilter", "audioStateFilter", "audioSearchFilter"
+].forEach(id => {
+  $(id)?.addEventListener(id === "audioSearchFilter" ? "input" : "change", () => {
+    resetAudioPreview();
+    renderAudioManager();
+  });
+});
+$("selectFilteredAudioButton")?.addEventListener("click", () => {
+  filteredAudioFiles().filter(item => !item.protected).forEach(item => state.selectedAudioIds.add(item.audioId));
+  resetAudioPreview();
+  renderAudioManager();
+});
+$("clearAudioSelectionButton")?.addEventListener("click", () => {
+  state.selectedAudioIds.clear();
+  resetAudioPreview();
+  renderAudioManager();
+});
+$("previewAudioCleanupButton")?.addEventListener("click", async event => {
+  const button = event.currentTarget;
+  const audioIds = [...state.selectedAudioIds];
+  if (!audioIds.length) {
+    $("audioCleanupPreview").classList.remove("hidden");
+    $("audioCleanupPreview").innerHTML = "<strong>尚未选择音频</strong>请先勾选要移入回收站的音频文件。";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "正在重新对账…";
+  try {
+    const preview = await postJson("/api/controls/audio-files/preview", { audioIds });
+    state.audioPreview = preview;
+    state.audioSnapshot = preview.snapshotToken || "";
+    const blocked = (preview.blocked || []).map(item =>
+      `<li>${escapeHtml(item.name)}：${escapeHtml(item.reason)}</li>`
+    ).join("");
+    $("audioCleanupPreview").classList.remove("hidden");
+    $("audioCleanupPreview").innerHTML = `<strong>${escapeHtml(preview.message)}</strong>
+      可删除空间约 ${escapeHtml(formatBytes(preview.sizeBytes))}。
+      ${blocked ? `<ul>${blocked}</ul>` : ""}`;
+    $("confirmAudioCleanupButton").classList.toggle("hidden", !preview.deletableCount);
+    if (preview.blockedCount) {
+      window.alert(`有 ${preview.blockedCount} 个音频被活动任务保护，已禁止删除。请查看页面中的具体原因。`);
+    }
+  } catch (error) {
+    resetAudioPreview();
+    $("audioCleanupPreview").classList.remove("hidden");
+    $("audioCleanupPreview").innerHTML = `<strong>音频删除预览失败</strong>${escapeHtml(error.message || "请刷新后重试")}`;
+    window.alert(error.message || "音频状态已变化，请重新对账");
+  } finally {
+    button.disabled = false;
+    button.textContent = "预览删除";
+  }
+});
+$("confirmAudioCleanupButton")?.addEventListener("click", async event => {
+  const button = event.currentTarget;
+  const preview = state.audioPreview;
+  if (!preview?.deletableCount) return;
+  if (!window.confirm(`确认将 ${preview.deletableCount} 个音频文件（${formatBytes(preview.sizeBytes)}）移入 Windows 回收站吗？不会删除文件夹，也不会改变任务完成状态。`)) return;
+  button.disabled = true;
+  button.textContent = "正在移入回收站…";
+  try {
+    const audioIds = (preview.deletable || []).map(item => item.audioId);
+    const result = await postJson("/api/controls/audio-files/recycle", {
+      audioIds,
+      snapshotToken: preview.snapshotToken,
+      confirm: "RECYCLE_SELECTED_AUDIO_FILES",
+    });
+    renderActionResult("audioCleanupResult", result);
+    state.selectedAudioIds.clear();
+    await loadAudioManager();
+    await refresh();
+    window.alert(result.message || "音频已移入 Windows 回收站");
+  } catch (error) {
+    const message = error.message || "音频清理失败";
+    renderActionResult("audioCleanupResult", {
+      state: "failed", message, updatedAt: new Date().toISOString()
+    });
+    $("audioCleanupPreview").classList.remove("hidden");
+    $("audioCleanupPreview").innerHTML = `<strong>音频清理已停止</strong>${escapeHtml(message)}`;
+    window.alert(message);
   } finally {
     button.disabled = false;
     button.textContent = "确认移入回收站";

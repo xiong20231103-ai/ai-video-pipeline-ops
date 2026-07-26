@@ -381,7 +381,7 @@ tr:hover td { background: #fafcff; }
 .danger.wide { width: 100%; border: 1px solid #ef9aa5; border-radius: 8px; padding: 9px 11px; background: #fff1f3; color: #b42336; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .danger.wide:disabled { opacity: .55; cursor: wait; }
 
-.draft-manager-card h2 { font-size: 16px; }
+.draft-manager-card h2, .audio-manager-card h2 { font-size: 16px; }
 .draft-manager-dialog {
   width: min(1040px, calc(100vw - 28px)); max-height: calc(100vh - 28px);
   padding: 0; border: 0; border-radius: 16px; color: var(--text);
@@ -440,6 +440,35 @@ tr:hover td { background: #fafcff; }
 .draft-category.formal { color: var(--green); background: var(--green-soft); }
 .draft-category.lab { color: var(--blue); background: var(--blue-soft); }
 .draft-category.manual_or_unknown { color: var(--amber); background: var(--amber-soft); }
+.audio-manager-filters { grid-template-columns: repeat(4, minmax(135px, 1fr)); }
+.audio-manager-filters .draft-search { grid-column: span 2; }
+.audio-manager-row {
+  grid-template-columns: 34px minmax(180px, 1.25fr) 145px 140px 85px minmax(150px, 1fr) minmax(175px, 1.15fr);
+  cursor: pointer;
+}
+.audio-manager-row .audio-protection {
+  display: inline-block; width: fit-content; padding: 4px 7px; border-radius: 6px; font-weight: 800;
+}
+.audio-protection.deletable { color: var(--green); background: var(--green-soft); }
+.audio-protection.protected { color: var(--red); background: var(--red-soft); }
+.audio-manager-row.protected { cursor: help; }
+.audio-manager-row.protected:hover { background: #fff4f5; }
+.audio-manager-row .audio-identity { color: var(--text); font-weight: 700; }
+.audio-protection-dialog {
+  width: min(440px, calc(100vw - 28px)); padding: 0; border: 0; border-radius: 14px;
+  color: var(--text); box-shadow: 0 20px 60px rgba(21, 39, 68, .28);
+}
+.audio-protection-dialog::backdrop { background: rgba(15, 23, 42, .55); }
+.audio-protection-dialog > div { padding: 22px; }
+.audio-protection-dialog h2 { margin: 4px 0 16px; color: var(--red); font-size: 20px; }
+.audio-protection-dialog dl { margin: 0 0 18px; }
+.audio-protection-dialog dl div { padding: 9px 0; border-bottom: 1px solid var(--line); }
+.audio-protection-dialog dt { color: var(--muted); font-size: 10px; font-weight: 800; }
+.audio-protection-dialog dd { margin: 5px 0 0; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.audio-protection-dialog .primary {
+  width: 100%; border: 0; border-radius: 8px; padding: 9px 12px;
+  background: var(--blue); color: #fff; font: inherit; font-weight: 800; cursor: pointer;
+}
 .draft-cleanup-preview {
   margin: 12px 22px 0; padding: 11px 12px; border: 1px solid #f3c5cb;
   border-radius: 9px; background: var(--red-soft); color: #9f2537; font-size: 11px; line-height: 1.55;
@@ -486,7 +515,7 @@ footer {
   .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .metric-card { padding: 13px; }
   .metric-card:last-child { grid-column: span 2; }
-  .taskbox-panel, .pipeline-panel, .tasks-panel, .current-card, .upload-card, .draft-manager-card, .queue-control-card, .project-gaps-card, .events-card { padding: 16px; }
+  .taskbox-panel, .pipeline-panel, .tasks-panel, .current-card, .upload-card, .draft-manager-card, .audio-manager-card, .queue-control-card, .project-gaps-card, .events-card { padding: 16px; }
   .taskbox-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .taskbox-summary div:nth-child(2) { border-right: 0; }
   .taskbox-summary div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
@@ -519,6 +548,13 @@ footer {
   .draft-manager-row > span:nth-of-type(2),
   .draft-manager-row > span:nth-of-type(3) { display: none; }
   .draft-manager-row .draft-source { grid-column: 2 / -1; }
+  .audio-manager-filters { grid-template-columns: 1fr 1fr; }
+  .audio-manager-filters .draft-search { grid-column: 1 / -1; }
+  .audio-manager-row { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .audio-manager-row > span:nth-of-type(2),
+  .audio-manager-row > span:nth-of-type(3) { display: none; }
+  .audio-manager-row .audio-identity,
+  .audio-manager-row .draft-source { grid-column: 2 / -1; }
   footer { padding: 16px; display: block; }
   footer span { display: block; margin: 4px 0; }
 }
