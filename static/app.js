@@ -62,6 +62,25 @@ function draftDateKey(value) {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+function renderDraftDateFilter() {
+  const select = $("draftDateFilter");
+  if (!select) return;
+  const selected = select.value || "";
+  const counts = new Map();
+  state.drafts.forEach(item => {
+    const key = draftDateKey(item.updatedAt || item.createdAt);
+    if (key) counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  const dates = [...counts.keys()].sort((a, b) => b.localeCompare(a));
+  select.innerHTML = [
+    `<option value="">全部日期（${state.drafts.length}）</option>`,
+    ...dates.map(value =>
+      `<option value="${escapeHtml(value)}">${escapeHtml(value)}（${counts.get(value)}）</option>`
+    )
+  ].join("");
+  select.value = dates.includes(selected) ? selected : "";
+}
+
 function filteredDrafts() {
   const category = $("draftCategoryFilter")?.value || "";
   const date = $("draftDateFilter")?.value || "";
@@ -130,6 +149,7 @@ async function loadDraftManager() {
     const payload = await getJson("/api/controls/capcut-drafts");
     state.drafts = payload.items || [];
     state.draftSnapshot = payload.snapshotToken || "";
+    renderDraftDateFilter();
     state.selectedDraftIds = new Set(
       [...state.selectedDraftIds].filter(id => state.drafts.some(item => item.draftId === id && !item.protected))
     );

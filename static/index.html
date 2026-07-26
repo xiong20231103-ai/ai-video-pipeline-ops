@@ -194,7 +194,11 @@
             <option value="manual_or_unknown">人工或来源不明</option>
           </select>
         </label>
-        <label>日期<input id="draftDateFilter" type="date"></label>
+        <label>查看范围
+          <select id="draftDateFilter">
+            <option value="">全部日期</option>
+          </select>
+        </label>
         <label class="draft-search">搜索<input id="draftSearchFilter" type="search" placeholder="草稿名称或源视频"></label>
         <button id="refreshDraftManagerButton" type="button">刷新</button>
       </div>
