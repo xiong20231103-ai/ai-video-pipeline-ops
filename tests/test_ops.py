@@ -1,5 +1,7 @@
 import json
+import os
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -8,6 +10,206 @@ import app
 
 
 class OpsTests(unittest.TestCase):
+    def _make_capcut_draft(self, root: Path, draft_id: str, name: str, marker: str = "") -> Path:
+        folder = root / name
+        folder.mkdir(parents=True)
+        timestamp = int((time.time() - 3600) * 1_000_000)
+        (folder / "draft_meta_info.json").write_text(
+            json.dumps({
+                "draft_id": draft_id,
+                "draft_name": name,
+                "tm_draft_create": timestamp,
+                "tm_draft_modified": timestamp,
+            }),
+            encoding="utf-8",
+        )
+        (folder / "draft_content.json").write_text(
+            json.dumps({"materials": {"videos": [{"path": f"{marker or 'manual'}-source.mp4"}]}}),
+            encoding="utf-8",
+        )
+        return folder
+
+    def _write_capcut_index(self, root: Path, items: list[tuple[str, str]]) -> None:
+        (root / "root_meta_info.json").write_text(
+            json.dumps({
+                "all_draft_store": [
+                    {"draft_id": draft_id, "draft_name": name, "draft_fold_path": str(root / name)}
+                    for draft_id, name in items
+                ],
+                "draft_ids": len(items),
+                "root_path": str(root),
+            }),
+            encoding="utf-8",
+        )
+
+    def test_capcut_draft_inventory_classifies_and_hides_paths(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self._make_capcut_draft(root, "formal-id", "formal", "remote-inbox-20260726")
+            self._make_capcut_draft(root, "lab-id", "lab", "lab-20260726")
+            self._make_capcut_draft(root, "manual-id", "manual")
+            self._write_capcut_index(root, [
+                ("formal-id", "formal"), ("lab-id", "lab"), ("manual-id", "manual"),
+            ])
+            with patch("app._capcut_draft_processes", return_value=[]):
+                payload = app.capcut_draft_inventory_public(root)
+            self.assertEqual(3, payload["counts"]["total"])
+            self.assertEqual({"formal", "lab", "manual_or_unknown"}, {item["category"] for item in payload["items"]})
+            self.assertFalse(any("_path" in item for item in payload["items"]))
+            self.assertNotIn(str(root), json.dumps(payload, ensure_ascii=False))
+
+    def test_capcut_draft_preview_blocks_while_capcut_is_running(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self._make_capcut_draft(root, "formal-id", "formal", "remote-inbox-20260726")
+            self._write_capcut_index(root, [("formal-id", "formal")])
+            with patch("app._capcut_draft_processes", return_value=[{"pid": 123, "name": "CapCut.exe"}]):
+                preview = app.preview_capcut_draft_cleanup(["formal-id"], root=root)
+            self.assertEqual(0, preview["deletableCount"])
+            self.assertEqual(1, preview["blockedCount"])
+            self.assertIn("正在运行", preview["blocked"][0]["reason"])
+
+    def test_capcut_draft_cleanup_removes_exact_index_entry_and_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            first = self._make_capcut_draft(root, "first-id", "first", "remote-inbox-20260726")
+            second = self._make_capcut_draft(root, "second-id", "second", "remote-inbox-20260726")
+            self._write_capcut_index(root, [("first-id", "first"), ("second-id", "second")])
+            preview = app.preview_capcut_draft_cleanup(["first-id"], root=root)
+            recycle_target = root / ".recycled-first"
+
+            def fake_recycle(path: Path) -> None:
+                path.rename(recycle_target)
+
+            with (
+                patch("app._capcut_draft_processes", return_value=[]),
+                patch("app._recycle_directory", side_effect=fake_recycle),
+                patch("app.CAPCUT_DRAFT_CLEANUP_BACKUP_DIR", root / ".backups"),
+                patch("app.CAPCUT_DRAFT_CLEANUP_STATUS_PATH", root / ".status.json"),
+                patch("app.save_control_action"),
+            ):
+                result = app.execute_capcut_draft_cleanup(
+                    ["first-id"], preview["snapshotToken"], root=root
+                )
+            index = json.loads((root / "root_meta_info.json").read_text(encoding="utf-8"))
+            self.assertEqual(1, result["removedCount"])
+            self.assertFalse(first.exists())
+            self.assertTrue(second.exists())
+            self.assertEqual(["second-id"], [item["draft_id"] for item in index["all_draft_store"]])
+            with self.assertRaises(app.HTTPException):
+                app.preview_capcut_draft_cleanup(["first-id"], root=root)
+
+    def test_capcut_draft_cleanup_rejects_stale_snapshot(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self._make_capcut_draft(root, "formal-id", "formal", "remote-inbox-20260726")
+            self._write_capcut_index(root, [("formal-id", "formal")])
+            preview = app.preview_capcut_draft_cleanup(["formal-id"], root=root)
+            self._write_capcut_index(root, [("formal-id", "formal"), ("other-id", "other")])
+            with patch("app._capcut_draft_processes", return_value=[]):
+                with self.assertRaises(app.HTTPException) as context:
+                    app.execute_capcut_draft_cleanup(
+                        ["formal-id"], preview["snapshotToken"], root=root
+                    )
+            self.assertEqual(409, context.exception.status_code)
+
+    def test_metadata_scan_ignores_handoff_backup_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            handoff = root / "交接记录" / "7.22"
+            handoff.mkdir(parents=True)
+            live = handoff / "第四步到第五步.json"
+            backup = handoff / "第四步到第五步.before-repair.json"
+            live.write_text(json.dumps({"date": "7.22", "tasks": [{"taskId": "live"}]}), encoding="utf-8")
+            backup.write_text(json.dumps({"date": "7.22", "tasks": [{"taskId": "backup"}]}), encoding="utf-8")
+            collector = app.Collector(
+                dict(app.CONFIG, capcut_handoff_dir=str(root / "capcut"), fourth_step_handoff_dir=str(root / "交接记录")),
+                app.Store(root / "ops.db"),
+            )
+            collector.scan_metadata()
+            self.assertEqual({"live"}, set(collector.metadata))
+
+    def test_current_ledger_requeue_overrides_old_active_capcut_attempt(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            capcut = root / "capcut"
+            ledger = root / "ledger"
+            capcut.mkdir()
+            ledger.mkdir()
+            (capcut / "old-attempt.json").write_text(
+                json.dumps({"tasks": [{"taskId": "wall-ru", "activeManifestId": "old", "status": "running"}]}),
+                encoding="utf-8",
+            )
+            (ledger / "current.json").write_text(
+                json.dumps({"tasks": [{"taskId": "wall-ru", "status": "waiting_capcut"}]}),
+                encoding="utf-8",
+            )
+            collector = app.Collector(
+                dict(app.CONFIG, capcut_handoff_dir=str(capcut), fourth_step_handoff_dir=str(ledger)),
+                app.Store(root / "ops.db"),
+            )
+            collector.scan_metadata()
+            self.assertEqual("waiting_capcut", collector.metadata["wall-ru"]["status"])
+            self.assertEqual((ledger / "current.json"), Path(collector.metadata["wall-ru"]["_source"]))
+
+    def test_explicit_contract_reset_overrides_newer_abandoned_status(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = app.Store(Path(folder) / "ops.db")
+            base = {
+                "task_id": "wall-ru", "batch_id": "batch", "date_label": "7.22",
+                "project": "SPC墙板", "material": "晶岩墙板", "language": "俄语",
+                "number": "001", "sequence": 1, "video_path": "", "audio_path": "",
+                "output_path": "", "state_text": "", "error": "",
+                "source_file": "old.status.json", "remote_pipeline_task_id": "parent",
+                "expected_task_count": 4,
+            }
+            store.upsert_task({**base, "state": "Completed", "state_text": "剪辑完成", "source_timestamp": 200.0})
+            store.upsert_task({
+                **base,
+                "state": "waiting_capcut",
+                "state_text": "等待第五步",
+                "source_file": "current-ledger.json",
+                "source_timestamp": 100.0,
+                "_force_contract_reset": True,
+            })
+            self.assertEqual("waiting_capcut", store.tasks()[0]["state"])
+
+    def test_store_clear_all_removes_only_dashboard_records(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = app.Store(Path(folder) / "ops.db")
+            store.event("Test", "INFO", "old event")
+            store.save_heartbeat("test", {"ok": True})
+            store.source_result(Path(folder) / "source.json", False, "missing", "missing")
+
+            store.clear_all()
+
+            self.assertEqual([], store.events(10))
+            self.assertIsNone(store.last_heartbeat())
+            self.assertEqual([], store.source_errors())
+
+    def test_reset_generation_ignores_old_media_but_accepts_new_media(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            old_video = root / "old" / "old.mp4"
+            old_video.parent.mkdir()
+            old_video.write_bytes(b"old")
+            old_epoch = time.time() - 60
+            os.utime(old_video, (old_epoch, old_epoch))
+            store = app.Store(root / "ops.db")
+            collector = app.Collector(dict(app.CONFIG, download_root=str(root)), store)
+
+            reset_at = app.datetime.fromtimestamp(time.time()).astimezone().isoformat(timespec="seconds")
+            collector.reset_runtime(reset_at)
+            collector.scan_download_pipeline(False)
+            self.assertEqual({}, collector.pipeline_history["download"])
+
+            new_video = root / "new" / "new.mp4"
+            new_video.parent.mkdir()
+            new_video.write_bytes(b"new")
+            collector.last_download_scan_epoch = 0
+            collector.scan_download_pipeline(False)
+            self.assertTrue(collector.pipeline_history["download"])
+
     def test_receiver_v2_reconciliation_clears_ghost_and_archives_history(self):
         class Response:
             def __enter__(self):
@@ -18,18 +220,18 @@ class OpsTests(unittest.TestCase):
 
             def read(self):
                 return json.dumps({
-                    "schemaVersion": 2,
+                    "schemaVersion": 3,
                     "updatedAt": "2026-07-22T10:00:00+08:00",
                     "reconciledAt": "2026-07-22T10:00:00+08:00",
                     "reconciliationState": "healthy",
-                    "projects": {},
-                    "archivedProjects": {
-                        "ghost": {
+                    "projects": [],
+                    "archivedProjects": [
+                        {
                             "taskId": "ghost", "batchId": "box-1", "date": "7.21",
                             "project": "实体机", "material": "净白板",
                             "status": "cancelled", "archiveReason": "operator_cancelled",
                         }
-                    },
+                    ],
                 }, ensure_ascii=False).encode("utf-8")
 
         with tempfile.TemporaryDirectory() as folder:
@@ -80,12 +282,73 @@ class OpsTests(unittest.TestCase):
                 "snapshotUpdatedAt": "2026-07-22T10:00:00+08:00",
             }
             try:
-                first = app.request_workbench_continue(target)
-                second = app.request_workbench_continue(target)
+                with patch(
+                    "app.ensure_receiver_workbench_running",
+                    side_effect=[
+                        {"started": True, "alreadyRunning": False, "pid": 4321},
+                        {"started": False, "alreadyRunning": True, "pid": 9876},
+                    ],
+                ) as ensure_running:
+                    first = app.request_workbench_continue(target)
+                    second = app.request_workbench_continue(target)
                 saved = json.loads((root / "workbench" / "handoff" / "control" / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8"))
                 self.assertEqual(first["commandId"], second["commandId"])
+                self.assertTrue(first["workbenchStarted"])
+                self.assertTrue(second["workbenchAlreadyRunning"])
+                self.assertEqual(2, ensure_running.call_count)
+                self.assertTrue(saved["workbenchAlreadyRunning"])
+                self.assertEqual(9876, saved["workbenchPid"])
                 for key, value in target.items():
                     self.assertEqual(value, saved[key])
+            finally:
+                app.CONFIG["workbench_dir"] = previous
+
+    def test_continue_keeps_command_when_receiver_cannot_launch_workbench(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "workbench").mkdir()
+            previous = app.CONFIG.get("workbench_dir")
+            app.CONFIG["workbench_dir"] = str(root)
+            target = {
+                "batchId": "box-2", "taskId": "task-2", "productionDate": "7.22",
+                "snapshotUpdatedAt": "2026-07-22T11:00:00+08:00",
+            }
+            try:
+                with patch(
+                    "app.ensure_receiver_workbench_running",
+                    side_effect=app.HTTPException(status_code=503, detail="receiver offline"),
+                ):
+                    result = app.request_workbench_continue(target)
+                command_file = root / "workbench" / "handoff" / "control" / app.CONTINUE_COMMAND_NAME
+                self.assertTrue(command_file.is_file())
+                self.assertTrue(result["accepted"])
+                self.assertFalse(result["workbenchStarted"])
+                self.assertEqual("receiver offline", result["workbenchLaunchError"])
+                saved = json.loads(command_file.read_text(encoding="utf-8"))
+                self.assertEqual("receiver offline", saved["workbenchLaunchError"])
+            finally:
+                app.CONFIG["workbench_dir"] = previous
+
+    def test_continue_keeps_structured_receiver_startup_error(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "workbench").mkdir()
+            previous = app.CONFIG.get("workbench_dir")
+            app.CONFIG["workbench_dir"] = str(root)
+            target = {
+                "batchId": "box-startup", "taskId": "task-startup", "productionDate": "7.22",
+                "snapshotUpdatedAt": "2026-07-23T10:00:00+08:00",
+            }
+            detail = {"code": "ready_timeout", "message": "工作台在 20 秒内未写入就绪心跳。", "logFile": "C:/temp/log"}
+            try:
+                with patch("app.ensure_receiver_workbench_running", side_effect=app.HTTPException(status_code=503, detail=detail)):
+                    result = app.request_workbench_continue(target)
+                self.assertEqual("ready_timeout", result["workbenchLaunchCode"])
+                self.assertEqual(detail["message"], result["workbenchLaunchError"])
+                self.assertEqual("C:/temp/log", result["workbenchLaunchLog"])
+                command = app.read_json_object(root / "workbench" / "handoff" / "control" / app.CONTINUE_COMMAND_NAME)
+                self.assertEqual("requested", command["state"])
+                self.assertEqual("ready_timeout", command["workbenchLaunchCode"])
             finally:
                 app.CONFIG["workbench_dir"] = previous
 
@@ -306,6 +569,53 @@ class OpsTests(unittest.TestCase):
         finally:
             app.COLLECTOR.project_download_statuses = previous
 
+    def test_task_box_shows_current_task_voice_pending_not_stale_global_voice(self):
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            app.COLLECTOR.project_download_statuses = [{
+                "taskId": "huang-5", "batchId": "box-9", "batchSequence": 5,
+                "batchSize": 9, "date": "7.22", "project": "黄颢", "material": "碳岩板",
+                "expectedCount": 4, "completed": 4, "failed": 0, "gapActive": False,
+                "notStarted": False, "status": "completed", "pipelineStatus": "voice_pending",
+                "pipelineStateText": "第 1/2 步已完整，正在启动当前项目的配音",
+            }]
+            with patch("app.remote_capcut_summaries", return_value={}):
+                box = app.task_box_payloads()[0]
+
+            self.assertEqual("running", box["current"]["status"])
+            self.assertEqual("第 3 步准备配音", box["current"]["currentStep"])
+            self.assertEqual("huang-5", box["current"]["taskId"])
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
+    def test_task_box_uses_dynamic_material_rows_but_fixed_total_53(self):
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            # The per-material split is intentionally different from the 7.22
+            # split.  Dashboard must trust each submitted row and only require
+            # the formal task-box sum to remain 53.
+            counts = [3, 4, 6, 24, 4, 4, 4, 2, 2]
+            app.COLLECTOR.project_download_statuses = [
+                {
+                    "taskId": f"dynamic-{sequence}", "batchId": "dynamic-53",
+                    "batchSequence": sequence, "batchSize": len(counts), "date": "7.23",
+                    "project": "实体机" if sequence <= 3 else "项目",
+                    "material": f"材料{sequence}", "expectedCount": count,
+                    "completed": 0, "failed": 0, "gapActive": False,
+                    "notStarted": True, "status": "planned",
+                }
+                for sequence, count in enumerate(counts, 1)
+            ]
+            with patch("app.remote_capcut_summaries", return_value={}):
+                box = app.task_box_payloads()[0]
+
+            self.assertEqual(53, box["totalVideos"])
+            self.assertEqual(counts, [item["expected"] for item in box["items"]])
+            self.assertEqual(9, box["projectCount"])
+            self.assertEqual("planned", box["items"][0]["status"])
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
     def test_dashboard_keeps_other_regions_when_receiver_api_fails(self):
         previous = app.COLLECTOR.project_download_statuses
         try:
@@ -398,15 +708,27 @@ class OpsTests(unittest.TestCase):
                 "tasks": {
                     "cleaned": {
                         "date": "7.21", "status": "uploaded", "progress": 100,
-                        "cleanup": {"state": "local_final_deleted"},
+                        "cleanup": {
+                            "state": "cleanup_completed",
+                            "cloudVerifiedAt": "2026-07-21T12:00:00+08:00",
+                            "taskFilesCleanedAt": "2026-07-21T12:00:01+08:00",
+                            "audioPathState": "permanent_keep",
+                        },
                     },
                     "pending": {
                         "date": "7.21", "status": "uploaded", "progress": 100,
-                        "cleanup": {"state": "cloud_verified"},
+                        "cleanup": {
+                            "state": "waiting_shared_release",
+                            "cloudVerifiedAt": "2026-07-21T12:00:00+08:00",
+                            "taskFilesCleanedAt": "2026-07-21T12:00:01+08:00",
+                        },
                     },
                     "blocked": {
                         "date": "7.21", "status": "uploaded", "progress": 100,
-                        "cleanup": {"state": "blocked_cloud_size_mismatch"},
+                        "cleanup": {
+                            "state": "blocked_cloud_size_mismatch",
+                            "cloudVerifiedAt": "2026-07-21T12:00:00+08:00",
+                        },
                     },
                 },
             }, ensure_ascii=False), encoding="utf-8")
@@ -418,8 +740,12 @@ class OpsTests(unittest.TestCase):
 
             stage = collector.pipeline_history["upload"]["7.21"]
             self.assertEqual(1, stage["localCleaned"])
+            self.assertEqual(2, stage["taskFilesCleaned"])
+            self.assertEqual(1, stage["waitingSharedRelease"])
+            self.assertEqual(3, stage["cloudVerified"])
             self.assertEqual(1, stage["cleanupPending"])
             self.assertEqual(1, stage["cleanupBlocked"])
+            self.assertEqual(1, stage["permanentKeep"])
 
     def test_normalize_uses_metadata(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -497,7 +823,12 @@ class OpsTests(unittest.TestCase):
                         "remotePipelineTaskId": "legacy-1",
                     },
                 }
-                for task_id, remote_id in (("formal", "parent-1"), ("old-test", "legacy-1")):
+                for task_id, remote_id in (("formal", "parent-1"), ("formal-second", "parent-2"), ("old-test", "legacy-1")):
+                    source = handoff / f"{task_id}.json" if task_id != "old-test" else root / "old-launch.json"
+                    app.COLLECTOR.metadata[task_id] = {
+                        "_source": str(source),
+                        "remotePipelineTaskId": remote_id,
+                    }
                     app.STORE.upsert_task({
                         "task_id": task_id, "batch_id": "batch", "date_label": "7.21",
                         "project": "云手机", "material": "碳岩板", "language": "英语",
@@ -508,8 +839,10 @@ class OpsTests(unittest.TestCase):
                     })
 
                 rows = app.production_capcut_tasks("7.21")
+                scoped = app.production_capcut_tasks("7.21", remote_task_id="parent-2")
 
-                self.assertEqual(["formal"], [row["task_id"] for row in rows])
+                self.assertEqual({"formal", "formal-second"}, {row["task_id"] for row in rows})
+                self.assertEqual(["formal-second"], [row["task_id"] for row in scoped])
             finally:
                 app.STORE = previous_store
                 app.COLLECTOR.metadata = previous_metadata

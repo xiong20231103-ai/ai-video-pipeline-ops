@@ -5,7 +5,9 @@ function currentLocalDateLabel() {
 
 const state = {
   date: "", batchId: "", overview: null, templates: [], templateSignature: "",
-  gaps: {}, lastGoodDashboard: null, refreshBusy: false
+  gaps: {}, lastGoodDashboard: null, refreshBusy: false,
+  step5Items: [], step5Filter: "",
+  drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null
 };
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? "")
@@ -35,6 +37,115 @@ function formatAge(seconds) {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}分钟前`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}小时前`;
   return `${Math.floor(seconds / 86400)}天前`;
+}
+
+function formatBytes(value) {
+  let size = Number(value || 0);
+  if (!Number.isFinite(size) || size <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit += 1; }
+  return `${size >= 10 || unit === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[unit]}`;
+}
+
+function draftCategoryLabel(value) {
+  if (value === "formal") return "正式自动";
+  if (value === "lab") return "内测";
+  return "人工/不明";
+}
+
+function draftDateKey(value) {
+  const date = new Date(value || "");
+  if (Number.isNaN(date.getTime())) return "";
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function filteredDrafts() {
+  const category = $("draftCategoryFilter")?.value || "";
+  const date = $("draftDateFilter")?.value || "";
+  const query = ($("draftSearchFilter")?.value || "").trim().toLocaleLowerCase();
+  return state.drafts.filter(item => {
+    if (category && item.category !== category) return false;
+    if (date && draftDateKey(item.updatedAt || item.createdAt) !== date) return false;
+    if (query && !`${item.name || ""} ${item.sourceLabel || ""}`.toLocaleLowerCase().includes(query)) return false;
+    return true;
+  });
+}
+
+function resetDraftPreview() {
+  state.draftPreview = null;
+  $("draftCleanupPreview")?.classList.add("hidden");
+  $("confirmDraftCleanupButton")?.classList.add("hidden");
+}
+
+function updateDraftSelectionSummary() {
+  const selected = state.drafts.filter(item => state.selectedDraftIds.has(item.draftId));
+  const size = selected.reduce((total, item) => total + Number(item.sizeBytes || 0), 0);
+  const node = $("draftSelectionSummary");
+  if (node) node.textContent = `已选择 ${selected.length} 个 · ${formatBytes(size)}`;
+}
+
+function renderDraftManager() {
+  const node = $("draftManagerList");
+  if (!node) return;
+  const items = filteredDrafts();
+  if (!items.length) {
+    node.innerHTML = `<p class="empty">当前筛选条件下没有草稿</p>`;
+    updateDraftSelectionSummary();
+    return;
+  }
+  node.innerHTML = items.map(item => {
+    const checked = state.selectedDraftIds.has(item.draftId) ? "checked" : "";
+    const disabled = item.protected ? "disabled" : "";
+    const detail = item.protected ? item.protectedReason : (item.inIndex ? "索引正常" : "目录未登记在首页索引");
+    return `<label class="draft-manager-row ${item.protected ? "protected" : ""}" title="${escapeHtml(detail)}">
+      <input type="checkbox" data-draft-id="${escapeHtml(item.draftId)}" ${checked} ${disabled}>
+      <strong>${escapeHtml(item.name || "未命名草稿")}</strong>
+      <span class="draft-category ${escapeHtml(item.category)}">${escapeHtml(draftCategoryLabel(item.category))}</span>
+      <span>${escapeHtml(formatDateTime(item.updatedAt || item.createdAt))}</span>
+      <span>${escapeHtml(formatBytes(item.sizeBytes))}</span>
+      <span class="draft-source">${escapeHtml(item.sourceLabel || detail)}</span>
+    </label>`;
+  }).join("");
+  node.querySelectorAll("input[data-draft-id]").forEach(input => {
+    input.addEventListener("change", event => {
+      const draftId = event.currentTarget.dataset.draftId;
+      if (event.currentTarget.checked) state.selectedDraftIds.add(draftId);
+      else state.selectedDraftIds.delete(draftId);
+      resetDraftPreview();
+      updateDraftSelectionSummary();
+    });
+  });
+  updateDraftSelectionSummary();
+}
+
+async function loadDraftManager() {
+  const button = $("openDraftManagerButton");
+  const refreshButton = $("refreshDraftManagerButton");
+  if (button) { button.disabled = true; button.textContent = "正在读取草稿…"; }
+  if (refreshButton) refreshButton.disabled = true;
+  try {
+    const payload = await getJson("/api/controls/capcut-drafts");
+    state.drafts = payload.items || [];
+    state.draftSnapshot = payload.snapshotToken || "";
+    state.selectedDraftIds = new Set(
+      [...state.selectedDraftIds].filter(id => state.drafts.some(item => item.draftId === id && !item.protected))
+    );
+    resetDraftPreview();
+    renderDraftManager();
+    const count = $("draftManagerCount");
+    if (count) {
+      count.textContent = `${payload.counts?.total || 0} 个`;
+      count.className = `task-state ${(payload.runningProcesses || []).length ? "failed" : "neutral"}`;
+    }
+  } catch (error) {
+    $("draftManagerList").innerHTML = `<p class="empty">${escapeHtml(error.message || "读取草稿失败")}</p>`;
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "管理 CapCut 草稿"; }
+    if (refreshButton) refreshButton.disabled = false;
+  }
 }
 
 function ageFromTime(value) {
@@ -111,7 +222,21 @@ function renderStage(name, data = {}) {
 function renderPipeline(pipeline = {}) {
   ["download", "voice", "stitch", "capcut", "upload"].forEach(name => renderStage(name, pipeline[name]));
   renderDownloadFailures(pipeline.download || {});
+  renderUploadSummary(pipeline.upload || {});
   renderPipelineRows(pipeline);
+}
+
+function renderUploadSummary(upload = {}) {
+  const configured = upload.state !== "unconfigured";
+  $("uploadCardTitle").textContent = configured
+    ? (upload.state === "running" ? "百度网盘上传中" : upload.stateText || "百度网盘上传服务")
+    : "百度网盘未配置";
+  $("uploadCardMessage").textContent = configured
+    ? `等待 ${upload.waiting || 0}，上传中 ${upload.uploading || 0}，云端已核验 ${upload.cloudVerified || 0}，失败 ${upload.failed || 0}。本条文件已清理 ${upload.taskFilesCleaned || 0}，等待共享引用释放 ${upload.waitingSharedRelease || 0}，全部清理完成 ${upload.localCleaned || 0}，阻止 ${upload.cleanupBlocked || 0}，历史保留 ${upload.legacyRetained || 0}，永久保护 ${upload.permanentKeep || 0}。`
+    : "请先在TikHub工作台配置并授权百度网盘。";
+  $("uploadCardBadge").textContent = configured
+    ? (upload.state === "failed" ? "上传失败" : upload.state === "completed" ? "上传完成" : upload.state === "running" ? "上传中" : "等待成片")
+    : "未配置";
 }
 
 function renderDownloadFailures(download = {}) {
@@ -126,7 +251,7 @@ function renderDownloadFailures(download = {}) {
   const shown = items.slice(0, 8);
   list.innerHTML = shown.length
     ? shown.map(item => `<li><code>${escapeHtml(item.url || "未记录链接")}</code><span>${escapeHtml(item.reason || "下载或 AI 去字幕失败")}</span></li>`).join("")
-    : `<li><span>工作台已记录 ${failed} 条失败；请打开工作台的“批次核对 / 缺口提醒”查看并补链。</span></li>`;
+    : `<li><span>已记录 ${failed} 条失败；请在本页任务箱展开对应材料，查看原因并直接补链。</span></li>`;
 }
 
 function renderPipelinePayload(payload = {}) {
@@ -160,7 +285,9 @@ function renderPipelineRows(pipeline = {}) {
       ? "尚未接入"
       : (item.programOnline ? "程序运行中" : "程序未运行");
     const onlineClass = item.programOnline ? "online" : "offline";
-    const current = item.current || item.todaySummary || item.source || "暂无当前任务";
+  const phase = item.phaseText || item.currentPhase || "";
+  const current = [item.current || item.todaySummary || item.source || "暂无当前任务", phase]
+    .filter(Boolean).join(" · ");
     const testHistory = Number(item.testHistoryCount || 0) ? `；测试历史 ${Number(item.testHistoryCount)} 条（不计生产）` : "";
     const liveText = item.state === "running"
       ? (item.isLive ? "实时更新" : "状态未刷新")
@@ -184,6 +311,10 @@ function categoryFor(raw) {
   return "running";
 }
 
+function step5FilterKey(item) {
+  return JSON.stringify([item.project || "未分类", item.material || "--"]);
+}
+
 function renderOverview(data) {
   state.overview = data;
   const machine = data.machine || {};
@@ -205,7 +336,7 @@ function renderOverview(data) {
     ? (upload.state === "running" ? "百度网盘上传中" : upload.message || "百度网盘上传服务")
     : "百度网盘未配置";
   $("uploadCardMessage").textContent = upload.configured
-    ? `等待 ${upload.waiting || 0}，上传中 ${upload.uploading || 0}，云端已核验 ${upload.cloudVerified || upload.completed || 0}，失败 ${upload.failed || 0}。核验后已清理 ${upload.localCleaned || 0}，待清理 ${upload.cleanupPending || 0}，阻止 ${upload.cleanupBlocked || 0}。`
+    ? `等待 ${upload.waiting || 0}，上传中 ${upload.uploading || 0}，云端已核验 ${upload.cloudVerified || 0}，失败 ${upload.failed || 0}。本条文件已清理 ${upload.taskFilesCleaned || 0}，等待共享引用释放 ${upload.waitingSharedRelease || 0}，全部清理完成 ${upload.localCleaned || 0}，阻止 ${upload.cleanupBlocked || 0}，历史保留 ${upload.legacyRetained || 0}。`
     : "请先在TikHub工作台配置并授权百度网盘。";
   $("uploadCardBadge").textContent = upload.configured
     ? (upload.state === "failed" ? "上传失败" : upload.state === "completed" ? "上传完成" : upload.state === "running" ? "上传中" : "等待成片")
@@ -239,13 +370,45 @@ function renderOverview(data) {
 function renderTasks(items) {
   const rows = $("taskRows");
   const cards = $("taskCards");
-  if (!items.length) {
+  const select = $("step5ProjectFilter");
+  const filters = new Map();
+  items.forEach(item => {
+    const project = item.project || "未分类";
+    const material = item.material || "--";
+    const key = step5FilterKey(item);
+    if (!filters.has(key)) filters.set(key, { project, material });
+  });
+  if (!filters.has(state.step5Filter)) state.step5Filter = "";
+  const filterSignature = Array.from(filters.keys()).join("|");
+  if (select.dataset.signature !== filterSignature) {
+    select.innerHTML = `<option value="">全部项目</option>${Array.from(filters.entries()).map(([key, filter]) =>
+      `<option value="${escapeHtml(key)}">${escapeHtml(filter.project)} / ${escapeHtml(filter.material)}</option>`
+    ).join("")}`;
+    select.dataset.signature = filterSignature;
+  }
+  select.value = state.step5Filter;
+
+  const visibleItems = state.step5Filter
+    ? items.filter(item => step5FilterKey(item) === state.step5Filter)
+    : items;
+  const visibleCounts = visibleItems.reduce((counts, item) => {
+    counts.total += 1;
+    counts[item.category] = (counts[item.category] || 0) + 1;
+    return counts;
+  }, { total: 0, waiting: 0, running: 0, completed: 0, failed: 0 });
+  $("countTotal").textContent = visibleCounts.total;
+  $("countWaiting").textContent = visibleCounts.waiting;
+  $("countRunning").textContent = visibleCounts.running;
+  $("countCompleted").textContent = visibleCounts.completed;
+  $("countFailed").textContent = visibleCounts.failed;
+
+  if (!visibleItems.length) {
     rows.innerHTML = `<tr><td colspan="6" class="empty">这个生产日期暂时没有第五步任务</td></tr>`;
     cards.innerHTML = `<p class="empty">这个生产日期暂时没有第五步任务</p>`;
     return;
   }
   const groups = new Map();
-  items.forEach(item => {
+  visibleItems.forEach(item => {
     const key = `${item.project || "未分类"} / ${item.material || "--"}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(item);
@@ -257,7 +420,7 @@ function renderTasks(items) {
       <td><strong>${escapeHtml(item.project || "未分类")}</strong><span class="subtext">${escapeHtml(item.date_label || "")}</span></td>
       <td>${escapeHtml(item.material || "--")}<span class="subtext">${escapeHtml(item.language || "--")}</span></td>
       <td>${escapeHtml(item.number || "--")}${item.sequence ? `-${escapeHtml(item.sequence)}` : ""}</td>
-      <td>${escapeHtml(item.state_text || item.state)}</td>
+      <td>${escapeHtml(item.phase_text || item.state_text || item.phase || item.state)}<span class="subtext">${item.heartbeat_at ? `心跳 ${escapeHtml(formatClock(item.heartbeat_at))}` : ""}</span></td>
       <td>${escapeHtml(item.output_name || "尚未生成")}<span class="subtext">${escapeHtml(item.video_name || "")}</span></td>
       <td><span class="task-state ${escapeHtml(item.category)}">${escapeHtml(item.category === "running" ? "处理中" : item.state_text)}</span></td>
     </tr>`).join("")}`;
@@ -268,7 +431,7 @@ function renderTasks(items) {
       <summary><strong>${escapeHtml(label)}</strong><span>${done} / ${group.length}</span></summary>
       ${group.map(item => `<article class="task-card-item">
         <div><b>${escapeHtml(item.language || "--")} · ${escapeHtml(item.number || "--")}${item.sequence ? `-${escapeHtml(item.sequence)}` : ""}</b><span class="task-state ${escapeHtml(item.category)}">${escapeHtml(item.category === "running" ? "处理中" : item.state_text)}</span></div>
-        <p>${escapeHtml(item.state_text || item.state)}</p><small>${escapeHtml(item.output_name || "尚未生成")}</small>
+        <p>${escapeHtml(item.phase_text || item.state_text || item.state)}</p><small>${escapeHtml(item.output_name || "尚未生成")}${item.heartbeat_at ? ` · 心跳 ${escapeHtml(formatClock(item.heartbeat_at))}` : ""}</small>
       </article>`).join("")}
     </details>`;
   }).join("");
@@ -491,20 +654,69 @@ function renderSources(source = {}) {
 function renderContinueResult(result = {}) {
   const node = $("continueResult");
   const stateName = String(result.state || "idle");
+  // A continue command is durable on the receiver.  Keep the button locked for
+  // every non-terminal recovery phase, including the v3 accepted/recovering
+  // states, so a refresh can never make a second click look safe.
+  const inFlightStates = ["requested", "accepted", "running", "recovering"];
+  const commandInFlight = !result.stale && inFlightStates.includes(stateName);
   const stateLabel = {
-    idle: "尚未对账", requested: "已发送", running: "对账中",
-    completed: "可以继续", blocked: "已阻止", failed: "执行失败"
+    idle: "尚未对账", requested: "命令已发送", accepted: "工作台已接收",
+    running: "正在安全继续", recovering: "正在恢复当前项目",
+    completed: "恢复已完成", blocked: "已阻止", failed: "执行失败", expired: "命令已过期"
   }[stateName] || stateName;
   const rows = Array.isArray(result.steps) ? result.steps : [];
+  const launchError = inFlightStates.includes(stateName)
+    ? String(result.workbenchLaunchError || "")
+    : "";
+  const launchCode = String(result.workbenchLaunchCode || "");
+  const launchLog = String(result.workbenchLaunchLog || "");
+  const launchState = result.workbenchReady
+    ? "工作台已确认就绪"
+    : result.workbenchAlreadyRunning
+      ? "正在复用已运行的工作台"
+      : result.workbenchStartPending
+        ? "工作台正在启动"
+        : result.workbenchStarted
+          ? "工作台已启动，等待接收指令"
+          : "";
   node.className = `reconcile-result ${stateName === "completed" ? "completed" : ["blocked", "failed"].includes(stateName) ? "failed" : "neutral"}`;
+  const commandDetail = result.commandId
+    ? `<small>命令编号：${escapeHtml(result.commandId)}${commandInFlight ? " · 请勿重复点击" : ""}</small>`
+    : "";
+  const bridgeState = String(result.bridgeState || "");
+  const bridgeMessage = String(result.bridgeMessage || "");
+  const bridgeDetail = bridgeState
+    ? `<p><small>Fish桥接：${escapeHtml(bridgeState)}${result.bridgePort ? ` · 端口 ${Number(result.bridgePort)}` : ""}${result.bridgePid ? ` · PID ${Number(result.bridgePid)}` : ""}${bridgeMessage ? ` · ${escapeHtml(bridgeMessage)}` : ""}</small></p>`
+    : "";
   node.innerHTML = `<div class="reconcile-head"><strong>${escapeHtml(stateLabel)}${result.stale ? " · 结果已过期" : ""}</strong><span>${escapeHtml(formatDateTime(result.finishedAt || result.requestedAt))}</span></div>
     <p>${escapeHtml(result.message || "尚未执行安全继续对账")}</p>
+    ${commandDetail}
+    ${bridgeDetail}
     ${rows.length ? `<div class="reconcile-steps">${rows.map(item => `<div><span>${item.step}. ${escapeHtml(item.name)}</span><b>${Number(item.actual || 0)} / ${Number(item.expected || 0)}</b></div>`).join("")}</div>` : ""}`;
+  if (launchState || launchError) {
+    const detail = document.createElement("p");
+    detail.className = launchError ? "failed" : "";
+    detail.textContent = launchError
+      ? `工作台启动失败${launchCode ? `（${launchCode}）` : ""}：${launchError}${launchLog ? `；日志：${launchLog}` : ""}`
+      : `${launchState}${result.workbenchPid ? `（PID ${Number(result.workbenchPid)}）` : ""}`;
+    node.appendChild(detail);
+  }
   const button = $("continueCurrentButton");
   const allowed = result.allowed !== false;
-  button.dataset.allowed = allowed ? "true" : "false";
-  button.disabled = !allowed;
-  button.title = allowed ? "" : (result.message || "接收器状态未对账");
+  const clickable = allowed && !commandInFlight;
+  button.dataset.allowed = clickable ? "true" : "false";
+  button.dataset.commandState = stateName;
+  button.disabled = !clickable;
+  button.textContent = stateName === "requested"
+    ? "命令已发送，等待工作台…"
+    : stateName === "accepted"
+      ? "工作台已接收，正在核对…"
+      : ["running", "recovering"].includes(stateName)
+      ? "正在安全继续，请勿重复点击…"
+      : "安全继续当前项目";
+  button.title = commandInFlight
+    ? (result.message || "继续命令正在执行，请等待状态更新")
+    : allowed ? "" : (result.message || "接收器状态未对账");
 }
 
 function renderActionResult(id, result = {}) {
@@ -563,7 +775,8 @@ async function refresh() {
     state.date = data.selectedDate || state.date;
     renderOverview(data.overview || {});
     renderPipelinePayload(data.pipeline || {});
-    renderTasks(data.tasks?.items || []);
+    state.step5Items = data.tasks?.items || [];
+    renderTasks(state.step5Items);
     renderEvents(data.events?.items || []);
     renderProjectGaps(data.projectGaps?.items || []);
     renderReceiverQueue(data.receiverQueue?.items || []);
@@ -573,6 +786,8 @@ async function refresh() {
     renderSources(data.sources || {});
     renderContinueResult(data.controls?.continue || {});
     renderActionResult("uploadActionResult", data.controls?.uploadRescan || {});
+    renderActionResult("draftCleanupResult", data.controls?.capcutDraftCleanup || {});
+    renderActionResult("resetRecordsResult", data.controls?.resetRecords || {});
   } catch (error) {
     $("machineBadge").className = "status-badge offline";
     $("machineBadge").innerHTML = "<span></span>Dashboard 连接失败";
@@ -594,6 +809,95 @@ $("taskBoxSelect")?.addEventListener("change", event => {
   state.date = "";
   refresh();
 });
+$("step5ProjectFilter")?.addEventListener("change", event => {
+  state.step5Filter = event.target.value;
+  renderTasks(state.step5Items);
+});
+$("openDraftManagerButton")?.addEventListener("click", async () => {
+  const dialog = $("draftManagerDialog");
+  if (dialog && !dialog.open) dialog.showModal();
+  await loadDraftManager();
+});
+$("closeDraftManagerButton")?.addEventListener("click", () => $("draftManagerDialog")?.close());
+$("refreshDraftManagerButton")?.addEventListener("click", loadDraftManager);
+["draftCategoryFilter", "draftDateFilter", "draftSearchFilter"].forEach(id => {
+  $(id)?.addEventListener(id === "draftSearchFilter" ? "input" : "change", () => {
+    resetDraftPreview();
+    renderDraftManager();
+  });
+});
+$("selectFilteredDraftsButton")?.addEventListener("click", () => {
+  filteredDrafts().filter(item => !item.protected).forEach(item => state.selectedDraftIds.add(item.draftId));
+  resetDraftPreview();
+  renderDraftManager();
+});
+$("clearDraftSelectionButton")?.addEventListener("click", () => {
+  state.selectedDraftIds.clear();
+  resetDraftPreview();
+  renderDraftManager();
+});
+$("previewDraftCleanupButton")?.addEventListener("click", async event => {
+  const button = event.currentTarget;
+  const draftIds = [...state.selectedDraftIds];
+  if (!draftIds.length) {
+    $("draftCleanupPreview").classList.remove("hidden");
+    $("draftCleanupPreview").innerHTML = "<strong>尚未选择草稿</strong>请先勾选要移入回收站的草稿。";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "正在核对…";
+  try {
+    const preview = await postJson("/api/controls/capcut-drafts/preview", { draftIds });
+    state.draftPreview = preview;
+    state.draftSnapshot = preview.snapshotToken || "";
+    const blocked = (preview.blocked || []).map(item =>
+      `<li>${escapeHtml(item.name)}：${escapeHtml(item.reason)}</li>`
+    ).join("");
+    $("draftCleanupPreview").classList.remove("hidden");
+    $("draftCleanupPreview").innerHTML = `<strong>${escapeHtml(preview.message)}</strong>
+      可删除空间约 ${escapeHtml(formatBytes(preview.sizeBytes))}。
+      ${blocked ? `<ul>${blocked}</ul>` : ""}`;
+    $("confirmDraftCleanupButton").classList.toggle("hidden", !preview.deletableCount);
+  } catch (error) {
+    resetDraftPreview();
+    $("draftCleanupPreview").classList.remove("hidden");
+    $("draftCleanupPreview").innerHTML = `<strong>删除预览失败</strong>${escapeHtml(error.message || "请刷新后重试")}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = "预览删除";
+  }
+});
+$("confirmDraftCleanupButton")?.addEventListener("click", async event => {
+  const button = event.currentTarget;
+  const preview = state.draftPreview;
+  if (!preview?.deletableCount) return;
+  if (!window.confirm(`确认将 ${preview.deletableCount} 个草稿移入 Windows 回收站吗？不会删除视频、音频、成片或生产任务。`)) return;
+  if (preview.containsManualOrUnknown && !window.confirm("选择中包含人工或来源不明草稿。再次确认仍要将这些草稿移入回收站。")) return;
+  button.disabled = true;
+  button.textContent = "正在移入回收站…";
+  try {
+    const draftIds = (preview.deletable || []).map(item => item.draftId);
+    const result = await postJson("/api/controls/capcut-drafts/cleanup", {
+      draftIds,
+      snapshotToken: preview.snapshotToken,
+      includeUnknown: Boolean(preview.containsManualOrUnknown),
+      confirm: "RECYCLE_SELECTED_CAPCUT_DRAFTS",
+    });
+    renderActionResult("draftCleanupResult", result);
+    state.selectedDraftIds.clear();
+    await loadDraftManager();
+    await refresh();
+  } catch (error) {
+    renderActionResult("draftCleanupResult", {
+      state: "failed", message: error.message || "草稿清理失败", updatedAt: new Date().toISOString()
+    });
+    $("draftCleanupPreview").classList.remove("hidden");
+    $("draftCleanupPreview").innerHTML = `<strong>草稿清理失败</strong>${escapeHtml(error.message || "请刷新后重试")}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = "确认移入回收站";
+  }
+});
 $("continueCurrentButton")?.addEventListener("click", async (event) => {
   const button = event.currentTarget;
   if (button.dataset.allowed === "false") return;
@@ -603,7 +907,8 @@ $("continueCurrentButton")?.addEventListener("click", async (event) => {
   try {
     const result = await postJson("/api/controls/continue-current", {});
     renderContinueResult({
-      state: "requested",
+      ...result,
+      state: result.state || "requested",
       commandId: result.commandId,
       message: result.message || "继续指令已发送，正在对账",
       requestedAt: new Date().toISOString(),
@@ -611,14 +916,11 @@ $("continueCurrentButton")?.addEventListener("click", async (event) => {
     await refresh();
   } catch (error) {
     renderContinueResult({ state: "failed", message: error.message || "发送继续指令失败" });
-  } finally {
-    button.disabled = button.dataset.allowed === "false";
-    button.textContent = "安全继续当前项目";
   }
 });
 $("uploadRescanButton")?.addEventListener("click", async (event) => {
   const button = event.currentTarget;
-  if (!window.confirm("确认检查所有正式清单，并自动补传已完成但尚未上传的成片吗？不会重新剪辑等待中的任务。")) return;
+  if (!window.confirm("确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。")) return;
   button.disabled = true;
   button.textContent = "正在检查上传缺口…";
   try {
@@ -637,7 +939,34 @@ $("uploadRescanButton")?.addEventListener("click", async (event) => {
     });
   } finally {
     button.disabled = false;
-    button.textContent = "检查并补传未上传成片";
+    button.textContent = "重新对账、补传并清理";
+  }
+});
+$("resetTestRecordsButton")?.addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  if (!window.confirm("确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。")) return;
+  if (!window.confirm("再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。")) return;
+  button.disabled = true;
+  button.textContent = "正在备份并重置…";
+  try {
+    const result = await postJson("/api/controls/testing/reset", { confirm: "RESET_TEST_RECORDS" });
+    state.date = "";
+    state.batchId = "";
+    renderActionResult("resetRecordsResult", {
+      state: "completed",
+      message: result.message || "测试记录已重置",
+      updatedAt: result.resetAt || new Date().toISOString(),
+    });
+    await refresh();
+  } catch (error) {
+    renderActionResult("resetRecordsResult", {
+      state: "failed",
+      message: error.message || "测试记录重置失败",
+      updatedAt: new Date().toISOString(),
+    });
+  } finally {
+    button.disabled = false;
+    button.textContent = "重置全部测试记录";
   }
 });
 $("createDate").value = currentLocalDateLabel();

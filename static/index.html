@@ -103,7 +103,15 @@
       <div class="panel tasks-panel">
         <div class="section-heading table-heading">
           <div><p class="eyebrow">STEP 5 TASKS</p><h2>第五步任务与进度</h2></div>
-          <span id="taskDateLabel" class="date-follow">跟随生产日期</span>
+          <div class="step5-heading-controls">
+            <span id="taskDateLabel" class="date-follow">跟随生产日期</span>
+            <label class="step5-filter" for="step5ProjectFilter">
+              <span>查看</span>
+              <select id="step5ProjectFilter" aria-label="筛选第五步项目">
+                <option value="">全部项目</option>
+              </select>
+            </label>
+          </div>
         </div>
         <div class="summary-grid">
           <div><small>总任务</small><strong id="countTotal">0</strong></div><div><small>等待</small><strong id="countWaiting">0</strong></div>
@@ -125,8 +133,17 @@
         <section class="panel upload-card">
           <div class="upload-icon">↥</div><div><p class="eyebrow">UPLOAD SERVICE</p><h2 id="uploadCardTitle">正在读取百度网盘状态</h2></div>
           <p id="uploadCardMessage">等待工作台上传服务写入状态。</p><span id="uploadCardBadge">检查中</span>
-          <button id="uploadRescanButton" class="primary wide" type="button">检查并补传未上传成片</button>
+          <button id="uploadRescanButton" class="primary wide" type="button">重新对账、补传并清理</button>
           <div id="uploadActionResult" class="action-result neutral">尚未手动检查上传缺口</div>
+        </section>
+        <section class="panel draft-manager-card">
+          <div class="section-heading compact">
+            <div><p class="eyebrow">CAPCUT DRAFTS</p><h2>CapCut 草稿管理</h2></div>
+            <span id="draftManagerCount" class="task-state neutral">未读取</span>
+          </div>
+          <p class="queue-control-note">只在你选择并确认后，将草稿移入 Windows 回收站；不会自动清空现有草稿。</p>
+          <button id="openDraftManagerButton" class="primary wide" type="button">管理 CapCut 草稿</button>
+          <div id="draftCleanupResult" class="action-result neutral">尚未手动清理 CapCut 草稿</div>
         </section>
         <section class="panel queue-control-card">
           <div class="section-heading compact"><div><p class="eyebrow">QUEUE CONTROL</p><h2>任务确认与撤回</h2></div></div>
@@ -137,6 +154,9 @@
           <section id="continueResult" class="reconcile-result neutral">
             <strong>尚未执行安全继续对账</strong>
           </section>
+          <button id="resetTestRecordsButton" class="danger wide" type="button">重置全部测试记录</button>
+          <p class="queue-control-note">仅把工作台、接收器、Dashboard 与 CapCut 的任务记录备份后归零；不会删除媒体、素材、配置或校准。</p>
+          <div id="resetRecordsResult" class="action-result neutral">尚未重置测试记录</div>
           <details class="web-task-form"><summary>新建项目任务</summary>
             <form id="createTaskForm">
               <label>日期<input id="createDate" name="date" placeholder="例如 7.21" required></label>
@@ -158,6 +178,43 @@
       </aside>
     </section>
   </main>
+  <dialog id="draftManagerDialog" class="draft-manager-dialog">
+    <div class="draft-manager-shell">
+      <header>
+        <div><p class="eyebrow">CAPCUT DRAFTS</p><h2>选择要移入回收站的草稿</h2></div>
+        <button id="closeDraftManagerButton" class="icon-button" type="button" aria-label="关闭草稿管理">×</button>
+      </header>
+      <p class="draft-manager-warning">CapCut 或批处理客户端运行时禁止删除。人工及来源不明草稿不会默认勾选。</p>
+      <div class="draft-manager-filters">
+        <label>分类
+          <select id="draftCategoryFilter">
+            <option value="">全部</option>
+            <option value="formal">正式自动草稿</option>
+            <option value="lab">内测草稿</option>
+            <option value="manual_or_unknown">人工或来源不明</option>
+          </select>
+        </label>
+        <label>日期<input id="draftDateFilter" type="date"></label>
+        <label class="draft-search">搜索<input id="draftSearchFilter" type="search" placeholder="草稿名称或源视频"></label>
+        <button id="refreshDraftManagerButton" type="button">刷新</button>
+      </div>
+      <div class="draft-manager-toolbar">
+        <div>
+          <button id="selectFilteredDraftsButton" type="button">全选当前筛选</button>
+          <button id="clearDraftSelectionButton" type="button">取消全选</button>
+        </div>
+        <strong id="draftSelectionSummary">已选择 0 个</strong>
+      </div>
+      <div id="draftManagerList" class="draft-manager-list">
+        <p class="empty">点击“管理 CapCut 草稿”后读取清单。</p>
+      </div>
+      <section id="draftCleanupPreview" class="draft-cleanup-preview hidden"></section>
+      <footer>
+        <button id="previewDraftCleanupButton" class="primary" type="button">预览删除</button>
+        <button id="confirmDraftCleanupButton" class="danger hidden" type="button">确认移入回收站</button>
+      </footer>
+    </div>
+  </dialog>
   <footer><span>AI视频生产线 OPS · Tailscale安全控制</span><span id="footerMachine">--</span></footer>
   <script src="/static/app.js"></script>
 </body>

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import csv
+import ctypes
+import hashlib
 import ipaddress
 import json
 import os
@@ -32,7 +34,13 @@ STATIC_DIR = BASE_DIR / "static"
 DB_PATH = DATA_DIR / "ops.db"
 CONFIG_PATH = BASE_DIR / "config.json"
 CONTINUE_COMMAND_NAME = "continue_current_project.json"
+LEGACY_INVALID_JSON_BACKSLASH = re.compile(r'(?<!\\)\\(?!["\\/bfnrtu])')
 CONTROL_ACTIONS_PATH = DATA_DIR / "control_actions.json"
+TEST_RESET_STATE_PATH = DATA_DIR / "test_reset_state.json"
+CAPCUT_DRAFT_CLEANUP_STATUS_PATH = DATA_DIR / "capcut_draft_cleanup_status.json"
+CAPCUT_DRAFT_CLEANUP_BACKUP_DIR = DATA_DIR / "capcut-draft-cleanup-backups"
+CAPCUT_DRAFT_CLEANUP_CONFIRM = "RECYCLE_SELECTED_CAPCUT_DRAFTS"
+CAPCUT_DRAFT_LOCK = threading.RLock()
 LOCAL_PATH_PATTERN = re.compile(r"(?i)(?<![A-Za-z0-9])[A-Z]:[\\/][^\"\r\n]*")
 SENSITIVE_KEY_PARTS = ("accesstoken", "access_token", "password", "secret", "authorization")
 
@@ -120,6 +128,7 @@ def load_config() -> dict[str, Any]:
         "capcut_handoff_dir": "../TikHub_AI_视频工作台/handoff/capcut",
         "fourth_step_handoff_dir": "../TikHub_AI_视频工作台/交接记录",
         "final_output_root": "E:/",
+        "capcut_draft_root": "",
         "upload_status_file": "../TikHub_AI_视频工作台/handoff/upload/upload_status.json",
         "scan_interval_seconds": 2,
         "pipeline_live_after_seconds": 15,
@@ -148,6 +157,78 @@ def receiver_base_url() -> str:
     return f"{parts.scheme}://{parts.netloc}"
 
 
+def ensure_receiver_workbench_running() -> dict[str, Any]:
+    """Ask the receiver to own workbench startup and single-instance checks."""
+    # The receiver waits up to 20 seconds for the workbench readiness heartbeat.
+    return receiver_json("/api/workbench/ensure-running", method="POST", timeout=28)
+
+
+def _continue_launch_result(result: dict[str, Any]) -> dict[str, Any]:
+    started = bool(result.get("started"))
+    already_running = bool(result.get("alreadyRunning"))
+    message = str(result.get("message") or "").strip()
+    if already_running:
+        status_message = "命令已发送，现有工作台正在接收"
+    elif started:
+        status_message = "命令已发送，正在启动工作台"
+    else:
+        status_message = message or "命令已发送，接收器正在确认工作台状态"
+    return {
+        "workbenchStarted": started,
+        "workbenchAlreadyRunning": already_running,
+        "workbenchReady": bool(result.get("ready")),
+        "workbenchStartPending": bool(result.get("startPending")),
+        "workbenchPid": int(result.get("pid") or 0),
+        "workbenchLaunchCode": "",
+        "workbenchLaunchLog": "",
+        "workbenchLaunchError": "",
+        "message": status_message,
+    }
+
+
+def _ensure_workbench_for_continue() -> dict[str, Any]:
+    """Keep the durable command even when receiver-side startup fails."""
+    try:
+        return _continue_launch_result(ensure_receiver_workbench_running())
+    except HTTPException as exc:
+        detail = exc.detail
+        structured = detail if isinstance(detail, dict) else {}
+        error_message = str(structured.get("message") or detail)
+        return {
+            "workbenchStarted": False,
+            "workbenchAlreadyRunning": False,
+            "workbenchReady": False,
+            "workbenchStartPending": False,
+            "workbenchPid": 0,
+            "workbenchLaunchCode": str(structured.get("code") or f"http_{exc.status_code}"),
+            "workbenchLaunchLog": str(structured.get("logFile") or ""),
+            "workbenchLaunchError": error_message,
+            "message": f"继续命令已保存，但工作台启动失败：{error_message}",
+        }
+
+
+def _persist_continue_launch_state(command_file: Path, command_id: str, launch: dict[str, Any]) -> None:
+    """Persist startup feedback while leaving workbench-owned running states untouched."""
+    try:
+        current = json.loads(command_file.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return
+    if not isinstance(current, dict) or str(current.get("commandId") or "") != command_id:
+        return
+    if str(current.get("state") or "") != "requested":
+        return
+    for key in (
+        "workbenchStarted", "workbenchAlreadyRunning", "workbenchPid",
+        "workbenchReady", "workbenchStartPending", "workbenchLaunchCode",
+        "workbenchLaunchLog", "workbenchLaunchError", "message",
+    ):
+        current[key] = launch.get(key)
+    current["workbenchLaunchUpdatedAt"] = now_iso()
+    temp = command_file.with_suffix(".tmp")
+    temp.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(temp, command_file)
+
+
 def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
     """Queue one safe-resume request for the local workbench."""
     workbench_dir = resolve_path(str(CONFIG.get("workbench_dir") or ""))
@@ -160,10 +241,89 @@ def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
     command_file = workbench_dir / "handoff" / "control" / CONTINUE_COMMAND_NAME
     command_file.parent.mkdir(parents=True, exist_ok=True)
     try:
-        existing = json.loads(command_file.read_text(encoding="utf-8"))
+        existing = json.loads(command_file.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError):
         existing = {}
+    # A command can remain behind when an older workbench wrote finishedAt
+    # while retaining state=running, or after its project has completed.
     if isinstance(existing, dict) and existing.get("state") in {"requested", "running"}:
+        existing_target = (
+            str(existing.get("batchId") or ""),
+            str(existing.get("taskId") or ""),
+            str(existing.get("productionDate") or ""),
+        )
+        requested_target = (
+            str(target.get("batchId") or ""),
+            str(target.get("taskId") or ""),
+            str(target.get("productionDate") or ""),
+        )
+        old_runtime = read_json_object(workbench_dir / "handoff" / "download" / "project_status.json")
+        old_items = old_runtime.get("items") if isinstance(old_runtime.get("items"), dict) else {}
+        old_item = old_items.get(existing_target[1]) if isinstance(old_items, dict) else {}
+        old_pipeline = str(old_item.get("pipelineStatus") or "").lower() if isinstance(old_item, dict) else ""
+        heartbeat = parse_time(str(existing.get("lastHeartbeat") or existing.get("startedAt") or existing.get("requestedAt") or ""))
+        expired_reason = ""
+        if existing.get("finishedAt"):
+            expired_reason = "运行命令已含完成时间"
+        elif old_pipeline in {"completed", "cancelled", "withdrawn"}:
+            expired_reason = "命令所属项目已结束"
+        elif (
+            existing.get("state") == "running"
+            and existing_target == requested_target
+            and old_pipeline in {"step1_completed", "step12_completed", "voice_pending", "blocked_voice"}
+            and heartbeat
+            and time.time() - heartbeat > 20
+            and not existing.get("lastHeartbeat")
+        ):
+            # Workbench owns the transition to running and writes a heartbeat
+            # only after it has actually started a task-scoped recovery.
+            # A Dashboard/receiver startup acknowledgement alone is not a
+            # running production command and must not block another click.
+            expired_reason = "继续命令未确认启动，已允许安全重试"
+        elif existing_target != requested_target and heartbeat and time.time() - heartbeat > 300:
+            expired_reason = "另一项目的旧命令已超时"
+        if expired_reason:
+            existing["state"] = "expired"
+            existing["stale"] = True
+            existing["expiredReason"] = expired_reason
+            existing["finishedAt"] = now_iso()
+            temp = command_file.with_suffix(".tmp")
+            temp.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
+            os.replace(temp, command_file)
+    # A prior command can remain marked running after the task-scoped Fish
+    # handoff has already entered a terminal voice failure.  Only that same
+    # task is allowed to supersede the stale command.
+    runtime_status = read_json_object(workbench_dir / "handoff" / "download" / "project_status.json")
+    runtime_items = runtime_status.get("items") if isinstance(runtime_status.get("items"), dict) else {}
+    runtime_item = runtime_items.get(str(target.get("taskId") or "")) if isinstance(runtime_items, dict) else {}
+    pipeline_status = str(runtime_item.get("pipelineStatus") or "").lower() if isinstance(runtime_item, dict) else ""
+    task_id = str(target.get("taskId") or "")
+    voice_handoff = read_json_object(resolve_path(str(CONFIG.get("voice_handoff_file") or "")))
+    voice_status = str(voice_handoff.get("status") or "").lower()
+    handoff_task_ids = {
+        str(item.get("canonicalTaskId") or "")
+        for item in (voice_handoff.get("failedItems") or [])
+        if isinstance(item, dict)
+    }
+    handoff_task_ids.update(str(value or "") for value in (voice_handoff.get("canonicalTaskIds") or []))
+    voice_failure_for_task = (
+        task_id in handoff_task_ids
+        and voice_status in {"failed", "completed_with_errors"}
+        and any(
+            str(item.get("canonicalTaskId") or "") == task_id
+            for item in (voice_handoff.get("failedItems") or [])
+            if isinstance(item, dict)
+        )
+    )
+    retryable_terminal_voice = (
+        pipeline_status in {"blocked_voice", "voice_failed", "voice_login_required"}
+        or voice_failure_for_task
+    )
+    if (
+        isinstance(existing, dict)
+        and existing.get("state") in {"requested", "running"}
+        and not retryable_terminal_voice
+    ):
         existing_target = (
             str(existing.get("batchId") or ""),
             str(existing.get("taskId") or ""),
@@ -176,12 +336,15 @@ def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
         )
         if existing_target != requested_target:
             raise HTTPException(status_code=409, detail="已有另一项目的安全继续命令正在处理")
-        return {
+        response = {
             "accepted": True,
             "commandId": str(existing.get("commandId") or ""),
             "state": existing.get("state"),
-            "message": "继续指令已在处理",
         }
+        launch = _ensure_workbench_for_continue()
+        _persist_continue_launch_state(command_file, response["commandId"], launch)
+        response.update(launch)
+        return response
     payload = {
         "command": "continue_current_project",
         "commandId": f"continue-{uuid.uuid4().hex[:12]}",
@@ -196,18 +359,37 @@ def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
     temp = command_file.with_suffix(".tmp")
     temp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     os.replace(temp, command_file)
-    payload = {
+    response = {
         "accepted": True,
         "commandId": payload["commandId"],
         "state": "requested",
-        "message": "已发送给家里工作台；将先对账再安全继续",
     }
-    return payload
+    launch = _ensure_workbench_for_continue()
+    _persist_continue_launch_state(command_file, response["commandId"], launch)
+    response.update(launch)
+    return response
 
 
 def continue_command_file() -> Path:
     runtime = workbench_runtime_dir()
     return runtime / "handoff" / "control" / CONTINUE_COMMAND_NAME
+
+
+def fish_bridge_status() -> dict[str, Any]:
+    """Read the local-only Fish bridge ownership record for remote diagnosis."""
+    handoff_path = resolve_path(str(CONFIG.get("voice_handoff_file") or ""))
+    runtime = read_json_object(handoff_path.with_name("fish_bridge_runtime.json"))
+    if not runtime:
+        return {"state": "idle", "message": "Fish 桥接尚未启动"}
+    return {
+        "state": str(runtime.get("state") or "idle"),
+        "message": str(runtime.get("message") or runtime.get("cleanupReason") or ""),
+        "pid": int(runtime.get("pid") or 0),
+        "port": int(runtime.get("port") or 5178),
+        "batchId": str(runtime.get("batchId") or ""),
+        "updatedAt": str(runtime.get("updatedAt") or runtime.get("startedAt") or ""),
+        "terminalStatus": str(runtime.get("terminalStatus") or ""),
+    }
 
 
 def read_json_object(path: Path) -> dict[str, Any]:
@@ -218,24 +400,458 @@ def read_json_object(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def capcut_draft_root() -> Path:
+    configured = str(CONFIG.get("capcut_draft_root") or "").strip()
+    if configured:
+        return resolve_path(configured)
+    local_app_data = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    return Path(local_app_data) / "CapCut" / "User Data" / "Projects" / "com.lveditor.draft"
+
+
+def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(path.suffix + ".tmp")
+    temp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(temp, path)
+
+
+def _capcut_draft_processes() -> list[dict[str, Any]]:
+    active: list[dict[str, Any]] = []
+    for process in psutil.process_iter(["pid", "name", "cmdline"]):
+        try:
+            name = str(process.info.get("name") or "")
+            command = " ".join(process.info.get("cmdline") or [])
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            continue
+        normalized = f"{name} {command}".lower()
+        if (
+            name.lower() in {"capcut.exe", "capcutbatchclient.exe"}
+            or "capcutbatchclient" in normalized
+        ):
+            active.append({"pid": int(process.info.get("pid") or 0), "name": name or "CapCut"})
+    return active
+
+
+def _draft_timestamp(value: Any, fallback: float) -> float:
+    try:
+        number = float(value or 0)
+    except (TypeError, ValueError):
+        return fallback
+    if number > 10_000_000_000:
+        number /= 1_000_000
+    return number if number > 0 else fallback
+
+
+def _draft_directory_size(folder: Path) -> int:
+    total = 0
+    try:
+        for current, _directories, files in os.walk(folder):
+            for name in files:
+                try:
+                    total += (Path(current) / name).stat().st_size
+                except OSError:
+                    continue
+    except OSError:
+        return total
+    return total
+
+
+def _draft_content_summary(folder: Path) -> tuple[str, str]:
+    content_path = folder / "draft_content.json"
+    try:
+        raw = content_path.read_text(encoding="utf-8-sig", errors="replace")
+    except OSError:
+        raw = ""
+    lowered = raw.lower()
+    if "remote-inbox-" in lowered:
+        category = "formal"
+    elif "lab-" in lowered or "lab_" in lowered or "isolatedtest" in lowered:
+        category = "lab"
+    else:
+        category = "manual_or_unknown"
+    candidates = re.findall(
+        r"[^\"\\/]{1,180}\.(?:mp4|mov|mkv|avi|webm)",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    source_label = candidates[0].strip() if candidates else ""
+    return category, source_label
+
+
+def _capcut_draft_snapshot(root: Path, index_path: Path) -> str:
+    digest = hashlib.sha256()
+    try:
+        digest.update(index_path.read_bytes())
+    except OSError:
+        digest.update(b"missing-index")
+    try:
+        folders = sorted(
+            (item for item in root.iterdir() if item.is_dir() and not item.name.startswith(".")),
+            key=lambda item: item.name.casefold(),
+        )
+    except OSError:
+        folders = []
+    for folder in folders:
+        try:
+            stat = folder.stat()
+            digest.update(f"{folder.name}\0{stat.st_mtime_ns}\0".encode("utf-8", errors="replace"))
+        except OSError:
+            digest.update(f"{folder.name}\0missing\0".encode("utf-8", errors="replace"))
+    return digest.hexdigest()
+
+
+def _capcut_draft_inventory(root: Path | None = None) -> dict[str, Any]:
+    root = (root or capcut_draft_root()).resolve()
+    index_path = root / "root_meta_info.json"
+    if not root.is_dir():
+        return {
+            "available": False, "message": "CapCut 草稿目录不存在", "snapshotToken": "",
+            "items": [], "counts": {}, "runningProcesses": [],
+        }
+    try:
+        index_payload = json.loads(index_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        index_payload = {}
+    index_records = index_payload.get("all_draft_store") if isinstance(index_payload, dict) else []
+    index_records = index_records if isinstance(index_records, list) else []
+    index_by_id: dict[str, list[dict[str, Any]]] = {}
+    for record in index_records:
+        if not isinstance(record, dict):
+            continue
+        draft_id = str(record.get("draft_id") or "").strip()
+        if draft_id:
+            index_by_id.setdefault(draft_id, []).append(record)
+
+    try:
+        folders = [
+            item for item in root.iterdir()
+            if item.is_dir() and not item.name.startswith(".")
+        ]
+    except OSError:
+        folders = []
+    running = _capcut_draft_processes()
+    now_epoch = time.time()
+    items: list[dict[str, Any]] = []
+    folder_ids: set[str] = set()
+    for folder in folders:
+        meta = read_json_object(folder / "draft_meta_info.json")
+        draft_id = str(meta.get("draft_id") or "").strip()
+        if draft_id:
+            folder_ids.add(draft_id)
+        records = index_by_id.get(draft_id, []) if draft_id else []
+        record = records[0] if len(records) == 1 else {}
+        try:
+            folder_stat = folder.stat()
+            modified_epoch = _draft_timestamp(
+                meta.get("tm_draft_modified") or record.get("tm_draft_modified"),
+                folder_stat.st_mtime,
+            )
+            created_epoch = _draft_timestamp(
+                meta.get("tm_draft_create") or record.get("tm_draft_create"),
+                folder_stat.st_ctime,
+            )
+        except OSError:
+            modified_epoch = created_epoch = 0.0
+        category, source_label = _draft_content_summary(folder)
+        protected_reason = ""
+        if running:
+            protected_reason = "CapCut 或批处理客户端正在运行"
+        elif not draft_id:
+            protected_reason = "草稿缺少唯一 draft_id"
+        elif len(records) > 1:
+            protected_reason = "草稿索引存在重复 draft_id"
+        elif modified_epoch and now_epoch - modified_epoch < 900:
+            protected_reason = "草稿在最近15分钟内更新"
+        name = str(meta.get("draft_name") or record.get("draft_name") or folder.name)
+        items.append({
+            "draftId": draft_id or f"unidentified:{hashlib.sha256(folder.name.encode('utf-8')).hexdigest()[:16]}",
+            "name": name,
+            "folderName": folder.name,
+            "createdAt": datetime.fromtimestamp(created_epoch).astimezone().isoformat(timespec="seconds") if created_epoch else "",
+            "updatedAt": datetime.fromtimestamp(modified_epoch).astimezone().isoformat(timespec="seconds") if modified_epoch else "",
+            "sizeBytes": _draft_directory_size(folder),
+            "category": category,
+            "sourceLabel": source_label,
+            "inIndex": len(records) == 1,
+            "protected": bool(protected_reason),
+            "protectedReason": protected_reason,
+            "_path": str(folder),
+        })
+    stale_index_records = sum(
+        len(records)
+        for draft_id, records in index_by_id.items()
+        if draft_id not in folder_ids
+    )
+    items.sort(key=lambda item: (parse_time(item.get("updatedAt")), item.get("name") or ""), reverse=True)
+    counts = {
+        "total": len(items),
+        "formal": sum(item["category"] == "formal" for item in items),
+        "lab": sum(item["category"] == "lab" for item in items),
+        "manualOrUnknown": sum(item["category"] == "manual_or_unknown" for item in items),
+        "protected": sum(bool(item["protected"]) for item in items),
+        "staleIndexRecords": stale_index_records,
+    }
+    return {
+        "available": True,
+        "message": "草稿清单已读取",
+        "snapshotToken": _capcut_draft_snapshot(root, index_path),
+        "items": items,
+        "counts": counts,
+        "runningProcesses": running,
+        "_root": str(root),
+        "_index": str(index_path),
+        "_indexPayload": index_payload,
+    }
+
+
+def capcut_draft_inventory_public(root: Path | None = None) -> dict[str, Any]:
+    inventory = _capcut_draft_inventory(root)
+    return {
+        key: value for key, value in inventory.items()
+        if not key.startswith("_") and key != "items"
+    } | {
+        "items": [
+            {key: value for key, value in item.items() if not key.startswith("_")}
+            for item in inventory.get("items", [])
+        ],
+        "updatedAt": now_iso(),
+    }
+
+
+def _selected_capcut_drafts(
+    draft_ids: list[str],
+    *,
+    root: Path | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    normalized = list(dict.fromkeys(str(value or "").strip() for value in draft_ids if str(value or "").strip()))
+    if not normalized:
+        raise HTTPException(status_code=400, detail="请至少选择一个草稿")
+    if len(normalized) > 500 or any(len(value) > 160 for value in normalized):
+        raise HTTPException(status_code=400, detail="选择的草稿数量或标识无效")
+    inventory = _capcut_draft_inventory(root)
+    if not inventory.get("available"):
+        raise HTTPException(status_code=503, detail=str(inventory.get("message") or "草稿目录不可用"))
+    by_id = {str(item.get("draftId") or ""): item for item in inventory.get("items", [])}
+    missing = [value for value in normalized if value not in by_id]
+    if missing:
+        raise HTTPException(status_code=409, detail=f"有 {len(missing)} 个草稿已变化，请刷新清单后重试")
+    return inventory, [by_id[value] for value in normalized]
+
+
+def preview_capcut_draft_cleanup(draft_ids: list[str], *, root: Path | None = None) -> dict[str, Any]:
+    inventory, selected = _selected_capcut_drafts(draft_ids, root=root)
+    deletable = [item for item in selected if not item.get("protected")]
+    blocked = [item for item in selected if item.get("protected")]
+    return {
+        "state": "preview",
+        "snapshotToken": str(inventory.get("snapshotToken") or ""),
+        "selectedCount": len(selected),
+        "deletableCount": len(deletable),
+        "blockedCount": len(blocked),
+        "sizeBytes": sum(safe_int(item.get("sizeBytes")) for item in deletable),
+        "containsManualOrUnknown": any(item.get("category") == "manual_or_unknown" for item in deletable),
+        "deletable": [
+            {"draftId": item["draftId"], "name": item["name"], "category": item["category"]}
+            for item in deletable
+        ],
+        "blocked": [
+            {
+                "draftId": item["draftId"], "name": item["name"],
+                "reason": item.get("protectedReason") or "草稿受保护",
+            }
+            for item in blocked
+        ],
+        "message": f"可移入回收站 {len(deletable)} 个，受保护 {len(blocked)} 个",
+    }
+
+
+def _recycle_directory(path: Path) -> None:
+    if os.name != "nt":
+        raise OSError("草稿回收站操作仅支持 Windows")
+
+    class SHFILEOPSTRUCTW(ctypes.Structure):
+        _fields_ = [
+            ("hwnd", ctypes.c_void_p),
+            ("wFunc", ctypes.c_uint),
+            ("pFrom", ctypes.c_wchar_p),
+            ("pTo", ctypes.c_wchar_p),
+            ("fFlags", ctypes.c_ushort),
+            ("fAnyOperationsAborted", ctypes.c_bool),
+            ("hNameMappings", ctypes.c_void_p),
+            ("lpszProgressTitle", ctypes.c_wchar_p),
+        ]
+
+    operation = SHFILEOPSTRUCTW()
+    operation.wFunc = 3  # FO_DELETE
+    operation.pFrom = str(path) + "\0\0"
+    operation.fFlags = 0x0040 | 0x0010 | 0x0004 | 0x0400  # undo, no confirm, silent, no UI errors
+    result = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(operation))
+    if result != 0 or operation.fAnyOperationsAborted:
+        raise OSError(f"Windows 回收站操作失败（代码 {result}）")
+
+
+def execute_capcut_draft_cleanup(
+    draft_ids: list[str],
+    snapshot_token: str,
+    *,
+    include_unknown: bool = False,
+    root: Path | None = None,
+) -> dict[str, Any]:
+    with CAPCUT_DRAFT_LOCK:
+        inventory, selected = _selected_capcut_drafts(draft_ids, root=root)
+        if str(inventory.get("snapshotToken") or "") != str(snapshot_token or ""):
+            raise HTTPException(status_code=409, detail="草稿清单已变化，请重新预览")
+        running = inventory.get("runningProcesses") or []
+        if running:
+            raise HTTPException(status_code=409, detail="CapCut 或批处理客户端正在运行，请全部关闭后再删除草稿")
+        blocked = [item for item in selected if item.get("protected")]
+        if blocked:
+            raise HTTPException(status_code=409, detail=f"所选草稿中有 {len(blocked)} 个正在使用或身份不完整")
+        if any(item.get("category") == "manual_or_unknown" for item in selected) and not include_unknown:
+            raise HTTPException(status_code=400, detail="包含人工或来源不明草稿，需要额外确认")
+
+        root_path = Path(str(inventory["_root"])).resolve()
+        index_path = Path(str(inventory["_index"])).resolve()
+        index_payload = inventory.get("_indexPayload")
+        if not isinstance(index_payload, dict):
+            raise HTTPException(status_code=409, detail="CapCut 草稿索引无效，已停止删除")
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup_dir = CAPCUT_DRAFT_CLEANUP_BACKUP_DIR / timestamp
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            (backup_dir / "root_meta_info.json").write_bytes(index_path.read_bytes())
+        except OSError as exc:
+            raise HTTPException(status_code=500, detail=f"草稿索引备份失败：{exc}") from exc
+        manifest = {
+            "cleanupId": f"draft-cleanup-{uuid.uuid4().hex[:12]}",
+            "createdAt": now_iso(),
+            "snapshotToken": snapshot_token,
+            "drafts": [
+                {
+                    "draftId": item["draftId"], "name": item["name"],
+                    "category": item["category"], "folderName": item["folderName"],
+                }
+                for item in selected
+            ],
+        }
+        _write_json_atomic(backup_dir / "cleanup-manifest.json", manifest)
+
+        original_records = index_payload.get("all_draft_store")
+        original_records = original_records if isinstance(original_records, list) else []
+        selected_ids = {str(item["draftId"]) for item in selected}
+        provisional = dict(index_payload)
+        provisional["all_draft_store"] = [
+            record for record in original_records
+            if not (isinstance(record, dict) and str(record.get("draft_id") or "") in selected_ids)
+        ]
+        try:
+            _write_json_atomic(index_path, provisional)
+        except OSError as exc:
+            raise HTTPException(status_code=500, detail=f"草稿索引更新失败：{exc}") from exc
+
+        removed: list[dict[str, Any]] = []
+        failed: list[dict[str, Any]] = []
+        for item in selected:
+            if _capcut_draft_processes():
+                failed.append({"draftId": item["draftId"], "name": item["name"], "reason": "删除过程中 CapCut 被启动"})
+                continue
+            folder = Path(str(item.get("_path") or "")).resolve()
+            try:
+                if folder.parent != root_path or not folder.is_dir():
+                    raise OSError("草稿目录身份已经变化")
+                _recycle_directory(folder)
+                removed.append({"draftId": item["draftId"], "name": item["name"]})
+            except OSError as exc:
+                failed.append({"draftId": item["draftId"], "name": item["name"], "reason": str(exc)})
+
+        if failed:
+            successful_ids = {str(item["draftId"]) for item in removed}
+            final_index = dict(index_payload)
+            final_index["all_draft_store"] = [
+                record for record in original_records
+                if not (isinstance(record, dict) and str(record.get("draft_id") or "") in successful_ids)
+            ]
+            _write_json_atomic(index_path, final_index)
+
+        result = {
+            "cleanupId": manifest["cleanupId"],
+            "state": "completed" if not failed else ("partial" if removed else "failed"),
+            "message": f"已移入回收站 {len(removed)} 个草稿；失败 {len(failed)} 个",
+            "removedCount": len(removed),
+            "failedCount": len(failed),
+            "removed": removed,
+            "failed": failed,
+            "updatedAt": now_iso(),
+        }
+        _write_json_atomic(CAPCUT_DRAFT_CLEANUP_STATUS_PATH, result)
+        save_control_action("capcutDraftCleanup", result)
+        return result
+
+
 def continue_command_status() -> dict[str, Any]:
     payload = read_json_object(continue_command_file())
     if not payload:
         return {"state": "idle", "message": "尚未执行安全继续对账", "stale": False}
+    state = str(payload.get("state") or "idle")
+    if state in {"requested", "running"} and payload.get("finishedAt"):
+        state = "expired"
+    # A completed/blocked command is historical once the task has moved to a
+    # retryable downstream phase.  Leaving the old terminal label on screen
+    # made operators believe that the next safe-continue click was still
+    # blocked even though it correctly creates a fresh command.
+    if state in {"blocked", "failed", "cancelled"} and payload.get("finishedAt"):
+        runtime = read_json_object(workbench_runtime_dir() / "handoff" / "download" / "project_status.json")
+        runtime_items = runtime.get("items") if isinstance(runtime.get("items"), dict) else {}
+        current = runtime_items.get(str(payload.get("taskId") or "")) if isinstance(runtime_items, dict) else {}
+        pipeline = str((current or {}).get("pipelineStatus") or "").lower()
+        phase = str((current or {}).get("currentPhase") or "").lower()
+        if pipeline in {"capcut_pending", "capcut_running", "voice_pending", "stitch_pending"} or phase in {
+            "waiting_capcut", "waiting_client", "stopped"
+        }:
+            state = "expired"
     result = {
         "commandId": str(payload.get("commandId") or ""),
-        "state": str(payload.get("state") or "idle"),
+        "state": state,
         "message": str(payload.get("message") or ""),
         "requestedAt": str(payload.get("requestedAt") or ""),
         "startedAt": str(payload.get("startedAt") or ""),
         "finishedAt": str(payload.get("finishedAt") or ""),
+        "lastHeartbeat": str(payload.get("lastHeartbeat") or ""),
+        "expiredReason": str(payload.get("expiredReason") or ""),
         "requestedBy": str(payload.get("requestedBy") or ""),
         "batchId": str(payload.get("batchId") or ""),
         "taskId": str(payload.get("taskId") or ""),
         "productionDate": str(payload.get("productionDate") or ""),
         "snapshotUpdatedAt": str(payload.get("snapshotUpdatedAt") or ""),
-        "stale": bool(payload.get("stale", False)),
+        "workbenchStarted": bool(payload.get("workbenchStarted")),
+        "workbenchAlreadyRunning": bool(payload.get("workbenchAlreadyRunning")),
+        "workbenchReady": bool(payload.get("workbenchReady")),
+        "workbenchStartPending": bool(payload.get("workbenchStartPending")),
+        "workbenchPid": int(payload.get("workbenchPid") or 0),
+        "workbenchLaunchCode": str(payload.get("workbenchLaunchCode") or ""),
+        "workbenchLaunchLog": str(payload.get("workbenchLaunchLog") or ""),
+        "workbenchLaunchError": str(payload.get("workbenchLaunchError") or ""),
+        "workbenchLaunchUpdatedAt": str(payload.get("workbenchLaunchUpdatedAt") or ""),
+        "bridgeState": str(payload.get("bridgeState") or ""),
+        "bridgeMessage": str(payload.get("bridgeMessage") or ""),
+        "bridgePid": int(payload.get("bridgePid") or 0),
+        "bridgePort": int(payload.get("bridgePort") or 5178),
+        "bridgeUpdatedAt": str(payload.get("bridgeUpdatedAt") or ""),
+        "stale": bool(payload.get("stale", False) or state == "expired"),
     }
+    if state == "expired" and not result["expiredReason"]:
+        result["expiredReason"] = "旧恢复结果已归档；当前项目已进入可恢复步骤"
+        result["message"] = result["expiredReason"]
+    bridge = fish_bridge_status()
+    if not result["bridgeState"]:
+        result["bridgeState"] = str(bridge.get("state") or "idle")
+    if not result["bridgeMessage"]:
+        result["bridgeMessage"] = str(bridge.get("message") or "")
+    if not result["bridgePid"]:
+        result["bridgePid"] = int(bridge.get("pid") or 0)
+    if not result["bridgeUpdatedAt"]:
+        result["bridgeUpdatedAt"] = str(bridge.get("updatedAt") or "")
+    result["bridgeTerminalStatus"] = str(bridge.get("terminalStatus") or "")
     latest_project_update = max(
         (parse_time(item.get("updatedAt")) for item in COLLECTOR.project_download_statuses),
         default=0.0,
@@ -257,6 +873,17 @@ def save_control_action(name: str, payload: dict[str, Any]) -> None:
     temp = CONTROL_ACTIONS_PATH.with_suffix(".tmp")
     temp.write_text(json.dumps(actions, ensure_ascii=False, indent=2), encoding="utf-8")
     os.replace(temp, CONTROL_ACTIONS_PATH)
+
+
+def load_test_reset_state() -> dict[str, Any]:
+    return read_json_object(TEST_RESET_STATE_PATH)
+
+
+def save_test_reset_state(payload: dict[str, Any]) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    temp = TEST_RESET_STATE_PATH.with_suffix(".tmp")
+    temp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(temp, TEST_RESET_STATE_PATH)
 
 
 def workbench_runtime_dir() -> Path:
@@ -360,7 +987,10 @@ def request_upload_rescan() -> dict[str, Any]:
         "running": True,
         "candidates": candidate_count,
         "missing": missing_count,
-        "message": f"检查完成：发现 {candidate_count} 条可补传，{missing_count} 条成片不存在；{action}，将自动去重上传。",
+        "message": (
+            f"对账完成：发现 {candidate_count} 条可补传，{missing_count} 条成片不存在；"
+            f"{action}。上传服务会自动去重，并继续核验尚未完成的安全清理。"
+        ),
     }
     save_control_action("uploadRescan", {**result, "state": "completed"})
     return result
@@ -406,7 +1036,13 @@ def require_control_permission(request: Request) -> None:
         raise HTTPException(status_code=403, detail="控制操作仅允许通过 Tailscale 或家里电脑本机执行")
 
 
-def receiver_json(path: str, *, method: str = "GET", payload: dict[str, Any] | None = None) -> dict[str, Any]:
+def receiver_json(
+    path: str,
+    *,
+    method: str = "GET",
+    payload: dict[str, Any] | None = None,
+    timeout: float = 3,
+) -> dict[str, Any]:
     request = urllib.request.Request(
         receiver_base_url().rstrip("/") + path,
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8") if payload is not None else None,
@@ -414,10 +1050,15 @@ def receiver_json(path: str, *, method: str = "GET", payload: dict[str, Any] | N
         headers={"Accept": "application/json", "Content-Type": "application/json"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=3) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            response_error = json.loads(raw)
+        except json.JSONDecodeError:
+            response_error = raw
+        detail = response_error.get("detail", response_error) if isinstance(response_error, dict) else response_error
         raise HTTPException(status_code=exc.code, detail=detail) from exc
     except (OSError, ValueError, urllib.error.URLError) as exc:
         raise HTTPException(status_code=503, detail=f"任务接收器不可用：{exc}") from exc
@@ -458,7 +1099,10 @@ class Store:
                     language TEXT, number TEXT, sequence INTEGER,
                     video_path TEXT, audio_path TEXT, output_path TEXT,
                     state TEXT, state_text TEXT, error TEXT,
-                    source_file TEXT, source_timestamp REAL, updated_at TEXT
+                    source_file TEXT, source_timestamp REAL,
+                    phase TEXT DEFAULT '', phase_text TEXT DEFAULT '',
+                    manifest_id TEXT DEFAULT '', attempt_id TEXT DEFAULT '',
+                    heartbeat_at TEXT DEFAULT '', updated_at TEXT
                 );
                 CREATE TABLE IF NOT EXISTS task_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -486,6 +1130,9 @@ class Store:
                 db.execute("ALTER TABLE tasks ADD COLUMN remote_pipeline_task_id TEXT DEFAULT ''")
             if "expected_task_count" not in columns:
                 db.execute("ALTER TABLE tasks ADD COLUMN expected_task_count INTEGER DEFAULT 0")
+            for name in ("phase", "phase_text", "manifest_id", "attempt_id", "heartbeat_at"):
+                if name not in columns:
+                    db.execute(f"ALTER TABLE tasks ADD COLUMN {name} TEXT DEFAULT ''")
 
     def event(
         self,
@@ -550,7 +1197,15 @@ class Store:
     def upsert_task(self, task: dict[str, Any]) -> None:
         with self.lock, self.connection() as db:
             old = db.execute("SELECT * FROM tasks WHERE task_id=?", (task["task_id"],)).fetchone()
-            if old and float(old["source_timestamp"] or 0) > float(task["source_timestamp"]):
+            # A deliberate Step 4 -> Step 5 requeue is an explicit current
+            # contract.  Its ledger mtime can legitimately be older than an
+            # abandoned CapCut status file, so timestamp order alone must not
+            # resurrect the abandoned attempt in the Dashboard.
+            if (
+                old
+                and float(old["source_timestamp"] or 0) > float(task["source_timestamp"])
+                and not bool(task.get("_force_contract_reset"))
+            ):
                 return
             state_changed = (
                 not old
@@ -562,8 +1217,9 @@ class Store:
                 """INSERT INTO tasks(
                     task_id,batch_id,date_label,project,material,language,number,sequence,
                     video_path,audio_path,output_path,state,state_text,error,
-                    source_file,source_timestamp,remote_pipeline_task_id,expected_task_count,updated_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    source_file,source_timestamp,remote_pipeline_task_id,expected_task_count,
+                    phase,phase_text,manifest_id,attempt_id,heartbeat_at,updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(task_id) DO UPDATE SET
                     batch_id=excluded.batch_id,date_label=excluded.date_label,
                     project=excluded.project,material=excluded.material,
@@ -574,6 +1230,9 @@ class Store:
                     source_file=excluded.source_file,source_timestamp=excluded.source_timestamp,
                     remote_pipeline_task_id=excluded.remote_pipeline_task_id,
                     expected_task_count=excluded.expected_task_count,
+                    phase=excluded.phase,phase_text=excluded.phase_text,
+                    manifest_id=excluded.manifest_id,attempt_id=excluded.attempt_id,
+                    heartbeat_at=excluded.heartbeat_at,
                     updated_at=excluded.updated_at""",
                 (
                     task["task_id"], task["batch_id"], task["date_label"], task["project"],
@@ -581,7 +1240,9 @@ class Store:
                     task["video_path"], task["audio_path"], task["output_path"], task["state"],
                     task["state_text"], task["error"], task["source_file"],
                     task["source_timestamp"], task["remote_pipeline_task_id"],
-                    task["expected_task_count"], now_iso(),
+                    task["expected_task_count"], task.get("phase", ""),
+                    task.get("phase_text", ""), task.get("manifest_id", ""),
+                    task.get("attempt_id", ""), task.get("heartbeat_at", ""), now_iso(),
                 ),
             )
             if state_changed:
@@ -670,6 +1331,12 @@ class Store:
             result["payload"] = {}
         return result
 
+    def clear_all(self) -> None:
+        """Clear Dashboard-derived records only; never touch production files."""
+        with self.lock, self.connection() as db:
+            for table in ("tasks", "task_history", "events", "heartbeats", "source_health"):
+                db.execute(f"DELETE FROM {table}")
+
 
 class Collector:
     def __init__(self, config: dict[str, Any], store: Store):
@@ -683,12 +1350,14 @@ class Collector:
         self.last_heartbeat_epoch = 0.0
         self.metadata: dict[str, dict[str, Any]] = {}
         self.pipeline: dict[str, dict[str, Any]] = {
+            "capcut": self.empty_stage("Waiting for CapCut task"),
             "download": self.empty_stage("等待工作台启动"),
             "voice": self.empty_stage("等待语音任务"),
             "stitch": self.empty_stage("等待拼接任务"),
             "upload": self.empty_stage("等待百度网盘上传"),
         }
         self.pipeline_history: dict[str, dict[str, dict[str, Any]]] = {
+            "capcut": {},
             "download": {},
             "voice": {},
             "stitch": {},
@@ -696,6 +1365,7 @@ class Collector:
         }
         self.last_generation_scan_epoch = 0.0
         self.last_download_scan_epoch = 0.0
+        self.last_metadata_scan_epoch = 0.0
         self.project_download_statuses: list[dict[str, Any]] = []
         self.archived_project_statuses: list[dict[str, Any]] = []
         self.receiver_snapshot: dict[str, Any] = {}
@@ -707,6 +1377,36 @@ class Collector:
         self.receiver_reconciliation_state = "unknown"
         self.receiver_reconciliation_message = "等待接收器对账"
         self.receiver_control_ready = False
+        self.reset_epoch = parse_time(load_test_reset_state().get("resetAt"))
+
+    def reset_runtime(self, reset_at: str) -> None:
+        """Forget derived state and ignore files older than the reset generation."""
+        self.reset_epoch = parse_time(reset_at, time.time())
+        self.metadata = {}
+        self.pipeline = {
+            "capcut": self.empty_stage("Waiting for CapCut task"),
+            "download": self.empty_stage("等待工作台启动"),
+            "voice": self.empty_stage("等待语音任务"),
+            "stitch": self.empty_stage("等待拼接任务"),
+            "upload": self.empty_stage("等待百度网盘上传"),
+        }
+        self.pipeline_history = {"download": {}, "voice": {}, "stitch": {}, "capcut": {}, "upload": {}}
+        self.project_download_statuses = []
+        self.archived_project_statuses = []
+        self.receiver_snapshot = {}
+        self.receiver_snapshot_at = ""
+        self.receiver_data_updated_at = ""
+        self.receiver_error = ""
+        self.receiver_schema_version = 0
+        self.receiver_reconciled_at = ""
+        self.receiver_reconciliation_state = "unknown"
+        self.receiver_reconciliation_message = "等待接收器对账"
+        self.receiver_control_ready = False
+        self.last_generation_scan_epoch = 0.0
+        self.last_download_scan_epoch = 0.0
+        self.last_metadata_scan_epoch = 0.0
+        self.last_scan_at = reset_at
+        self.last_scan_epoch = self.reset_epoch
 
     @staticmethod
     def empty_stage(state_text: str = "等待任务") -> dict[str, Any]:
@@ -817,7 +1517,13 @@ class Collector:
     def _json(self, path: Path) -> dict[str, Any] | None:
         try:
             raw = path.read_text(encoding="utf-8")
-            data = json.loads(raw)
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                # Legacy workbench handoffs occasionally contain a single
+                # Windows path separator. Read it compatibly so an old path
+                # cannot erase otherwise valid current status from the UI.
+                data = json.loads(LEGACY_INVALID_JSON_BACKSLASH.sub(r"\\\\", raw))
             signature = f"{path.stat().st_mtime_ns}:{path.stat().st_size}"
             self.store.source_result(path, True, signature)
             return data if isinstance(data, dict) else None
@@ -830,16 +1536,40 @@ class Collector:
             return None
 
     def scan_metadata(self) -> None:
+        # Metadata contains immutable manifests plus archived diagnostics.  The
+        # active status files are still read every collector pass below, but a
+        # full recursive manifest walk does not need to run every two seconds.
+        # Keeping the last good map also prevents a transient file lock from
+        # making the Dashboard forget the formal task contract.
+        now = time.time()
+        if self.metadata and now - self.last_metadata_scan_epoch < 5:
+            return
         roots = [
             resolve_path(str(self.config["capcut_handoff_dir"])),
             resolve_path(str(self.config["fourth_step_handoff_dir"])),
         ]
+        # The durable Step 4 -> Step 5 ledger is the current task contract.
+        # A prior CapCut attempt can retain activeManifestId after a safe
+        # requeue, but it must never mask the ledger's new waiting state.
+        fourth_step_root = roots[1].resolve()
         metadata: dict[str, dict[str, Any]] = {}
         for root in roots:
             if not root.exists():
                 continue
             for path in root.rglob("*.json"):
                 if path.name.endswith(".status.json"):
+                    continue
+                relative_parts = {part.casefold() for part in path.relative_to(root).parts}
+                # Backups and reset snapshots are intentionally retained next
+                # to the handoff data, but they are audit material—not a live
+                # Step 4 -> Step 5 manifest.  Scanning them inflated current
+                # production counts after a safe repair.
+                if (
+                    ".before-" in path.name
+                    or path.name.endswith(".bak.json")
+                    or "test_reset_backups" in relative_parts
+                    or "archive" in relative_parts
+                ):
                     continue
                 data = self._json(path)
                 if not data:
@@ -853,8 +1583,32 @@ class Collector:
                     candidate["_batch_id"] = batch_id
                     candidate["_date_label"] = date_label
                     candidate["_source"] = str(path)
-                    metadata[str(item["taskId"])] = {**metadata.get(str(item["taskId"]), {}), **candidate}
+                    # ``contractResetAt`` is written only by the workbench
+                    # when a prior fifth-step attempt was explicitly archived
+                    # and returned to waiting.  It is stronger than a stale
+                    # client status, but does not affect normal active tasks.
+                    candidate["_authoritative_reset"] = bool(
+                        candidate.get("contractResetAt")
+                        or candidate.get("wallDraftMismatchResetAt")
+                    )
+                    task_id = str(item["taskId"])
+                    previous = metadata.get(task_id, {})
+                    # The live ledger binds a task to exactly one manifest.
+                    # Do not let an older JSON discovered later in rglob()
+                    # overwrite a newer retry attempt.
+                    # The exception is the authoritative fourth-step ledger:
+                    # its explicit requeue/reset state must supersede a stale
+                    # CapCut attempt that was scanned first.
+                    is_current_ledger = root.resolve() == fourth_step_root
+                    if (
+                        previous.get("activeManifestId")
+                        and not candidate.get("activeManifestId")
+                        and not is_current_ledger
+                    ):
+                        continue
+                    metadata[task_id] = {**previous, **candidate}
         self.metadata = metadata
+        self.last_metadata_scan_epoch = now
 
     def normalize_task(
         self,
@@ -897,6 +1651,11 @@ class Collector:
             ),
             "state": state,
             "state_text": state_text,
+            "phase": str(item.get("currentPhase") or item.get("phase") or item.get("state") or meta.get("currentPhase") or ""),
+            "phase_text": str(item.get("phaseText") or item.get("stateText") or meta.get("phaseText") or ""),
+            "manifest_id": str(item.get("manifestId") or meta.get("activeManifestId") or ""),
+            "attempt_id": str(item.get("attemptId") or meta.get("activeAttemptId") or ""),
+            "heartbeat_at": str(item.get("heartbeatAt") or ""),
             "error": str(item.get("error") or ""),
             "remote_pipeline_task_id": str(
                 item.get("remotePipelineTaskId") or meta.get("remotePipelineTaskId") or ""
@@ -930,6 +1689,19 @@ class Collector:
             date_label = str(data.get("date") or "")
             for item in data.get("tasks") or []:
                 if isinstance(item, dict) and item.get("taskId"):
+                    meta = self.metadata.get(str(item.get("taskId") or ""), {})
+                    # Do not allow an old status file to re-activate a task
+                    # that the durable Step 4 ledger explicitly reset.
+                    if meta.get("_authoritative_reset"):
+                        continue
+                    expected_manifest = str(meta.get("handoffManifest") or "").strip()
+                    active_manifest = str(meta.get("activeManifestId") or "").strip()
+                    status_manifest = str(data.get("manifestId") or item.get("manifestId") or "").strip()
+                    manifest_path = Path(str(path).removesuffix(".status.json") + ".json")
+                    if expected_manifest and Path(expected_manifest).resolve() != manifest_path.resolve():
+                        continue
+                    if active_manifest and status_manifest and active_manifest != status_manifest:
+                        continue
                     self.store.upsert_task(
                         self.normalize_task(item, path, timestamp, batch_id, date_label)
                     )
@@ -944,15 +1716,15 @@ class Collector:
                 fallback_timestamp = source.stat().st_mtime
             except OSError:
                 fallback_timestamp = 0.0
-            self.store.upsert_task(
-                self.normalize_task(
-                    item,
-                    source,
-                    fallback_timestamp,
-                    str(item.get("_batch_id") or ""),
-                    str(item.get("date") or item.get("_date_label") or ""),
-                )
+            normalized = self.normalize_task(
+                item,
+                source,
+                fallback_timestamp,
+                str(item.get("_batch_id") or ""),
+                str(item.get("date") or item.get("_date_label") or ""),
             )
+            normalized["_force_contract_reset"] = bool(item.get("_authoritative_reset"))
+            self.store.upsert_task(normalized)
 
     def scan_workbench_pipeline(self) -> bool:
         path = resolve_path(str(self.config.get("workbench_ops_status") or ""))
@@ -966,7 +1738,7 @@ class Collector:
             self.config.get("pipeline_live_after_seconds") or 15
         )
         stages = data.get("stages") or {}
-        for name in ("download", "voice", "stitch"):
+        for name in ("download", "voice", "stitch", "capcut", "upload"):
             if isinstance(stages.get(name), dict):
                 item = dict(stages[name])
                 item.setdefault("updatedAt", data.get("updatedAt"))
@@ -1025,6 +1797,15 @@ class Collector:
                 contracts[child] = data
         return contracts
 
+    def active_workbench_task_id(self) -> str:
+        """Return the canonical task currently owned by Workbench, if any."""
+        suite_root = resolve_path(str(self.config.get("workbench_dir") or ""))
+        workbench_root = suite_root / "workbench" if (suite_root / "workbench").is_dir() else suite_root
+        payload = self._json(workbench_root / "handoff" / "current_pipeline_context.json")
+        if not isinstance(payload, dict):
+            return ""
+        return str(payload.get("canonicalTaskId") or payload.get("taskId") or "").strip()
+
     def scan_project_download_statuses(self) -> None:
         """Expose one durable status card per submitted project to remote clients."""
         payload = None
@@ -1033,7 +1814,8 @@ class Collector:
         if receiver_url:
             receiver_attempted = True
             try:
-                with urllib.request.urlopen(receiver_url, timeout=1.5) as response:
+                summary_url = receiver_url.rsplit("/", 1)[0] + "/summary"
+                with urllib.request.urlopen(summary_url, timeout=1.5) as response:
                     candidate = json.loads(response.read().decode("utf-8"))
                     if isinstance(candidate, dict):
                         self.receiver_snapshot = candidate
@@ -1044,18 +1826,26 @@ class Collector:
                         self.receiver_reconciliation_state = str(candidate.get("reconciliationState") or "unknown")
                         self.receiver_reconciliation_message = str(candidate.get("reconciliationMessage") or "")
                         self.receiver_control_ready = bool(
-                            self.receiver_schema_version >= 2
+                            self.receiver_schema_version >= 3
                             and self.receiver_reconciliation_state == "healthy"
                         )
                         archived = candidate.get("archivedProjects")
-                        self.archived_project_statuses = [
-                            dict(item, taskId=str(item.get("taskId") or task_id))
-                            for task_id, item in (archived.items() if isinstance(archived, dict) else [])
-                            if isinstance(item, dict)
-                        ]
+                        archived_rows = (
+                            [dict(item, taskId=str(item.get("taskId") or task_id))
+                             for task_id, item in archived.items() if isinstance(item, dict)]
+                            if isinstance(archived, dict)
+                            else [dict(item) for item in archived if isinstance(item, dict)]
+                            if isinstance(archived, list)
+                            else []
+                        )
+                        self.archived_project_statuses = archived_rows
                         if self.receiver_control_ready:
                             self.receiver_error = ""
-                            payload = {"items": candidate.get("projects") or {}}
+                            projects = candidate.get("projects") or []
+                            payload = {"items": {
+                                str(item.get("taskId") or ""): item
+                                for item in projects if isinstance(item, dict) and item.get("taskId")
+                            }}
                         else:
                             self.receiver_error = "接收器状态未对账"
             except (OSError, ValueError, urllib.error.URLError) as exc:
@@ -1075,12 +1865,23 @@ class Collector:
         if not payload:
             return
         raw_items = payload.get("items") if isinstance(payload.get("items"), dict) else {}
+        # The receiver owns the durable task-box snapshot, while the
+        # workbench owns live step-3/4 state.  Merge only task-scoped pipeline
+        # fields so Dashboard can surface a Fish failure without altering
+        # receiver counts or task-box membership.
+        local_status = self._json(self.project_download_status_file())
+        local_items = local_status.get("items") if isinstance(local_status.get("items"), dict) else {}
         records: list[dict[str, Any]] = []
         for task_id, raw in raw_items.items():
             if not isinstance(raw, dict):
                 continue
             item = dict(raw)
             item["taskId"] = str(item.get("taskId") or task_id)
+            local_item = local_items.get(item["taskId"]) if isinstance(local_items, dict) else None
+            if isinstance(local_item, dict):
+                for field in ("pipelineStatus", "pipelineStateText", "pipelineUpdatedAt", "currentPhase", "attemptId", "manifestId"):
+                    if field in local_item:
+                        item[field] = local_item[field]
             try:
                 expected = max(0, int(item.get("expectedCount") or 0))
                 completed = max(0, int(item.get("completed") or 0))
@@ -1099,7 +1900,10 @@ class Collector:
             # A submitted project has a target, but it is not a production
             # gap until the receiver/workbench has actually started it.
             # Pending confirmation must remain an informational plan card.
-            not_started = status in {"pending_confirmation", "received", "queued"}
+            not_started = bool(item.get("notStarted")) or status in {
+                "pending_confirmation", "received", "queued", "planned", "waiting_download"
+            }
+            terminal = bool(item.get("terminal")) or status in {"completed", "blocked_missing_links"}
             item["stateText"] = str(item.get("stateText") or "")
             item["currentTask"] = str(item.get("currentTask") or "")
             item["error"] = str(item.get("error") or "")
@@ -1110,12 +1914,13 @@ class Collector:
                 "historicalFailed": historical_failed if status == "completed" else 0,
                 "missingCount": missing,
                 "notStarted": not_started,
+                "terminal": terminal,
                 "status": status,
                 "gapActive": bool(
                     not not_started
-                    and status != "running"
+                    and terminal
                     and status != "completed"
-                    and (missing > 0 or failed > 0 or status == "blocked_missing_links")
+                    and (bool(item.get("gapActive")) or status == "blocked_missing_links")
                 ),
             })
             records.append(item)
@@ -1258,6 +2063,8 @@ class Collector:
         grouped_files: dict[str, list[tuple[Path, str]]] = {}
         for path in root.rglob("*.mp4"):
             try:
+                if path.stat().st_mtime <= self.reset_epoch:
+                    continue
                 relative = path.relative_to(root)
                 parts = relative.parts
                 # New external tasks are deliberately stored as
@@ -1382,8 +2189,64 @@ class Collector:
             parse_time(data.get("startedAt")),
         )
         current_timestamp = parse_time(self.pipeline["voice"].get("updatedAt"))
-        if direct_timestamp >= current_timestamp:
+        active_task_id = self.active_workbench_task_id()
+        candidates = [
+            str(data.get("canonicalTaskId") or "").strip(),
+            str(data.get("taskId") or "").strip(),
+            *[str(value or "").strip() for value in (data.get("canonicalTaskIds") or [])],
+            *[str(value or "").strip() for value in (data.get("taskIds") or [])],
+        ]
+        belongs_to_active_task = not active_task_id or any(
+            value == active_task_id or active_task_id in value for value in candidates if value
+        )
+        if belongs_to_active_task and direct_timestamp >= current_timestamp:
             self.pipeline["voice"] = direct
+
+    def apply_active_workbench_voice_pending(self) -> None:
+        """Keep the primary voice card scoped to the active Workbench task.
+
+        The durable handoff file is intentionally retained after a batch.  A
+        completed handoff from a prior project must therefore never make the
+        current project's dashboard card look like ``1/1`` before its own
+        voice job has started.
+        """
+        suite_root = resolve_path(str(self.config.get("workbench_dir") or ""))
+        workbench_root = suite_root / "workbench" if (suite_root / "workbench").is_dir() else suite_root
+        context = self._json(workbench_root / "handoff" / "current_pipeline_context.json")
+        if not isinstance(context, dict):
+            return
+        task_id = str(context.get("canonicalTaskId") or context.get("taskId") or "").strip()
+        status = str(context.get("status") or "").lower()
+        if not task_id or status not in {"step1_completed", "step12_completed", "voice_pending"}:
+            return
+        handoff = self._json(resolve_path(str(self.config.get("voice_handoff_file") or "")))
+        handoff_ids = {
+            str(handoff.get("canonicalTaskId") or "").strip(),
+            str(handoff.get("taskId") or "").strip(),
+            *[str(value or "").strip() for value in (handoff.get("canonicalTaskIds") or [])],
+            *[str(value or "").strip() for value in (handoff.get("taskIds") or [])],
+        } if isinstance(handoff, dict) else set()
+        if task_id in handoff_ids:
+            return
+        language_plan = context.get("languagePlan") if isinstance(context.get("languagePlan"), list) else []
+        expected = sum(max(0, safe_int(item.get("audioCount"))) for item in language_plan if isinstance(item, dict))
+        expected = expected or max(0, safe_int(context.get("expectedCount")))
+        stage = self.empty_stage("当前项目等待配音")
+        stage.update({
+            "state": "waiting",
+            "stateText": "第1/2步已完成，等待当前项目配音",
+            "total": expected,
+            "completed": 0,
+            "failed": 0,
+            "progress": 0,
+            "current": " / ".join(
+                str(context.get(key) or "") for key in ("project", "material") if context.get(key)
+            ),
+            "updatedAt": str(context.get("createdAt") or ""),
+            "source": "工作台当前项目状态",
+            "isLive": True,
+        })
+        self.pipeline["voice"] = stage
 
     def scan_generation_pipeline(self, workbench_available: bool) -> None:
         if time.time() - self.last_generation_scan_epoch < 10:
@@ -1393,6 +2256,7 @@ class Collector:
         if not root.exists():
             return
         paths = list(root.glob("*/*/generation_records_*.json"))
+        paths = [path for path in paths if path.stat().st_mtime > self.reset_epoch]
         if not paths:
             return
         grouped: dict[str, dict[str, Any]] = {}
@@ -1480,15 +2344,33 @@ class Collector:
             failed = sum(1 for item in items if item.get("status") == "failed")
             uploading = sum(1 for item in items if item.get("status") == "uploading")
             waiting = max(0, total - completed - failed - uploading)
+            cloud_verified = sum(
+                1 for item in items
+                if bool((item.get("cleanup") or {}).get("cloudVerifiedAt"))
+            )
+            task_files_cleaned = sum(
+                1 for item in items
+                if bool((item.get("cleanup") or {}).get("taskFilesCleanedAt"))
+            )
+            waiting_shared_release = sum(
+                1 for item in items
+                if (item.get("cleanup") or {}).get("state") == "waiting_shared_release"
+            )
             local_cleaned = sum(
                 1 for item in items
-                if (item.get("cleanup") or {}).get("state") in {"local_media_deleted", "local_final_deleted"}
+                if (item.get("cleanup") or {}).get("state") == "cleanup_completed"
             )
             cleanup_blocked = sum(
                 1 for item in items
                 if str((item.get("cleanup") or {}).get("state") or "").startswith("blocked_")
             )
-            cleanup_pending = max(0, completed - local_cleaned - cleanup_blocked)
+            legacy_retained = sum(
+                1 for item in items
+                if (item.get("cleanup") or {}).get("state") == "legacy_retained"
+            )
+            cleanup_pending = max(
+                0, completed - local_cleaned - cleanup_blocked - legacy_retained
+            )
             active = [item for item in items if item.get("status") == "uploading"]
             if active:
                 state, text, current = "running", "正在上传最终成片", active[0]
@@ -1525,11 +2407,18 @@ class Collector:
             stage.update(
                 {
                     "localCleaned": local_cleaned,
+                    "taskFilesCleaned": task_files_cleaned,
+                    "waitingSharedRelease": waiting_shared_release,
                     "cleanupPending": cleanup_pending,
                     "cleanupBlocked": cleanup_blocked,
+                    "legacyRetained": legacy_retained,
                     "waiting": waiting,
                     "uploading": uploading,
-                    "cloudVerified": completed,
+                    "cloudVerified": cloud_verified,
+                    "permanentKeep": sum(
+                        1 for item in items
+                        if (item.get("cleanup") or {}).get("audioPathState") == "permanent_keep"
+                    ),
                 }
             )
             history[date_label] = stage
@@ -1560,6 +2449,7 @@ class Collector:
         self.scan_voice_pipeline()
         self.scan_generation_pipeline(workbench_available)
         self.scan_upload_pipeline()
+        self.apply_active_workbench_voice_pending()
 
     def scan(self) -> None:
         self.scan_metadata()
@@ -1575,7 +2465,7 @@ class Collector:
 
 
 def process_status() -> dict[str, bool]:
-    result = {"workbench": False, "voice": False, "capcut": False, "upload": False}
+    result = {"workbench": False, "voice": False, "stitch": False, "capcut": False, "upload": False}
     for process in psutil.process_iter(["name", "cmdline"]):
         try:
             name = (process.info.get("name") or "").lower()
@@ -1586,6 +2476,8 @@ def process_status() -> dict[str, bool]:
             result["workbench"] = True
         if "batchvoiceclient" in name or "runbatch.js" in command:
             result["voice"] = True
+        if "board_video_stitcher" in command or "ai板材视频拼接工具" in command:
+            result["stitch"] = True
         if "capcutbatchclient" in name or "capcutbatchclient" in command:
             result["capcut"] = True
         if "uploadworker" in name or "upload_service.py" in command:
@@ -1740,10 +2632,18 @@ def capcut_stage_for_tasks(tasks: list[dict[str, Any]], date_label: str = "") ->
             "progress": round((counts["completed"] + counts["failed"]) * 100 / total)
             if total else 0,
             "current": (
-                f"{latest['project']} / {latest['material']} / {latest['language']}"
+                " / ".join(
+                    part for part in (
+                        latest["project"], latest["material"], latest["language"],
+                        latest.get("phase_text") or latest.get("phase") or "",
+                    ) if part
+                )
                 if latest else ""
             ),
             "updatedAt": latest["updated_at"] if latest else "",
+            "currentPhase": latest.get("phase") if latest else "",
+            "phaseText": latest.get("phase_text") if latest else "",
+            "heartbeatAt": latest.get("heartbeat_at") if latest else "",
             "historyDate": date_label,
             "testHistoryCount": 0,
         },
@@ -1788,12 +2688,16 @@ def authoritative_capcut_task_ids() -> set[str]:
     }
 
 
-def production_capcut_tasks(date_label: str = "", state: str = "") -> list[dict[str, Any]]:
+def production_capcut_tasks(
+    date_label: str = "", state: str = "", remote_task_id: str = ""
+) -> list[dict[str, Any]]:
     active_ids = authoritative_capcut_task_ids()
+    owner = str(remote_task_id or "").strip()
     return [
         item for item in STORE.tasks(date_label, state)
         if item.get("task_id") in active_ids
         and item.get("remote_pipeline_task_id")
+        and (not owner or str(item.get("remote_pipeline_task_id") or "") == owner)
         and not is_test_history_task(item)
     ]
 
@@ -1899,6 +2803,8 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
                     "running": 0, "complete": False, "updatedAt": "",
                 }
             source_status = str(raw.get("status") or "").lower()
+            pipeline_status = str(raw.get("pipelineStatus") or "").lower()
+            pipeline_state_text = str(raw.get("pipelineStateText") or "").strip()
             if capcut_state.get("complete"):
                 status = "completed"
                 current_step = "第5步完成，最终成片已验证"
@@ -1929,6 +2835,41 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
                 status = "cancelled"
                 current_step = "已撤回"
                 state_text = "任务尚未生产并已撤回"
+            elif pipeline_status in {"blocked_voice", "voice_failed", "voice_login_required"}:
+                # Step 1/2 may be complete while Fish is blocked.  Keep this
+                # distinct from a download gap so Dashboard's safe-continue
+                # command restarts only the task-scoped voice run.
+                status = "blocked"
+                current_step = "第 3 步配音需要安全继续"
+                state_text = pipeline_state_text or "配音失败或登录失效；可安全继续重试，不会重新下载"
+            elif pipeline_status == "voice_pending":
+                status = "running"
+                current_step = "第 3 步准备配音"
+                state_text = pipeline_state_text or "第 1/2 步已完成，正在启动当前项目的配音"
+            elif pipeline_status == "voice_running":
+                status = "running"
+                current_step = "第 3 步批量配音"
+                state_text = pipeline_state_text or "正在生成语音"
+            elif pipeline_status == "voice_completed":
+                status = "running"
+                current_step = "第 4 步AI素材拼接"
+                state_text = pipeline_state_text or "配音完成，正在进入拼接"
+            elif pipeline_status == "stitch_running":
+                status = "running"
+                current_step = "第 4 步AI素材拼接"
+                state_text = pipeline_state_text or "正在拼接"
+            elif pipeline_status in {"capcut_pending", "capcut_running"}:
+                status = "running"
+                current_step = "第 5 步CapCut剪辑"
+                state_text = pipeline_state_text or "正在准备或运行CapCut"
+            elif pipeline_status in {"step1_completed", "step12_completed"} and download_completed >= expected and expected:
+                # A replenishment can close after the original step-1 runner
+                # has exited.  Until the workbench consumes the task-scoped
+                # handoff, report this as voice-pending rather than as an
+                # ambiguous “waiting for later steps” state.
+                status = "running"
+                current_step = "第3步准备配音"
+                state_text = pipeline_state_text or "第1/2步已完成，等待当前项目配音交接"
             elif download_completed >= expected and expected:
                 status = "running"
                 current_step = "第1/2步完成，等待后续步骤"
@@ -1942,7 +2883,7 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
                 "batchId": batch_id,
                 "sequence": max(1, safe_int(raw.get("batchSequence"), 1)),
                 "batchSize": max(1, safe_int(raw.get("batchSize"), len(rows) or 1)),
-                "productionDate": str(raw.get("date") or ""),
+                "productionDate": str(raw.get("productionDate") or raw.get("date") or ""),
                 "project": str(raw.get("project") or "未分类"),
                 "material": str(raw.get("material") or ""),
                 "expected": expected,
@@ -2024,10 +2965,10 @@ def archived_task_payloads() -> list[dict[str, Any]]:
     return sorted(items, key=lambda item: parse_time(item.get("archivedAt")), reverse=True)
 
 
-def pipeline_for_date(date_label: str) -> dict[str, dict[str, Any]]:
+def pipeline_for_date(date_label: str, remote_task_id: str = "") -> dict[str, dict[str, Any]]:
     selected = date_label or current_date_label()
     stages: dict[str, dict[str, Any]] = {}
-    for key in ("download", "voice", "stitch"):
+    for key in ("download", "voice", "stitch", "capcut"):
         historical = COLLECTOR.pipeline_history[key].get(selected)
         live = COLLECTOR.pipeline[key]
         if selected == current_date_label() and live.get("state") == "running":
@@ -2039,7 +2980,7 @@ def pipeline_for_date(date_label: str) -> dict[str, dict[str, Any]]:
         else:
             stages[key] = Collector.empty_stage(f"{selected} 无记录")
             stages[key]["historyDate"] = selected
-    formal_capcut_tasks = production_capcut_tasks(selected)
+    formal_capcut_tasks = production_capcut_tasks(selected, remote_task_id=remote_task_id)
     if formal_capcut_tasks and not (
         selected == current_date_label() and COLLECTOR.pipeline["stitch"].get("state") == "running"
     ):
@@ -2085,8 +3026,8 @@ def pipeline_for_date(date_label: str) -> dict[str, dict[str, Any]]:
     return decorate_pipeline_stages(stages)
 
 
-def overview_payload(date_label: str = "") -> dict[str, Any]:
-    tasks = production_capcut_tasks(date_label)
+def overview_payload(date_label: str = "", remote_task_id: str = "") -> dict[str, Any]:
+    tasks = production_capcut_tasks(date_label, remote_task_id=remote_task_id)
     counts = {"total": len(tasks), "waiting": 0, "running": 0, "completed": 0, "failed": 0}
     for item in tasks:
         counts[task_category(item["state"])] += 1
@@ -2172,8 +3113,12 @@ def overview_payload(date_label: str = "") -> dict[str, Any]:
             "failed": COLLECTOR.pipeline["upload"].get("failed", 0),
             "total": COLLECTOR.pipeline["upload"].get("total", 0),
             "localCleaned": COLLECTOR.pipeline["upload"].get("localCleaned", 0),
+            "taskFilesCleaned": COLLECTOR.pipeline["upload"].get("taskFilesCleaned", 0),
+            "waitingSharedRelease": COLLECTOR.pipeline["upload"].get("waitingSharedRelease", 0),
             "cleanupPending": COLLECTOR.pipeline["upload"].get("cleanupPending", 0),
             "cleanupBlocked": COLLECTOR.pipeline["upload"].get("cleanupBlocked", 0),
+            "legacyRetained": COLLECTOR.pipeline["upload"].get("legacyRetained", 0),
+            "permanentKeep": COLLECTOR.pipeline["upload"].get("permanentKeep", 0),
             "waiting": COLLECTOR.pipeline["upload"].get("waiting", 0),
             "uploading": COLLECTOR.pipeline["upload"].get("uploading", 0),
             "cloudVerified": COLLECTOR.pipeline["upload"].get("cloudVerified", 0),
@@ -2184,8 +3129,8 @@ def overview_payload(date_label: str = "") -> dict[str, Any]:
     return sanitize_public_value(payload)
 
 
-def public_task_items(date_label: str = "") -> list[dict[str, Any]]:
-    items = production_capcut_tasks(date_label)
+def public_task_items(date_label: str = "", remote_task_id: str = "") -> list[dict[str, Any]]:
+    items = production_capcut_tasks(date_label, remote_task_id=remote_task_id)
     return [public_task_item(item) for item in items]
 
 
@@ -2287,11 +3232,24 @@ def reconciliation_payload(boxes: list[dict[str, Any]]) -> dict[str, Any]:
         items = selected_box.get("items") if isinstance(selected_box.get("items"), list) else []
         current = items[-1] if items else None
     date_label = str((selected_box or {}).get("productionDate") or current_date_label())
-    stages = pipeline_for_date(date_label)
     expected = int((current or {}).get("expected") or 0)
     remote_id = str((current or {}).get("taskId") or "")
+    stages = pipeline_for_date(date_label, remote_id)
+    # `pipeline_for_date` normally selects a date history.  A task can carry
+    # its immutable production date across midnight, however, so that history
+    # may describe an earlier project's completed Fish/Stitch batch.  For the
+    # active canonical task, use the live task-scoped voice stage instead of
+    # showing an unrelated 1/1 or 19/19 result in the safe-continue panel.
+    active_task_id = COLLECTOR.active_workbench_task_id()
+    current_step = str((current or {}).get("currentStep") or "")
+    if remote_id and remote_id == active_task_id and "配音" in current_step:
+        live_voice = dict(COLLECTOR.pipeline.get("voice") or {})
+        if live_voice:
+            stages["voice"] = live_voice
+        stages["stitch"] = Collector.empty_stage("当前项目尚未进入第4步拼接")
+        stages["stitch"].update({"total": 0, "completed": 0, "failed": 0, "progress": 0})
     capcut_rows = [
-        item for item in production_capcut_tasks(date_label)
+        item for item in production_capcut_tasks(date_label, remote_task_id=remote_id)
         if str(item.get("remote_pipeline_task_id") or "") == remote_id
     ]
     upload = upload_task_index()
@@ -2308,6 +3266,36 @@ def reconciliation_payload(boxes: list[dict[str, Any]]) -> dict[str, Any]:
         command["message"] = "接收器状态未对账，安全继续已禁用"
     elif not current or not remote_id:
         command["message"] = "暂无活动项目，无需安全继续"
+    elif str((current or {}).get("status") or "") == "blocked" and "配音" in str((current or {}).get("currentStep") or ""):
+        # Do not leave a previous command as "completed" after a later Fish
+        # failure.  The live reconciled project state is authoritative.
+        command["state"] = "blocked"
+        command["stale"] = False
+        command["message"] = (
+            "第 3 步配音失败或已失效；点击安全继续只会重启当前项目的缺失语音，"
+            "不会重新下载或覆盖已成功音频。"
+        )
+    elif (
+        str((current or {}).get("status") or "") == "blocked"
+        and str(command.get("state") or "") in {"requested", "accepted", "running", "recovering"}
+    ):
+        # A recovery command is terminal as soon as the authoritative
+        # workbench state reports a downstream block.  Otherwise the command
+        # can remain "recovering" forever after a CapCut safe-stop and the
+        # operator cannot issue a fresh idempotent retry.
+        command["state"] = "blocked"
+        command["stale"] = False
+        current_step = str((current or {}).get("currentStep") or "")
+        if "CapCut" in current_step:
+            command["message"] = (
+                "安全继续已停止：CapCut 当前任务已安全阻止；现场与有效成片均已保留，"
+                "修复或重试失败任务后可再次点击一次安全继续。"
+            )
+        else:
+            command["message"] = (
+                f"安全继续已停止：当前项目在“{current_step or '未知步骤'}”被阻止；"
+                "请先处理该阻断，再重新安全继续。"
+            )
     command["steps"] = [
         {"step": 1, "name": "下载 / 去字幕", "expected": expected, "actual": int((current or {}).get("downloadCompleted") or 0), "state": str((current or {}).get("status") or "idle")},
         {"step": 2, "name": "批量语音", "expected": int(stages["voice"].get("total") or 0), "actual": int(stages["voice"].get("completed") or 0), "state": str(stages["voice"].get("state") or "idle")},
@@ -2327,7 +3315,13 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
             boxes[0] if boxes else None,
         )
     selected_date = str(date_label or (selected_box or {}).get("productionDate") or current_date_label())
-    stages = pipeline_for_date(selected_date)
+    current = (selected_box or {}).get("current") if isinstance((selected_box or {}).get("current"), dict) else {}
+    remote_id = str(current.get("taskId") or "")
+    stages = pipeline_for_date(selected_date, remote_id)
+    # The Step 5 panel is a daily production ledger, not only the currently
+    # active project's queue.  When the queue advances to a project that has
+    # not reached CapCut yet, filtering by that project made every completed
+    # earlier project appear to disappear.
     tasks = public_task_items(selected_date)
     gaps = [
         item for item in COLLECTOR.project_download_statuses
@@ -2358,6 +3352,8 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
         "controls": {
             "continue": reconciliation_payload(boxes),
             "uploadRescan": load_control_actions().get("uploadRescan") or {"state": "idle", "message": "尚未手动检查上传缺口"},
+            "capcutDraftCleanup": load_control_actions().get("capcutDraftCleanup") or {"state": "idle", "message": "尚未手动清理 CapCut 草稿"},
+            "resetRecords": load_control_actions().get("resetRecords") or {"state": "idle", "message": "尚未重置测试记录"},
         },
         "services": service_health_payload(),
         "sources": source_status_payload(),
@@ -2515,6 +3511,107 @@ def control_upload_rescan(request: Request):
             {"state": "failed", "accepted": False, "message": str(exc.detail)},
         )
         raise
+
+
+@app.get("/api/controls/capcut-drafts")
+def control_capcut_drafts(request: Request):
+    require_control_permission(request)
+    return capcut_draft_inventory_public()
+
+
+@app.post("/api/controls/capcut-drafts/preview")
+async def control_capcut_drafts_preview(request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="草稿选择不是有效 JSON") from exc
+    if not isinstance(payload, dict) or not isinstance(payload.get("draftIds"), list):
+        raise HTTPException(status_code=400, detail="请提交要删除的草稿 ID")
+    return preview_capcut_draft_cleanup(payload["draftIds"])
+
+
+@app.post("/api/controls/capcut-drafts/cleanup")
+async def control_capcut_drafts_cleanup(request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="草稿删除请求不是有效 JSON") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="草稿删除请求无效")
+    if payload.get("confirm") != CAPCUT_DRAFT_CLEANUP_CONFIRM:
+        raise HTTPException(status_code=400, detail="必须明确确认移入 Windows 回收站")
+    draft_ids = payload.get("draftIds")
+    if not isinstance(draft_ids, list):
+        raise HTTPException(status_code=400, detail="请提交要删除的草稿 ID")
+    return execute_capcut_draft_cleanup(
+        draft_ids,
+        str(payload.get("snapshotToken") or ""),
+        include_unknown=bool(payload.get("includeUnknown")),
+    )
+
+
+@app.get("/api/controls/capcut-drafts/cleanup/status")
+def control_capcut_drafts_cleanup_status(request: Request):
+    require_control_permission(request)
+    status = read_json_object(CAPCUT_DRAFT_CLEANUP_STATUS_PATH)
+    return status or {"state": "idle", "message": "尚未手动清理 CapCut 草稿"}
+
+
+@app.post("/api/controls/testing/reset")
+async def control_reset_testing_records(request: Request):
+    """Archive runtime records in the receiver, then reset Dashboard state."""
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="重置确认无效") from exc
+    if not isinstance(payload, dict) or payload.get("confirm") != "RESET_TEST_RECORDS":
+        raise HTTPException(status_code=400, detail="必须明确确认重置全部测试记录")
+    running = process_status()
+    active_labels = [
+        label for key, label in (
+            ("workbench", "工作台"), ("voice", "语音客户端"),
+            ("stitch", "拼接器"), ("capcut", "CapCut客户端"),
+        )
+        if running.get(key)
+    ]
+    if active_labels:
+        raise HTTPException(
+            status_code=409,
+            detail=f"请先结束正在运行的生产客户端：{'、'.join(active_labels)}；记录尚未重置",
+        )
+    try:
+        receiver_result = receiver_json("/api/testing/reset", method="POST", payload=payload, timeout=30)
+    except HTTPException as exc:
+        save_control_action(
+            "resetRecords",
+            {"state": "failed", "message": f"接收器未完成重置：{exc.detail}"},
+        )
+        raise
+
+    reset_at = now_iso()
+    reset_state = {
+        "resetId": str(receiver_result.get("resetId") or f"reset-{uuid.uuid4().hex[:12]}"),
+        "resetAt": reset_at,
+        "archivedRecordCount": safe_int(receiver_result.get("archivedRecordCount")),
+        "mediaDeleted": False,
+    }
+    save_test_reset_state(reset_state)
+    STORE.clear_all()
+    COLLECTOR.reset_runtime(reset_at)
+    result = {
+        **reset_state,
+        "ok": True,
+        "state": "completed",
+        "message": (
+            f"已备份并清空 {reset_state['archivedRecordCount']} 个测试记录；"
+            "视频、音频、素材、配置与校准均保留"
+        ),
+    }
+    save_control_action("resetRecords", result)
+    return sanitize_public_value(result)
 
 
 @app.get("/api/pipeline")
