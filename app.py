@@ -133,6 +133,7 @@ def load_config() -> dict[str, Any]:
         "download_state_file": "../TikHub_AI_视频工作台/handoff/download/download_batch_state.json",
         "download_project_status_file": "../TikHub_AI_视频工作台/handoff/download/project_status.json",
         "receiver_status_url": "http://127.0.0.1:8766/api/pipeline/snapshot",
+        "control_plane_url": "http://127.0.0.1:18790",
         "download_root": "",
         "voice_handoff_file": "../TikHub_AI_视频工作台/tools/BatchVoiceClient-Portable/data/last_batch_handoff.json",
         "audio_roots": [],
@@ -2242,6 +2243,30 @@ def receiver_json(
     return payload
 
 
+def control_plane_json(path: str, timeout: float = 8) -> dict[str, Any]:
+    base_url = str(CONFIG.get("control_plane_url") or "http://127.0.0.1:18790").rstrip("/")
+    parts = urllib.parse.urlsplit(base_url)
+    if parts.scheme not in {"http", "https"} or not parts.netloc:
+        raise HTTPException(status_code=500, detail="生产安全控制面地址无效")
+    if (parts.hostname or "").lower() not in {"127.0.0.1", "localhost", "::1"}:
+        raise HTTPException(status_code=500, detail="生产安全控制面只允许本机回环地址")
+    request = urllib.request.Request(
+        base_url + path,
+        method="GET",
+        headers={"Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8-sig"))
+    except urllib.error.HTTPError as exc:
+        raise HTTPException(status_code=exc.code, detail=f"生产安全控制面返回错误：{exc.code}") from exc
+    except (OSError, ValueError, urllib.error.URLError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=503, detail=f"生产安全控制面不可用：{exc}") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=502, detail="生产安全控制面返回无效数据")
+    return sanitize_public_value(payload)
+
+
 class Store:
     def __init__(self, path: Path):
         DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -4192,7 +4217,7 @@ def pipeline_for_date(date_label: str, remote_task_id: str = "") -> dict[str, di
     upload_history = COLLECTOR.pipeline_history["upload"].get(selected)
     if upload_history:
         stages["upload"] = dict(upload_history)
-    elif selected == current_date_label() and COLLECTOR.pipeline["upload"].get("historyDate") in {"", selected}:
+    elif selected == current_date_label() and COLLECTOR.pipeline["upload"].get("historyDate") == selected:
         stages["upload"] = dict(COLLECTOR.pipeline["upload"])
     else:
         stages["upload"] = Collector.empty_stage(f"{selected} 无上传记录")
@@ -4259,11 +4284,10 @@ def overview_payload(date_label: str = "", remote_task_id: str = "") -> dict[str
         },
         "CapCut任务状态",
     )
-    pipeline = {
-        **COLLECTOR.pipeline,
-        "capcut": capcut_stage,
-    }
+    scoped_pipeline = pipeline_for_date(date_label, remote_task_id) if date_label else COLLECTOR.pipeline
+    pipeline = {**scoped_pipeline, "capcut": capcut_stage}
     pipeline = decorate_pipeline_stages(pipeline)
+    upload_stage = pipeline.get("upload") or Collector.empty_stage("等待第五步最终成片")
     payload = {
         "machine": {
             "name": CONFIG["machine_name"],
@@ -4281,22 +4305,22 @@ def overview_payload(date_label: str = "", remote_task_id: str = "") -> dict[str
         "current": public_task_item(latest) if latest else None,
         "pipeline": pipeline,
         "upload": {
-            "configured": COLLECTOR.pipeline["upload"].get("state") != "unconfigured",
-            "state": COLLECTOR.pipeline["upload"].get("state"),
-            "message": COLLECTOR.pipeline["upload"].get("stateText"),
-            "completed": COLLECTOR.pipeline["upload"].get("completed", 0),
-            "failed": COLLECTOR.pipeline["upload"].get("failed", 0),
-            "total": COLLECTOR.pipeline["upload"].get("total", 0),
-            "localCleaned": COLLECTOR.pipeline["upload"].get("localCleaned", 0),
-            "taskFilesCleaned": COLLECTOR.pipeline["upload"].get("taskFilesCleaned", 0),
-            "waitingSharedRelease": COLLECTOR.pipeline["upload"].get("waitingSharedRelease", 0),
-            "cleanupPending": COLLECTOR.pipeline["upload"].get("cleanupPending", 0),
-            "cleanupBlocked": COLLECTOR.pipeline["upload"].get("cleanupBlocked", 0),
-            "legacyRetained": COLLECTOR.pipeline["upload"].get("legacyRetained", 0),
-            "permanentKeep": COLLECTOR.pipeline["upload"].get("permanentKeep", 0),
-            "waiting": COLLECTOR.pipeline["upload"].get("waiting", 0),
-            "uploading": COLLECTOR.pipeline["upload"].get("uploading", 0),
-            "cloudVerified": COLLECTOR.pipeline["upload"].get("cloudVerified", 0),
+            "configured": upload_stage.get("state") != "unconfigured",
+            "state": upload_stage.get("state"),
+            "message": upload_stage.get("stateText"),
+            "completed": upload_stage.get("completed", 0),
+            "failed": upload_stage.get("failed", 0),
+            "total": upload_stage.get("total", 0),
+            "localCleaned": upload_stage.get("localCleaned", 0),
+            "taskFilesCleaned": upload_stage.get("taskFilesCleaned", 0),
+            "waitingSharedRelease": upload_stage.get("waitingSharedRelease", 0),
+            "cleanupPending": upload_stage.get("cleanupPending", 0),
+            "cleanupBlocked": upload_stage.get("cleanupBlocked", 0),
+            "legacyRetained": upload_stage.get("legacyRetained", 0),
+            "permanentKeep": upload_stage.get("permanentKeep", 0),
+            "waiting": upload_stage.get("waiting", 0),
+            "uploading": upload_stage.get("uploading", 0),
+            "cloudVerified": upload_stage.get("cloudVerified", 0),
         },
         "sourceErrors": STORE.source_errors(),
         "updatedAt": COLLECTOR.last_scan_at,
@@ -4592,6 +4616,40 @@ def overview(date: str = ""):
 def dashboard(request: Request, date: str = "", batchId: str = ""):
     require_control_permission(request)
     return dashboard_payload(date, batchId)
+
+
+@app.get("/api/safety")
+def production_safety(request: Request):
+    require_control_permission(request)
+    endpoints = {
+        "quality": "/api/quality/current",
+        "versions": "/api/versions",
+        "cloud": "/api/cloud/reconciliation",
+        "disk": "/api/disk/forecast",
+        "credentials": "/api/credentials/status",
+        "integrity": "/api/task-integrity",
+        "evidence": "/api/incidents/latest/evidence",
+    }
+    result: dict[str, Any] = {
+        "updatedAt": now_iso(),
+        "modelCalled": False,
+        "sources": {},
+    }
+    for key, endpoint in endpoints.items():
+        try:
+            result[key] = control_plane_json(endpoint)
+            result["sources"][key] = {"state": "ok"}
+        except HTTPException as exc:
+            result[key] = {
+                "ok": False,
+                "error": "source_unavailable",
+                "message": str(exc.detail),
+            }
+            result["sources"][key] = {
+                "state": "stale",
+                "message": str(exc.detail),
+            }
+    return result
 
 
 @app.get("/api/project-gaps")

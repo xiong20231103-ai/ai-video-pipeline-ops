@@ -10,6 +10,13 @@ import app
 
 
 class OpsTests(unittest.TestCase):
+    def test_control_plane_rejects_non_loopback_target(self):
+        with patch.dict(app.CONFIG, {"control_plane_url": "http://example.com:18790"}):
+            with self.assertRaises(app.HTTPException) as error:
+                app.control_plane_json("/api/quality/current")
+        self.assertEqual(500, error.exception.status_code)
+        self.assertIn("回环", str(error.exception.detail))
+
     def _make_capcut_draft(self, root: Path, draft_id: str, name: str, marker: str = "") -> Path:
         folder = root / name
         folder.mkdir(parents=True)
@@ -1087,6 +1094,33 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(1, stage["cleanupPending"])
             self.assertEqual(1, stage["cleanupBlocked"])
             self.assertEqual(1, stage["permanentKeep"])
+
+    def test_pipeline_for_date_does_not_reuse_upload_from_another_day(self):
+        pipeline = {
+            key: app.Collector.empty_stage("idle")
+            for key in ("download", "voice", "stitch", "capcut", "upload")
+        }
+        pipeline["upload"].update({
+            "state": "completed",
+            "stateText": "旧任务上传完成 53/53",
+            "completed": 53,
+            "total": 53,
+            "historyDate": "7.22",
+        })
+        history = {
+            key: {}
+            for key in ("download", "voice", "stitch", "capcut", "upload")
+        }
+        with (
+            patch.object(app.COLLECTOR, "pipeline", pipeline),
+            patch.object(app.COLLECTOR, "pipeline_history", history),
+            patch.object(app, "current_date_label", return_value="7.28"),
+            patch.object(app, "production_capcut_tasks", return_value=[]),
+        ):
+            stage = app.pipeline_for_date("7.28")["upload"]
+        self.assertEqual(0, stage["completed"])
+        self.assertEqual(0, stage["total"])
+        self.assertNotIn("53/53", stage["stateText"])
 
     def test_normalize_uses_metadata(self):
         with tempfile.TemporaryDirectory() as folder:

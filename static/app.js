@@ -10,7 +10,8 @@ const state = {
   drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null,
   audioFiles: [], audioSnapshot: "", selectedAudioIds: new Set(), audioPreview: null,
   productionFiles: [], productionSnapshot: "", selectedProductionIds: new Set(),
-  productionPreview: null, productionCounts: {}
+  productionPreview: null, productionCounts: {},
+  safety: null, safetyLoadedAt: 0
 };
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? "")
@@ -49,6 +50,58 @@ function formatBytes(value) {
   let unit = 0;
   while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit += 1; }
   return `${size >= 10 || unit === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[unit]}`;
+}
+
+function renderSafety(data) {
+  state.safety = data;
+  const updated = $("safetyUpdatedAt");
+  if (updated) updated.textContent = `最后检查 ${formatDateTime(data?.updatedAt)}`;
+  const entries = [
+    ["成片质检", data?.quality,
+      value => `通过 ${value.passed || 0}/${value.total || 0} · 警告 ${value.warning || 0} · 阻止 ${value.blocked || 0}`,
+      value => Number(value.blocked || 0) ? "blocked" : Number(value.warning || 0) ? "warning" : "good"],
+    ["版本与配置", data?.versions,
+      value => `${value.items?.length || 0} 个组件 · 漂移 ${value.driftCount || 0}`,
+      value => Number(value.driftCount || 0) ? "blocked" : "good"],
+    ["云端对账", data?.cloud,
+      value => `实时核验 ${value.verified || 0}/${value.total || 0} · 阻止 ${value.blocked || 0}`,
+      value => Number(value.blocked || 0) ? "warning" : "good"],
+    ["磁盘预测", data?.disk,
+      value => `剩余 ${value.remainingVideos || 0} 条 · 需要 ${formatBytes(value.requiredFreeBytes)} · 可用 ${formatBytes(value.freeBytes)}`,
+      value => value.ready ? "good" : "blocked"],
+    ["登录状态", data?.credentials,
+      value => `${value.items?.length || 0} 个服务 · ${value.ready ? "可用" : "需要处理"}`,
+      value => value.ready ? "good" : "warning"],
+    ["任务身份", data?.integrity,
+      value => `活动 ${value.activeRecords || 0} · 硬错误 ${value.hardFailureCount || 0}`,
+      value => value.safe ? "good" : "blocked"],
+    ["故障证据", data?.evidence,
+      value => value.incident ? `${value.incident.incidentId || "最新故障"} · 已保存本机证据` : "当前没有故障证据",
+      value => value.incident ? "warning" : "good"],
+  ];
+  const grid = $("safetyGrid");
+  if (!grid) return;
+  grid.innerHTML = entries.map(([title, value, text, klass]) => {
+    if (!value || value.error) {
+      const reason = value?.message || "状态源暂不可用，保留其他检查结果";
+      return `<article class="safety-card warning"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(reason)}</span></article>`;
+    }
+    return `<article class="safety-card ${klass(value)}"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(text(value))}</span></article>`;
+  }).join("");
+}
+
+async function refreshSafety(force = false) {
+  if (!force && Date.now() - state.safetyLoadedAt < 30000) return;
+  try {
+    const data = await getJson("/api/safety");
+    state.safetyLoadedAt = Date.now();
+    renderSafety(data);
+  } catch (error) {
+    renderSafety({
+      updatedAt: new Date().toISOString(),
+      quality: { error: true, message: "生产安全控制面暂不可用；不会影响生产任务" },
+    });
+  }
 }
 
 function draftCategoryLabel(value) {
@@ -1183,6 +1236,7 @@ async function refresh() {
     renderActionResult("audioCleanupResult", data.controls?.audioCleanup || {});
     renderActionResult("productionCleanupResult", data.controls?.productionFileCleanup || {});
     renderActionResult("resetRecordsResult", data.controls?.resetRecords || {});
+    await refreshSafety();
   } catch (error) {
     $("machineBadge").className = "status-badge offline";
     $("machineBadge").innerHTML = "<span></span>Dashboard 连接失败";

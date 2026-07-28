@@ -38,4 +38,7 @@ try {
 
 Set-Location -LiteralPath $project
 Write-Host "Dashboard is running at $url" -ForegroundColor Green
-& $python app.py
+# The project directory contains spaces.  Passing a bare relative script name
+# lets a broken/inherited working directory split it at "New project" and the
+# watchdog then loops without ever bringing 8765 online.
+& $python (Join-Path $project "app.py")

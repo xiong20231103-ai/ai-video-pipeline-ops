@@ -11,4 +11,5 @@ data/dashboard_watchdog_status.json
 data/simulation.status.json
 data/offline.flag
 ops-startup.*.log
+.test-deps/
 

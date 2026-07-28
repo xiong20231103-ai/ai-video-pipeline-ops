@@ -387,6 +387,36 @@ tr:hover td { background: #fafcff; }
   padding: 0; border: 0; border-radius: 16px; color: var(--text);
   box-shadow: 0 22px 70px rgba(21, 39, 68, .28);
 }
+
+.safety-panel { margin-top: 18px; }
+.safety-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.safety-card {
+  display: grid;
+  gap: 6px;
+  min-height: 78px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.safety-card strong { font-size: 14px; color: var(--ink); }
+.safety-card span { font-size: 12px; line-height: 1.45; color: var(--muted); }
+.safety-card.good { border-color: #a7e6ce; background: #edf9f4; }
+.safety-card.warning { border-color: #f5cf91; background: #fff8ea; }
+.safety-card.blocked { border-color: #f2b8bc; background: #fff1f2; }
+.safety-zero-token { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 1100px) {
+  .safety-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .safety-grid { grid-template-columns: 1fr; }
+}
 .draft-manager-dialog::backdrop { background: rgba(15, 23, 42, .55); }
 .draft-manager-shell { display: flex; flex-direction: column; max-height: calc(100vh - 28px); background: #fff; }
 .draft-manager-shell > header {
