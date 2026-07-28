@@ -271,7 +271,8 @@ def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
         existing = {}
     # A command can remain behind when an older workbench wrote finishedAt
     # while retaining state=running, or after its project has completed.
-    if isinstance(existing, dict) and existing.get("state") in {"requested", "running"}:
+    in_flight_states = {"requested", "accepted", "running", "recovering"}
+    if isinstance(existing, dict) and existing.get("state") in in_flight_states:
         existing_target = (
             str(existing.get("batchId") or ""),
             str(existing.get("taskId") or ""),
@@ -293,11 +294,14 @@ def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
         elif old_pipeline in {"completed", "cancelled", "withdrawn"}:
             expired_reason = "命令所属项目已结束"
         elif (
-            existing.get("state") == "running"
+            existing.get("state") in {"requested", "accepted"}
             and existing_target == requested_target
-            and old_pipeline in {"step1_completed", "step12_completed", "voice_pending", "blocked_voice"}
+            and old_pipeline in {
+                "step1_completed", "step12_completed", "voice_pending", "voice_completed",
+                "stitch_pending", "blocked_voice", "blocked_stitch", "blocked_reconcile",
+            }
             and heartbeat
-            and time.time() - heartbeat > 20
+            and time.time() - heartbeat > 120
             and not existing.get("lastHeartbeat")
         ):
             # Workbench owns the transition to running and writes a heartbeat
@@ -346,7 +350,7 @@ def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
     )
     if (
         isinstance(existing, dict)
-        and existing.get("state") in {"requested", "running"}
+        and existing.get("state") in in_flight_states
         and not retryable_terminal_voice
     ):
         existing_target = (
@@ -1857,6 +1861,18 @@ def continue_command_status() -> dict[str, Any]:
         return {"state": "idle", "message": "尚未执行安全继续对账", "stale": False}
     state = str(payload.get("state") or "idle")
     if state in {"requested", "running"} and payload.get("finishedAt"):
+        state = "expired"
+    # ``accepted`` is only the short hand-off between the Dashboard and the
+    # workbench.  If no workbench heartbeat follows it, keeping the button
+    # locked forever cannot be correct.  Report it as historical so the next
+    # click can create a fresh idempotent command.
+    accepted_at = parse_time(str(payload.get("startedAt") or payload.get("requestedAt") or ""))
+    if (
+        state == "accepted"
+        and not payload.get("lastHeartbeat")
+        and accepted_at
+        and time.time() - accepted_at > 120
+    ):
         state = "expired"
     # A completed/blocked command is historical once the task has moved to a
     # retryable downstream phase.  Leaving the old terminal label on screen

@@ -567,6 +567,44 @@ class OpsTests(unittest.TestCase):
             finally:
                 app.CONFIG["workbench_dir"] = previous
 
+    def test_stale_accepted_continue_command_is_replaced_for_same_task(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            workbench = root / "workbench"
+            control = workbench / "handoff" / "control"
+            runtime = workbench / "handoff" / "download"
+            control.mkdir(parents=True)
+            runtime.mkdir(parents=True)
+            target = {
+                "batchId": "box-accepted", "taskId": "task-accepted", "productionDate": "7.28",
+                "snapshotUpdatedAt": "2026-07-28T21:00:00+08:00",
+            }
+            old = {
+                **target,
+                "commandId": "continue-old",
+                "state": "accepted",
+                "requestedAt": "2026-07-28T20:00:00+08:00",
+                "startedAt": "2026-07-28T20:00:01+08:00",
+            }
+            (control / app.CONTINUE_COMMAND_NAME).write_text(json.dumps(old), encoding="utf-8")
+            (runtime / "project_status.json").write_text(json.dumps({
+                "items": {"task-accepted": {"pipelineStatus": "voice_completed"}},
+            }), encoding="utf-8")
+            previous = app.CONFIG.get("workbench_dir")
+            app.CONFIG["workbench_dir"] = str(root)
+            try:
+                with patch("app.time.time", return_value=1785247200), patch(
+                    "app.ensure_receiver_workbench_running",
+                    return_value={"started": False, "alreadyRunning": True, "pid": 2468},
+                ):
+                    result = app.request_workbench_continue(target)
+                saved = json.loads((control / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8"))
+                self.assertNotEqual("continue-old", result["commandId"])
+                self.assertEqual("requested", saved["state"])
+                self.assertEqual("task-accepted", saved["taskId"])
+            finally:
+                app.CONFIG["workbench_dir"] = previous
+
     def test_continue_keeps_command_when_receiver_cannot_launch_workbench(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
