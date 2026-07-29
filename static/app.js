@@ -52,6 +52,16 @@ function formatBytes(value) {
   return `${size >= 10 || unit === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[unit]}`;
 }
 
+function formatDuration(value) {
+  const seconds = Math.max(0, Math.round(Number(value || 0)));
+  if (!seconds) return "正在测算";
+  if (seconds < 60) return `约 ${seconds} 秒`;
+  if (seconds < 3600) return `约 ${Math.ceil(seconds / 60)} 分钟`;
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.ceil((seconds % 3600) / 60);
+  return `约 ${hours} 小时${minutes ? ` ${minutes} 分钟` : ""}`;
+}
+
 function renderSafety(data) {
   state.safety = data;
   const updated = $("safetyUpdatedAt");
@@ -660,6 +670,24 @@ function renderUploadSummary(upload = {}) {
   $("uploadCardBadge").textContent = configured
     ? (upload.state === "failed" ? "上传失败" : upload.state === "completed" ? "上传完成" : upload.state === "running" ? "上传中" : "等待成片")
     : "未配置";
+  const live = $("uploadLiveProgress");
+  if (!live) return;
+  live.classList.toggle("hidden", !configured || Number(upload.total || 0) <= 0);
+  if (!configured || Number(upload.total || 0) <= 0) return;
+  const percent = Math.max(0, Math.min(100, Number(upload.progress || 0)));
+  $("uploadProgressLabel").textContent = `总进度 ${Number(upload.completed || 0)} / ${Number(upload.total || 0)} 条`;
+  $("uploadProgressPercent").textContent = `${percent.toFixed(percent < 10 && percent > 0 ? 1 : 0)}%`;
+  $("uploadProgressBar").style.width = `${percent}%`;
+  $("uploadBytesText").textContent = `${formatBytes(upload.bytesUploaded)} / ${formatBytes(upload.bytesTotal)}`;
+  $("uploadSpeedText").textContent = Number(upload.speedBytesPerSecond || 0) > 0
+    ? `${formatBytes(upload.speedBytesPerSecond)}/s`
+    : "正在采样";
+  $("uploadRemainingText").textContent = `${Number(upload.waiting || 0) + Number(upload.uploading || 0)} 条 · ${formatBytes(upload.bytesRemaining)}`;
+  $("uploadEtaText").textContent = Number(upload.bytesRemaining || 0) <= 0 ? "已完成" : formatDuration(upload.etaSeconds);
+  const currentName = String(upload.currentFileName || "").trim();
+  $("uploadCurrentFile").textContent = currentName
+    ? `当前文件：${currentName} · ${Number(upload.currentFileProgress || 0)}%（百度单文件分片完成后更新）`
+    : (Number(upload.bytesRemaining || 0) > 0 ? "当前文件：等待上传服务领取下一条" : "全部文件已完成上传");
 }
 
 function renderDownloadFailures(download = {}) {
@@ -677,10 +705,63 @@ function renderDownloadFailures(download = {}) {
     : `<li><span>已记录 ${failed} 条失败；请在本页任务箱展开对应材料，查看原因并直接补链。</span></li>`;
 }
 
-function renderPipelinePayload(payload = {}) {
+function currentProjectPipeline(payload = {}, currentProjectStatus = {}) {
+  const identity = currentProjectStatus?.identity || {};
+  const taskId = identity.canonicalTaskId || identity.taskId || "";
+  const stages = Array.isArray(currentProjectStatus?.stages) ? currentProjectStatus.stages : [];
+  if (!taskId || !stages.length) return null;
+
+  const datePipeline = {};
+  (payload.items || []).forEach(item => { datePipeline[item.key] = item; });
+  const stateMap = {
+    waiting: "idle",
+    pending: "idle",
+    unknown: "idle",
+    blocked: "failed",
+    failed: "failed",
+    running: "running",
+    completed: "completed",
+  };
+  const currentLabel = [identity.project, identity.material].filter(Boolean).join(" / ") || "当前项目";
+  const pipeline = {};
+  stages.forEach(stage => {
+    const key = stage.step;
+    const base = datePipeline[key] || {};
+    const total = Number(stage.total || 0);
+    const completed = Number(stage.completed || 0);
+    const failed = Number(stage.failed || 0);
+    const state = stateMap[String(stage.status || "unknown").toLowerCase()] || "idle";
+    const stateText = stage.message || ({
+      completed: "当前项目已完成",
+      running: "当前项目处理中",
+      failed: "当前项目被阻止",
+      idle: stage.status === "unknown" ? "当前项目状态未知，等待对账" : "等待当前项目进入此阶段",
+    }[state]);
+    pipeline[key] = {
+      ...base,
+      ...stage,
+      key,
+      state,
+      stateText,
+      total,
+      completed,
+      failed,
+      progress: total ? Math.round((completed + failed) * 100 / total) : 0,
+      current: currentLabel,
+      source: "当前项目任务级状态",
+      todaySummary: "",
+      taskScoped: true,
+    };
+  });
+  return pipeline;
+}
+
+function renderPipelinePayload(payload = {}, currentProjectStatus = {}) {
   const pipeline = {};
   (payload.items || []).forEach(item => { pipeline[item.key] = item; });
-  renderPipeline(pipeline);
+  // The date ledger remains available for history, but it must never be used
+  // as the live progress of a different active project.
+  renderPipeline(currentProjectPipeline(payload, currentProjectStatus) || pipeline);
   renderPipelineDateOptions(payload.availableDates || [], payload.date);
 }
 
@@ -755,15 +836,10 @@ function renderOverview(data) {
   const current = data.current;
   const pipeline = data.pipeline || {};
   const upload = data.upload || {};
-  $("uploadCardTitle").textContent = upload.configured
-    ? (upload.state === "running" ? "百度网盘上传中" : upload.message || "百度网盘上传服务")
-    : "百度网盘未配置";
-  $("uploadCardMessage").textContent = upload.configured
-    ? `等待 ${upload.waiting || 0}，上传中 ${upload.uploading || 0}，云端已核验 ${upload.cloudVerified || 0}，失败 ${upload.failed || 0}。本条文件已清理 ${upload.taskFilesCleaned || 0}，等待共享引用释放 ${upload.waitingSharedRelease || 0}，全部清理完成 ${upload.localCleaned || 0}，阻止 ${upload.cleanupBlocked || 0}，历史保留 ${upload.legacyRetained || 0}。`
-    : "请先在TikHub工作台配置并授权百度网盘。";
-  $("uploadCardBadge").textContent = upload.configured
-    ? (upload.state === "failed" ? "上传失败" : upload.state === "completed" ? "上传完成" : upload.state === "running" ? "上传中" : "等待成片")
-    : "未配置";
+  renderUploadSummary({
+    ...upload,
+    stateText: upload.message || upload.stateText,
+  });
   const activeStage = ["download", "voice", "stitch", "capcut", "upload"]
     .map(key => pipeline[key]).find(item => item && item.state === "running");
   if (activeStage) {
@@ -1219,7 +1295,7 @@ async function refresh() {
     state.lastGoodDashboard = data;
     state.date = data.selectedDate || state.date;
     renderOverview(data.overview || {});
-    renderPipelinePayload(data.pipeline || {});
+    renderPipelinePayload(data.pipeline || {}, data.currentProjectStatus || {});
     state.step5Items = data.tasks?.items || [];
     renderTasks(state.step5Items);
     renderEvents(data.events?.items || []);

@@ -605,6 +605,91 @@ class OpsTests(unittest.TestCase):
             finally:
                 app.CONFIG["workbench_dir"] = previous
 
+    def test_stale_capcut_recovering_command_is_replaced_when_client_is_gone(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            workbench = root / "workbench"
+            control = workbench / "handoff" / "control"
+            runtime = workbench / "handoff" / "download"
+            control.mkdir(parents=True)
+            runtime.mkdir(parents=True)
+            target = {
+                "batchId": "box-capcut", "taskId": "task-capcut", "productionDate": "7.28",
+                "manifestId": "manifest-new", "attemptId": "attempt-new",
+                "snapshotUpdatedAt": "2026-07-29T10:10:00+08:00",
+            }
+            old = {
+                **target,
+                "commandId": "continue-stale-capcut",
+                "state": "recovering",
+                "requestedAt": "2026-07-29T09:50:00+08:00",
+                "startedAt": "2026-07-29T09:50:01+08:00",
+                "lastHeartbeat": "2026-07-29T10:06:00+08:00",
+            }
+            (control / app.CONTINUE_COMMAND_NAME).write_text(json.dumps(old), encoding="utf-8")
+            (runtime / "project_status.json").write_text(json.dumps({
+                "items": {"task-capcut": {
+                    "pipelineStatus": "blocked_capcut",
+                    "currentPhase": "waiting_client",
+                    "capcut": {"running": 0},
+                }},
+            }), encoding="utf-8")
+            previous = app.CONFIG.get("workbench_dir")
+            app.CONFIG["workbench_dir"] = str(root)
+            try:
+                current_time = app.parse_time("2026-07-29T10:10:00+08:00")
+                with patch("app.time.time", return_value=current_time), patch(
+                    "app.ensure_receiver_workbench_running",
+                    return_value={"started": False, "alreadyRunning": True, "pid": 2468},
+                ):
+                    result = app.request_workbench_continue(target)
+                saved = json.loads((control / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8"))
+                self.assertNotEqual("continue-stale-capcut", result["commandId"])
+                self.assertEqual("requested", saved["state"])
+                self.assertEqual("manifest-new", saved["manifestId"])
+                self.assertEqual("attempt-new", saved["attemptId"])
+            finally:
+                app.CONFIG["workbench_dir"] = previous
+
+    def test_live_capcut_recovery_command_is_not_expired(self):
+        command = {
+            "state": "recovering",
+            "lastHeartbeat": "2026-07-29T10:06:00+08:00",
+        }
+        runtime_item = {
+            "pipelineStatus": "blocked_capcut",
+            "currentPhase": "capcut_running",
+            "capcut": {"running": 1},
+        }
+        self.assertFalse(app._capcut_recovery_command_is_stale(command, runtime_item))
+
+    def test_recoverable_draft_waiting_expires_command_immediately(self):
+        command = {
+            "state": "recovering",
+            "lastHeartbeat": "2026-07-29T10:09:59+08:00",
+        }
+        runtime_item = {
+            "pipelineStatus": "blocked_capcut",
+            "currentPhase": "waiting_client",
+            "failureFingerprint": "draft_card_location_failed",
+            "capcut": {"running": 0},
+        }
+        self.assertTrue(app._capcut_recovery_command_is_stale(command, runtime_item))
+
+    def test_recoverable_draft_waiting_requires_structured_reason(self):
+        self.assertTrue(app._is_recoverable_draft_waiting({
+            "state": "Waiting",
+            "failure_fingerprint": "draft_editor_binding_failed",
+        }))
+        self.assertFalse(app._is_recoverable_draft_waiting({
+            "state": "Waiting",
+            "error": "ordinary queued task",
+        }))
+        self.assertTrue(app._is_recoverable_draft_waiting({
+            "state": "Failed",
+            "error": "CapCut 主页未能动态识别并安全定位 root_meta_info 首张目标草稿；未执行点击",
+        }))
+
     def test_continue_keeps_command_when_receiver_cannot_launch_workbench(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -1057,6 +1142,9 @@ class OpsTests(unittest.TestCase):
                                 "language": "英语",
                                 "status": "uploaded",
                                 "progress": 100,
+                                "observedSize": 1000,
+                                "startedAt": "2026-07-20T11:59:50+08:00",
+                                "completedAt": "2026-07-20T12:00:00+08:00",
                             },
                             "two": {
                                 "date": "7.20",
@@ -1065,6 +1153,12 @@ class OpsTests(unittest.TestCase):
                                 "language": "俄语",
                                 "status": "uploading",
                                 "progress": 50,
+                                "observedSize": 1000,
+                                "resume": {
+                                    "size": 1000,
+                                    "chunkSize": 500,
+                                    "uploadedParts": [0],
+                                },
                             },
                         },
                     },
@@ -1082,6 +1176,13 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(2, stage["total"])
             self.assertEqual(1, stage["completed"])
             self.assertEqual(75, stage["progress"])
+            self.assertEqual(2000, stage["bytesTotal"])
+            self.assertEqual(1500, stage["bytesUploaded"])
+            self.assertEqual(500, stage["bytesRemaining"])
+            self.assertEqual(100, stage["speedBytesPerSecond"])
+            self.assertEqual(5, stage["etaSeconds"])
+            self.assertEqual("", stage["currentFileName"])
+            self.assertEqual(500, stage["currentFileBytes"])
 
     def test_upload_pipeline_exposes_cloud_cleanup_status(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1285,6 +1386,34 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(len(store.tasks()), 1)
             self.assertEqual(store.tasks()[0]["state"], "Completed")
             self.assertEqual(len(store.source_errors()), 1)
+
+    def test_upload_rescan_also_requests_live_cloud_verification(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            with (
+                patch("app.workbench_runtime_dir", return_value=root),
+                patch(
+                    "app.inspect_upload_backlog",
+                    return_value={
+                        "candidates": [{"taskId": "waiting"}],
+                        "missing": [],
+                    },
+                ),
+                patch(
+                    "app._ensure_upload_service_running",
+                    return_value={"running": True, "started": False, "pid": 123},
+                ),
+                patch(
+                    "app.request_historical_cloud_verification",
+                    return_value={"state": "requested", "eligible": 16},
+                ) as verification,
+                patch("app.save_control_action"),
+            ):
+                result = app.request_upload_rescan()
+
+            verification.assert_called_once_with()
+            self.assertEqual("requested", result["verificationState"])
+            self.assertEqual(16, result["verificationEligible"])
 
 
 if __name__ == "__main__":

@@ -80,6 +80,28 @@ CAPCUT_STATE_TEXT = {
 }
 
 WAITING_STATES = {"Waiting", "waiting_capcut", "waiting_client", "stopped"}
+RECOVERABLE_DRAFT_REOPEN_ERRORS = {
+    "draft_card_location_failed",
+    "draft_editor_binding_failed",
+    "draft_cover_location_failed",
+    "draft_checkpoint_current_lease_directory_missing",
+    "draft_checkpoint_current_lease_files_missing",
+}
+
+
+def _is_recoverable_draft_waiting(item: dict[str, Any] | None) -> bool:
+    """Whether a CapCut task deliberately stopped at the safe reopen boundary."""
+    value = item or {}
+    state = str(value.get("state") or value.get("currentPhase") or value.get("phase") or "").lower()
+    fingerprint = str(
+        value.get("failureFingerprint") or value.get("failure_fingerprint") or value.get("errorCode") or ""
+    ).strip()
+    error = str(value.get("error") or value.get("message") or value.get("pipelineStateText") or "")
+    if state in {"waiting", "waiting_capcut", "waiting_client", "stopped"}:
+        return fingerprint in RECOVERABLE_DRAFT_REOPEN_ERRORS or "等待重开草稿，可安全继续" in error
+    # Compatibility for the currently retained pre-fix checkpoint.  Older
+    # clients wrote this exact safe-stop as Failed without a fingerprint.
+    return state == "failed" and "主页未能动态识别并安全定位" in error and "未执行点击" in error
 COMPLETED_STATES = {"Completed", "completed"}
 FAILED_STATES = {"Failed", "failed", "validation_failed", "manual_review"}
 
@@ -254,6 +276,44 @@ def _persist_continue_launch_state(command_file: Path, command_id: str, launch: 
     os.replace(temp, command_file)
 
 
+def _continue_target_signature(payload: dict[str, Any] | None) -> tuple[str, str, str, str, str]:
+    """The identity a safe-continue command is allowed to own.
+
+    ``batchId/taskId/date`` was enough before retries had their own CapCut
+    manifest.  Keeping manifest + attempt in the signature stops a stale
+    recovery from silently owning the next attempt of the same project.
+    """
+    value = payload or {}
+    return tuple(str(value.get(key) or "") for key in (
+        "batchId", "taskId", "productionDate", "manifestId", "attemptId",
+    ))
+
+
+def _capcut_recovery_command_is_stale(command: dict[str, Any], runtime_item: dict[str, Any]) -> bool:
+    """Return true only for a dead CapCut recovery, never a live client.
+
+    A workbench can safely stop CapCut after a failed task.  Its old command
+    used to remain ``recovering`` forever, so subsequent Dashboard clicks
+    returned the same id and did nothing.  A fresh heartbeat or an actual
+    running client always wins over this timeout check.
+    """
+    if str(command.get("state") or "") not in {"running", "recovering"}:
+        return False
+    pipeline = str(runtime_item.get("pipelineStatus") or "").lower()
+    if pipeline not in {"blocked_capcut", "capcut_pending", "capcut_failed"}:
+        return False
+    capcut = runtime_item.get("capcut") if isinstance(runtime_item.get("capcut"), dict) else {}
+    if int(capcut.get("running") or 0) > 0:
+        return False
+    current_phase = str(runtime_item.get("currentPhase") or "").lower()
+    if current_phase == "capcut_running":
+        return False
+    if _is_recoverable_draft_waiting(runtime_item):
+        return True
+    heartbeat = parse_time(str(command.get("lastHeartbeat") or command.get("startedAt") or ""))
+    return bool(heartbeat and time.time() - heartbeat > 120)
+
+
 def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
     """Queue one safe-resume request for the local workbench."""
     workbench_dir = resolve_path(str(CONFIG.get("workbench_dir") or ""))
@@ -273,16 +333,8 @@ def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
     # while retaining state=running, or after its project has completed.
     in_flight_states = {"requested", "accepted", "running", "recovering"}
     if isinstance(existing, dict) and existing.get("state") in in_flight_states:
-        existing_target = (
-            str(existing.get("batchId") or ""),
-            str(existing.get("taskId") or ""),
-            str(existing.get("productionDate") or ""),
-        )
-        requested_target = (
-            str(target.get("batchId") or ""),
-            str(target.get("taskId") or ""),
-            str(target.get("productionDate") or ""),
-        )
+        existing_target = _continue_target_signature(existing)
+        requested_target = _continue_target_signature(target)
         old_runtime = read_json_object(workbench_dir / "handoff" / "download" / "project_status.json")
         old_items = old_runtime.get("items") if isinstance(old_runtime.get("items"), dict) else {}
         old_item = old_items.get(existing_target[1]) if isinstance(old_items, dict) else {}
@@ -293,6 +345,8 @@ def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
             expired_reason = "运行命令已含完成时间"
         elif old_pipeline in {"completed", "cancelled", "withdrawn"}:
             expired_reason = "命令所属项目已结束"
+        elif isinstance(old_item, dict) and _capcut_recovery_command_is_stale(existing, old_item):
+            expired_reason = "CapCut 恢复命令心跳已失效，且客户端未运行；允许重新安全继续"
         elif (
             existing.get("state") in {"requested", "accepted"}
             and existing_target == requested_target
@@ -353,16 +407,8 @@ def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
         and existing.get("state") in in_flight_states
         and not retryable_terminal_voice
     ):
-        existing_target = (
-            str(existing.get("batchId") or ""),
-            str(existing.get("taskId") or ""),
-            str(existing.get("productionDate") or ""),
-        )
-        requested_target = (
-            str(target.get("batchId") or ""),
-            str(target.get("taskId") or ""),
-            str(target.get("productionDate") or ""),
-        )
+        existing_target = _continue_target_signature(existing)
+        requested_target = _continue_target_signature(target)
         if existing_target != requested_target:
             raise HTTPException(status_code=409, detail="已有另一项目的安全继续命令正在处理")
         response = {
@@ -383,6 +429,8 @@ def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
         "batchId": str(target.get("batchId") or ""),
         "taskId": str(target.get("taskId") or ""),
         "productionDate": str(target.get("productionDate") or ""),
+        "manifestId": str(target.get("manifestId") or ""),
+        "attemptId": str(target.get("attemptId") or ""),
         "snapshotUpdatedAt": str(target.get("snapshotUpdatedAt") or ""),
     }
     temp = command_file.with_suffix(".tmp")
@@ -1874,13 +1922,18 @@ def continue_command_status() -> dict[str, Any]:
         and time.time() - accepted_at > 120
     ):
         state = "expired"
+    runtime = read_json_object(workbench_runtime_dir() / "handoff" / "download" / "project_status.json")
+    runtime_items = runtime.get("items") if isinstance(runtime.get("items"), dict) else {}
+    runtime_item = runtime_items.get(str(payload.get("taskId") or "")) if isinstance(runtime_items, dict) else {}
+    if isinstance(runtime_item, dict) and _capcut_recovery_command_is_stale(payload, runtime_item):
+        state = "expired"
+        payload["stale"] = True
+        payload["expiredReason"] = "CapCut 恢复命令心跳已失效，且客户端未运行；可重新点击安全继续"
     # A completed/blocked command is historical once the task has moved to a
     # retryable downstream phase.  Leaving the old terminal label on screen
     # made operators believe that the next safe-continue click was still
     # blocked even though it correctly creates a fresh command.
     if state in {"blocked", "failed", "cancelled"} and payload.get("finishedAt"):
-        runtime = read_json_object(workbench_runtime_dir() / "handoff" / "download" / "project_status.json")
-        runtime_items = runtime.get("items") if isinstance(runtime.get("items"), dict) else {}
         current = runtime_items.get(str(payload.get("taskId") or "")) if isinstance(runtime_items, dict) else {}
         pipeline = str((current or {}).get("pipelineStatus") or "").lower()
         phase = str((current or {}).get("currentPhase") or "").lower()
@@ -1901,6 +1954,8 @@ def continue_command_status() -> dict[str, Any]:
         "batchId": str(payload.get("batchId") or ""),
         "taskId": str(payload.get("taskId") or ""),
         "productionDate": str(payload.get("productionDate") or ""),
+        "manifestId": str(payload.get("manifestId") or ""),
+        "attemptId": str(payload.get("attemptId") or ""),
         "snapshotUpdatedAt": str(payload.get("snapshotUpdatedAt") or ""),
         "workbenchStarted": bool(payload.get("workbenchStarted")),
         "workbenchAlreadyRunning": bool(payload.get("workbenchAlreadyRunning")),
@@ -2045,16 +2100,42 @@ def _ensure_upload_service_running() -> dict[str, Any]:
         pid = int(pid_file.read_text(encoding="ascii").strip())
     except (OSError, ValueError):
         pass
-    running = pid > 0 and psutil.pid_exists(pid)
+    running = False
+    if pid > 0 and psutil.pid_exists(pid):
+        try:
+            command_line = " ".join(psutil.Process(pid).cmdline()).casefold()
+            running = "upload_service.py" in command_line
+        except (psutil.Error, OSError):
+            running = False
     if not running:
+        try:
+            pid_file.unlink(missing_ok=True)
+        except OSError:
+            pass
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        subprocess.Popen(
+        process = subprocess.Popen(
             [str(pythonw), str(upload_script)],
             cwd=str(runtime),
             creationflags=flags,
             close_fds=True,
         )
-    return {"running": running, "started": not running, "pid": pid if running else 0}
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            time.sleep(0.1)
+            try:
+                pid = int(pid_file.read_text(encoding="ascii").strip())
+            except (OSError, ValueError):
+                pid = 0
+            if pid > 0 and psutil.pid_exists(pid):
+                running = True
+                break
+            if process.poll() is not None:
+                break
+    return {
+        "running": running,
+        "started": running and "process" in locals(),
+        "pid": pid if running else 0,
+    }
 
 
 def historical_cloud_verification_status() -> dict[str, Any]:
@@ -2170,6 +2251,7 @@ def request_upload_rescan() -> dict[str, Any]:
     upload_state_file = resolve_path(str(CONFIG.get("upload_status_file") or runtime / "handoff" / "upload" / "upload_status.json"))
     audit = inspect_upload_backlog(records_root, upload_state_file)
     worker = _ensure_upload_service_running()
+    verification = request_historical_cloud_verification()
     running = bool(worker.get("running"))
     candidate_count = len(audit.get("candidates") or [])
     missing_count = len(audit.get("missing") or [])
@@ -2179,6 +2261,10 @@ def request_upload_rescan() -> dict[str, Any]:
         "running": True,
         "candidates": candidate_count,
         "missing": missing_count,
+        "verificationState": str(verification.get("state") or ""),
+        "verificationEligible": safe_int(
+            verification.get("eligible") or verification.get("total")
+        ),
         "message": (
             f"对账完成：发现 {candidate_count} 条可补传，{missing_count} 条成片不存在；"
             f"{action}。上传服务会自动去重，并继续核验尚未完成的安全清理。"
@@ -2873,6 +2959,9 @@ class Collector:
             "attempt_id": str(item.get("attemptId") or meta.get("activeAttemptId") or ""),
             "heartbeat_at": str(item.get("heartbeatAt") or ""),
             "error": str(item.get("error") or ""),
+            "failure_fingerprint": str(
+                item.get("failureFingerprint") or meta.get("failureFingerprint") or ""
+            ),
             "remote_pipeline_task_id": str(
                 item.get("remotePipelineTaskId") or meta.get("remotePipelineTaskId") or ""
             ).strip(),
@@ -3587,6 +3676,69 @@ class Collector:
             cleanup_pending = max(
                 0, completed - local_cleaned - cleanup_blocked - legacy_retained
             )
+
+            def registered_size(item: dict[str, Any]) -> int:
+                cleanup = item.get("cleanup") if isinstance(item.get("cleanup"), dict) else {}
+                resume = item.get("resume") if isinstance(item.get("resume"), dict) else {}
+                return max(
+                    0,
+                    safe_int(item.get("cloudSize")),
+                    safe_int(cleanup.get("cloudVerifiedSize")),
+                    safe_int(resume.get("size")),
+                    safe_int(item.get("observedSize")),
+                )
+
+            def transferred_size(item: dict[str, Any]) -> int:
+                size = registered_size(item)
+                if str(item.get("status") or "") == "uploaded":
+                    return size
+                resume = item.get("resume") if isinstance(item.get("resume"), dict) else {}
+                chunk_size = max(0, safe_int(resume.get("chunkSize")))
+                uploaded_parts = resume.get("uploadedParts") if isinstance(resume.get("uploadedParts"), list) else []
+                if not size or not chunk_size or not uploaded_parts:
+                    return 0
+                transferred = 0
+                for raw_part in uploaded_parts:
+                    part = safe_int(raw_part, -1)
+                    if part < 0:
+                        continue
+                    offset = part * chunk_size
+                    if offset >= size:
+                        continue
+                    transferred += min(chunk_size, size - offset)
+                return min(size, transferred)
+
+            bytes_total = sum(registered_size(item) for item in items)
+            bytes_uploaded = sum(transferred_size(item) for item in items)
+            bytes_remaining = max(0, bytes_total - bytes_uploaded)
+            legacy_progress = round(
+                sum(int(item.get("progress") or 0) for item in items)
+                / max(total, 1)
+            )
+            byte_progress = (
+                min(100, round(bytes_uploaded * 100 / bytes_total))
+                if bytes_total else legacy_progress
+            )
+
+            # The upload API reports progress after each Baidu multipart block.
+            # Most production videos fit in one 32 MB block, so use recent real
+            # completed-file throughput for a stable speed and ETA instead of
+            # pretending to know progress inside an in-flight HTTP request.
+            throughput_samples: list[tuple[float, int]] = []
+            for item in items:
+                if str(item.get("status") or "") != "uploaded":
+                    continue
+                started = parse_time(item.get("startedAt"))
+                finished = parse_time(item.get("completedAt"))
+                size = registered_size(item)
+                duration = finished - started
+                if size > 0 and 1 <= duration <= 3600:
+                    throughput_samples.append((finished, round(size / duration)))
+            throughput_samples.sort(key=lambda value: value[0], reverse=True)
+            recent_rates = [rate for _, rate in throughput_samples[:8] if rate > 0]
+            speed_bps = round(sum(recent_rates) / len(recent_rates)) if recent_rates else 0
+            eta_seconds = round(bytes_remaining / speed_bps) if speed_bps > 0 else None
+
             active = [item for item in items if item.get("status") == "uploading"]
             if active:
                 state, text, current = "running", "正在上传最终成片", active[0]
@@ -3604,10 +3756,7 @@ class Collector:
                     "total": total,
                     "completed": completed,
                     "failed": failed,
-                    "progress": round(
-                        sum(int(item.get("progress") or 0) for item in items)
-                        / max(total, 1)
-                    ),
+                    "progress": byte_progress,
                     "current": " / ".join(
                         str(current.get(key) or "")
                         for key in ("project", "material", "language")
@@ -3622,6 +3771,16 @@ class Collector:
             )
             stage.update(
                 {
+                    "bytesTotal": bytes_total,
+                    "bytesUploaded": bytes_uploaded,
+                    "bytesRemaining": bytes_remaining,
+                    "speedBytesPerSecond": speed_bps,
+                    "etaSeconds": eta_seconds,
+                    "currentFileName": Path(str(current.get("localPath") or "")).name,
+                    "currentFileBytes": transferred_size(current),
+                    "currentFileTotalBytes": registered_size(current),
+                    "currentFileProgress": safe_int(current.get("progress")),
+                    "currentFileStartedAt": str(current.get("startedAt") or ""),
                     "localCleaned": local_cleaned,
                     "taskFilesCleaned": task_files_cleaned,
                     "waitingSharedRelease": waiting_shared_release,
@@ -4097,6 +4256,18 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
             normalized.append({
                 "taskId": task_id,
                 "batchId": batch_id,
+                # Keep the durable workbench identity on the public task-box
+                # record.  Consumers must never recover these values from a
+                # date-wide pipeline ledger: a task can keep its production
+                # date while a later task is already running.
+                "canonicalTaskId": str(raw.get("canonicalTaskId") or task_id),
+                "manifestId": str(raw.get("manifestId") or ""),
+                "attemptId": str(raw.get("attemptId") or ""),
+                "pipelineStatus": pipeline_status,
+                "pipelineStateText": pipeline_state_text,
+                "currentPhase": str(raw.get("currentPhase") or ""),
+                "languagePlan": list(raw.get("languagePlan") or []) if isinstance(raw.get("languagePlan"), list) else [],
+                "gapActive": bool(raw.get("gapActive")),
                 "sequence": max(1, safe_int(raw.get("batchSequence"), 1)),
                 "batchSize": max(1, safe_int(raw.get("batchSize"), len(rows) or 1)),
                 "productionDate": str(raw.get("productionDate") or raw.get("date") or ""),
@@ -4337,6 +4508,17 @@ def overview_payload(date_label: str = "", remote_task_id: str = "") -> dict[str
             "waiting": upload_stage.get("waiting", 0),
             "uploading": upload_stage.get("uploading", 0),
             "cloudVerified": upload_stage.get("cloudVerified", 0),
+            "progress": upload_stage.get("progress", 0),
+            "bytesTotal": upload_stage.get("bytesTotal", 0),
+            "bytesUploaded": upload_stage.get("bytesUploaded", 0),
+            "bytesRemaining": upload_stage.get("bytesRemaining", 0),
+            "speedBytesPerSecond": upload_stage.get("speedBytesPerSecond", 0),
+            "etaSeconds": upload_stage.get("etaSeconds"),
+            "currentFileName": upload_stage.get("currentFileName", ""),
+            "currentFileBytes": upload_stage.get("currentFileBytes", 0),
+            "currentFileTotalBytes": upload_stage.get("currentFileTotalBytes", 0),
+            "currentFileProgress": upload_stage.get("currentFileProgress", 0),
+            "currentFileStartedAt": upload_stage.get("currentFileStartedAt", ""),
         },
         "sourceErrors": STORE.source_errors(),
         "updatedAt": COLLECTOR.last_scan_at,
@@ -4467,6 +4649,14 @@ def reconciliation_payload(boxes: list[dict[str, Any]]) -> dict[str, Any]:
         item for item in production_capcut_tasks(date_label, remote_task_id=remote_id)
         if str(item.get("remote_pipeline_task_id") or "") == remote_id
     ]
+    capcut_recovery_rows = [
+        item for item in STORE.tasks(date_label)
+        if str(item.get("remote_pipeline_task_id") or "") == remote_id
+    ]
+    recoverable_draft_waiting = next(
+        (item for item in capcut_recovery_rows if _is_recoverable_draft_waiting(item)),
+        None,
+    )
     upload = upload_task_index()
     uploaded = sum(
         1 for item in capcut_rows
@@ -4477,39 +4667,48 @@ def reconciliation_payload(boxes: list[dict[str, Any]]) -> dict[str, Any]:
     command["productionDate"] = date_label
     command["allowed"] = bool(COLLECTOR.receiver_control_ready and current and remote_id)
     command["receiverReconciliationState"] = COLLECTOR.receiver_reconciliation_state
+    if (
+        recoverable_draft_waiting
+        and not process_status().get("capcut")
+        and str(command.get("state") or "") in {"requested", "accepted", "running", "recovering", "blocked", "failed"}
+    ):
+        command["state"] = "expired"
+        command["stale"] = True
+        command["expiredReason"] = "CapCut 已安全停在草稿重开检查点"
+        command["message"] = "等待重开草稿，可安全继续；不会重新导入、识别字幕或创建新草稿。"
     if not COLLECTOR.receiver_control_ready:
         command["message"] = "接收器状态未对账，安全继续已禁用"
     elif not current or not remote_id:
         command["message"] = "暂无活动项目，无需安全继续"
     elif str((current or {}).get("status") or "") == "blocked" and "配音" in str((current or {}).get("currentStep") or ""):
-        # Do not leave a previous command as "completed" after a later Fish
-        # failure.  The live reconciled project state is authoritative.
-        command["state"] = "blocked"
-        command["stale"] = False
-        command["message"] = (
-            "第 3 步配音失败或已失效；点击安全继续只会重启当前项目的缺失语音，"
-            "不会重新下载或覆盖已成功音频。"
-        )
+        if str(command.get("state") or "") in {"requested", "accepted", "running", "recovering"}:
+            command["message"] = "安全继续已发送，正在核对并恢复当前项目的缺失语音。"
+        else:
+            # Do not leave a previous command as "completed" after a later
+            # Fish failure.  A fresh in-flight command, however, must remain
+            # visible as in-flight until the workbench writes its result.
+            command["state"] = "blocked"
+            command["stale"] = False
+            command["message"] = (
+                "第 3 步配音失败或已失效；点击安全继续只会重启当前项目的缺失语音，"
+                "不会重新下载或覆盖已成功音频。"
+            )
     elif (
         str((current or {}).get("status") or "") == "blocked"
         and str(command.get("state") or "") in {"requested", "accepted", "running", "recovering"}
     ):
-        # A recovery command is terminal as soon as the authoritative
-        # workbench state reports a downstream block.  Otherwise the command
-        # can remain "recovering" forever after a CapCut safe-stop and the
-        # operator cannot issue a fresh idempotent retry.
-        command["state"] = "blocked"
+        # The project remains blocked until recovery succeeds, but that must
+        # not overwrite a newly requested command.  The workbench owns the
+        # command's terminal state; stale heartbeats are expired separately.
         command["stale"] = False
         current_step = str((current or {}).get("currentStep") or "")
         if "CapCut" in current_step:
             command["message"] = (
-                "安全继续已停止：CapCut 当前任务已安全阻止；现场与有效成片均已保留，"
-                "修复或重试失败任务后可再次点击一次安全继续。"
+                "安全继续已发送，正在核对 CapCut 失败与等待任务；只恢复未完成成片。"
             )
         else:
             command["message"] = (
-                f"安全继续已停止：当前项目在“{current_step or '未知步骤'}”被阻止；"
-                "请先处理该阻断，再重新安全继续。"
+                f"安全继续已发送，正在核对“{current_step or '当前步骤'}”并恢复未完成任务。"
             )
     command["steps"] = [
         {"step": 1, "name": "下载 / 去字幕", "expected": expected, "actual": int((current or {}).get("downloadCompleted") or 0), "state": str((current or {}).get("status") or "idle")},
@@ -4519,6 +4718,179 @@ def reconciliation_payload(boxes: list[dict[str, Any]]) -> dict[str, Any]:
         {"step": 5, "name": "百度网盘上传", "expected": len(capcut_rows), "actual": uploaded, "state": "completed" if capcut_rows and uploaded == len(capcut_rows) else "running" if uploaded else "idle"},
     ]
     return command
+
+
+def _current_stage(
+    key: str,
+    name: str,
+    *,
+    state: str = "unknown",
+    completed: int = 0,
+    total: int = 0,
+    failed: int = 0,
+    message: str = "",
+    updated_at: str = "",
+    scoped: bool = True,
+) -> dict[str, Any]:
+    """A task-scoped stage for remote consumers.
+
+    Date-wide ledgers are intentionally retained elsewhere for the Dashboard
+    history view.  This compact object is the only pipeline fact that the
+    control plane may use for the currently active project.
+    """
+    return {
+        "step": key,
+        "name": name,
+        "status": state or "unknown",
+        "completed": max(0, int(completed or 0)),
+        "total": max(0, int(total or 0)),
+        "failed": max(0, int(failed or 0)),
+        "message": str(message or ""),
+        "updatedAt": str(updated_at or ""),
+        "taskScoped": bool(scoped),
+    }
+
+
+def current_project_status_payload(current: dict[str, Any] | None, selected_box: dict[str, Any] | None) -> dict[str, Any]:
+    """Return the authoritative facts for exactly one active project.
+
+    Never use ``pipeline_for_date`` here.  Its rows are useful day totals but
+    caused old voice/stitch/upload results to be announced under a new task.
+    Unknown is safer than borrowing a number from another task.
+    """
+    item = dict(current or {})
+    box = dict(selected_box or {})
+    task_id = str(item.get("canonicalTaskId") or item.get("taskId") or "")
+    production_date = str(item.get("productionDate") or box.get("productionDate") or "")
+    expected = max(0, safe_int(item.get("expected")))
+    pipeline_status = str(item.get("pipelineStatus") or "").lower()
+    state_text = str(item.get("pipelineStateText") or item.get("stateText") or "")
+    language_plan = item.get("languagePlan") if isinstance(item.get("languagePlan"), list) else []
+    language_total = len([value for value in language_plan if str(value).strip()])
+    identity = {
+        "batchId": str(item.get("batchId") or box.get("batchId") or ""),
+        "canonicalTaskId": task_id,
+        "productionDate": production_date,
+        "manifestId": str(item.get("manifestId") or ""),
+        "attemptId": str(item.get("attemptId") or ""),
+        "project": str(item.get("project") or ""),
+        "material": str(item.get("material") or ""),
+    }
+    if not task_id:
+        return {"identity": identity, "state": "idle", "stages": [], "errors": [], "updatedAt": ""}
+
+    download_completed = safe_int(item.get("downloadCompleted"))
+    download_gap_active = bool(item.get("gapActive"))
+    download_state = "completed" if expected and download_completed >= expected else (
+        "blocked" if download_gap_active else "running"
+    )
+    download_message = state_text
+    if download_gap_active and expected:
+        download_message = (
+            f"下载与去字幕已完成 {download_completed}/{expected}，"
+            f"还差 {max(0, expected - download_completed)} 条；请在 Dashboard 或任务投递器补链。"
+        )
+    elif download_state == "completed":
+        download_message = f"下载与去字幕完成 {expected}/{expected}"
+    stages = [
+        _current_stage(
+            "download", "下载 / 去字幕", state=download_state,
+            completed=download_completed, total=expected,
+            message=download_message,
+            updated_at=str(item.get("updatedAt") or ""),
+        )
+    ]
+
+    # Voice has a task-level status, but older workbench snapshots do not
+    # always carry counts.  Do not substitute a date total in that case.
+    voice_state = "unknown"
+    voice_completed = 0
+    if pipeline_status == "voice_running":
+        voice_state = "running"
+    elif pipeline_status in {"blocked_voice", "voice_failed", "voice_login_required"}:
+        voice_state = "blocked"
+    elif pipeline_status in {"voice_completed", "stitch_running", "capcut_pending", "capcut_running", "completed"}:
+        voice_state = "completed"
+        voice_completed = language_total
+    elif pipeline_status in {"voice_pending", "step1_completed", "step12_completed"}:
+        voice_state = "waiting"
+    stages.append(_current_stage(
+        "voice", "批量语音", state=voice_state, completed=voice_completed,
+        total=language_total, message=state_text, updated_at=str(item.get("updatedAt") or ""),
+    ))
+
+    capcut_rows = production_capcut_tasks(production_date, remote_task_id=task_id)
+    capcut_stage = capcut_stage_for_tasks(capcut_rows, production_date)
+    handoff_total = len(capcut_rows)
+    stitch_state = "unknown"
+    stitch_completed = 0
+    if handoff_total:
+        stitch_state = "completed"
+        stitch_completed = handoff_total
+    elif pipeline_status == "stitch_running":
+        stitch_state = "running"
+    elif pipeline_status in {"blocked_stitch", "blocked_reconcile"}:
+        stitch_state = "blocked"
+    elif pipeline_status in {"voice_completed", "stitch_pending"}:
+        stitch_state = "waiting"
+    stages.append(_current_stage(
+        "stitch", "AI素材拼接", state=stitch_state, completed=stitch_completed,
+        total=expected if handoff_total else 0, message=state_text,
+        updated_at=str(capcut_stage.get("updatedAt") or item.get("updatedAt") or ""),
+    ))
+    stages.append(_current_stage(
+        "capcut", "CapCut成片", state=str(capcut_stage.get("state") or "unknown"),
+        completed=safe_int(capcut_stage.get("completed")), total=expected if expected else safe_int(capcut_stage.get("total")),
+        failed=safe_int(capcut_stage.get("failed")), message=str(capcut_stage.get("stateText") or ""),
+        updated_at=str(capcut_stage.get("updatedAt") or ""),
+    ))
+
+    upload = upload_task_index()
+    upload_rows = [upload.get(str(row.get("task_id") or ""), {}) for row in capcut_rows]
+    uploaded = sum(1 for row in upload_rows if str(row.get("status") or "").lower() == "uploaded")
+    uploading = sum(1 for row in upload_rows if str(row.get("status") or "").lower() == "uploading")
+    upload_failed = sum(1 for row in upload_rows if str(row.get("status") or "").lower() in {"failed", "blocked"})
+    upload_state = "unknown" if not capcut_rows else (
+        "failed" if upload_failed else "completed" if uploaded == len(capcut_rows) else "running" if uploading else "waiting"
+    )
+    stages.append(_current_stage(
+        "upload", "百度网盘上传", state=upload_state, completed=uploaded,
+        total=len(capcut_rows), failed=upload_failed,
+        message="" if capcut_rows else "当前项目尚未进入上传阶段",
+        updated_at=max((str(row.get("updatedAt") or row.get("finishedAt") or "") for row in upload_rows), default=""),
+    ))
+
+    errors: list[dict[str, Any]] = []
+    status = str(item.get("status") or "").lower()
+    # A download gap has its own deterministic watchdog event and must not
+    # simultaneously become a generic workbench failure notification.
+    if (
+        not download_gap_active
+        and status in {"failed", "blocked", "stalled", "login_required"}
+        and str(item.get("error") or state_text).strip()
+    ):
+        errors.append({
+            "component": "workbench", "phase": pipeline_status or "current",
+            "errorCode": pipeline_status or status, "status": status,
+            "message": str(item.get("error") or state_text),
+        })
+    for row in capcut_rows:
+        if task_category(str(row.get("state") or "")) != "failed":
+            continue
+        errors.append({
+            "component": "capcut", "phase": str(row.get("phase") or "capcut"),
+            "errorCode": str(row.get("error_code") or "capcut_failed"), "status": "failed",
+            "message": str(row.get("error") or row.get("state_text") or "CapCut task failed"),
+            "attemptId": str(row.get("attempt_id") or identity["attemptId"]),
+        })
+    return {
+        "identity": identity,
+        "state": str(item.get("status") or "unknown"),
+        "currentStep": str(item.get("currentStep") or ""),
+        "stages": stages,
+        "errors": errors,
+        "updatedAt": str(item.get("updatedAt") or ""),
+    }
 
 
 def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any]:
@@ -4533,6 +4905,7 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
     current = (selected_box or {}).get("current") if isinstance((selected_box or {}).get("current"), dict) else {}
     remote_id = str(current.get("taskId") or "")
     stages = pipeline_for_date(selected_date, remote_id)
+    current_project_status = current_project_status_payload(current, selected_box)
     # The Step 5 panel is a daily production ledger, not only the currently
     # active project's queue.  When the queue advances to a project that has
     # not reached CapCut yet, filtering by that project made every completed
@@ -4564,6 +4937,11 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
         "receiverQueue": queue_payload,
         "templates": template_payload,
         "taskBoxes": {"items": boxes, "selected": selected_box, "history": archived_task_payloads()},
+        # ``pipeline`` remains the date ledger for the visual history.  These
+        # two fields are the single fact domain for controls, Feishu and
+        # current-project notifications.
+        "currentProjectStatus": current_project_status,
+        "currentProjectErrors": current_project_status.get("errors") or [],
         "controls": {
             "continue": reconciliation_payload(boxes),
             "uploadRescan": load_control_actions().get("uploadRescan") or {"state": "idle", "message": "尚未手动检查上传缺口"},
@@ -4738,10 +5116,31 @@ def control_continue_current(request: Request):
     current = selected_box.get("current") if isinstance(selected_box, dict) else None
     if not isinstance(current, dict) or not str(current.get("taskId") or ""):
         raise HTTPException(status_code=409, detail="暂无活动项目，无需安全继续")
+    current_task_id = str(current.get("taskId") or "")
+    current_date = str(selected_box.get("productionDate") or current.get("productionDate") or "")
+    current_capcut_rows = [
+        item for item in STORE.tasks(current_date)
+        if str(item.get("remote_pipeline_task_id") or "") == current_task_id
+    ]
+    if any(_is_recoverable_draft_waiting(item) for item in current_capcut_rows) and not process_status().get("capcut"):
+        command_path = continue_command_file()
+        previous_command = read_json_object(command_path)
+        if (
+            str(previous_command.get("taskId") or "") == current_task_id
+            and str(previous_command.get("state") or "") in {"requested", "accepted", "running", "recovering"}
+        ):
+            previous_command["state"] = "expired"
+            previous_command["stale"] = True
+            previous_command["finishedAt"] = now_iso()
+            previous_command["expiredReason"] = "CapCut 已安全停在草稿重开检查点"
+            previous_command["message"] = "等待重开草稿，可安全继续"
+            _write_json_atomic(command_path, previous_command)
     return request_workbench_continue({
         "batchId": str(selected_box.get("batchId") or ""),
-        "taskId": str(current.get("taskId") or ""),
-        "productionDate": str(selected_box.get("productionDate") or current.get("productionDate") or ""),
+        "taskId": current_task_id,
+        "productionDate": current_date,
+        "manifestId": str(current.get("manifestId") or ""),
+        "attemptId": str(current.get("attemptId") or ""),
         "snapshotUpdatedAt": str(COLLECTOR.receiver_data_updated_at or ""),
     })
 

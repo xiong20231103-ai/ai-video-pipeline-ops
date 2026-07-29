@@ -150,6 +150,17 @@
         <section class="panel upload-card">
           <div class="upload-icon">↥</div><div><p class="eyebrow">UPLOAD SERVICE</p><h2 id="uploadCardTitle">正在读取百度网盘状态</h2></div>
           <p id="uploadCardMessage">等待工作台上传服务写入状态。</p><span id="uploadCardBadge">检查中</span>
+          <div id="uploadLiveProgress" class="upload-live-progress hidden">
+            <div class="upload-progress-heading"><strong id="uploadProgressLabel">总进度 --</strong><span id="uploadProgressPercent">0%</span></div>
+            <div class="upload-progress-track"><i id="uploadProgressBar"></i></div>
+            <div class="upload-live-grid">
+              <div><small>已上传 / 总量</small><strong id="uploadBytesText">--</strong></div>
+              <div><small>实时估算速度</small><strong id="uploadSpeedText">--</strong></div>
+              <div><small>剩余</small><strong id="uploadRemainingText">--</strong></div>
+              <div><small>预计完成</small><strong id="uploadEtaText">--</strong></div>
+            </div>
+            <p id="uploadCurrentFile" class="upload-current-file">当前文件：--</p>
+          </div>
           <button id="uploadRescanButton" class="primary wide" type="button">重新对账、补传并清理</button>
           <div id="uploadActionResult" class="action-result neutral">尚未手动检查上传缺口</div>
           <button id="historicalCloudVerifyButton" class="wide" type="button">核验历史云端文件</button>
