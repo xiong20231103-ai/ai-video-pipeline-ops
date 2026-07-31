@@ -4801,11 +4801,20 @@ def current_project_status_payload(current: dict[str, Any] | None, selected_box:
         )
     ]
 
-    # Voice has a task-level status, but older workbench snapshots do not
-    # always carry counts.  Do not substitute a date total in that case.
+    # A task-scoped CapCut handoff can only exist after this same task's voice
+    # and stitch stages completed.  Use that handoff as a deterministic
+    # fallback for older workbench snapshots that omitted languagePlan; never
+    # borrow the date-wide voice total.
+    capcut_rows = production_capcut_tasks(production_date, remote_task_id=task_id)
+    handoff_total = len(capcut_rows)
     voice_state = "unknown"
     voice_completed = 0
-    if pipeline_status == "voice_running":
+    voice_total = language_total
+    if handoff_total:
+        voice_state = "completed"
+        voice_completed = max(language_total, handoff_total)
+        voice_total = voice_completed
+    elif pipeline_status == "voice_running":
         voice_state = "running"
     elif pipeline_status in {"blocked_voice", "voice_failed", "voice_login_required"}:
         voice_state = "blocked"
@@ -4816,12 +4825,10 @@ def current_project_status_payload(current: dict[str, Any] | None, selected_box:
         voice_state = "waiting"
     stages.append(_current_stage(
         "voice", "批量语音", state=voice_state, completed=voice_completed,
-        total=language_total, message=state_text, updated_at=str(item.get("updatedAt") or ""),
+        total=voice_total, message=state_text, updated_at=str(item.get("updatedAt") or ""),
     ))
 
-    capcut_rows = production_capcut_tasks(production_date, remote_task_id=task_id)
     capcut_stage = capcut_stage_for_tasks(capcut_rows, production_date)
-    handoff_total = len(capcut_rows)
     stitch_state = "unknown"
     stitch_completed = 0
     if handoff_total:

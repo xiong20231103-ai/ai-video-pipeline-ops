@@ -1387,6 +1387,42 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(store.tasks()[0]["state"], "Completed")
             self.assertEqual(len(store.source_errors()), 1)
 
+    def test_current_project_voice_uses_task_scoped_capcut_handoff_when_language_plan_missing(self):
+        current = {
+            "canonicalTaskId": "task-current",
+            "batchId": "batch-current",
+            "productionDate": "7.31",
+            "expected": 4,
+            "downloadCompleted": 4,
+            "project": "project",
+            "material": "material",
+            "pipelineStatus": "",
+        }
+        rows = [
+            {"task_id": f"capcut-{index}", "state": "Waiting"}
+            for index in range(4)
+        ]
+        with (
+            patch("app.production_capcut_tasks", return_value=rows),
+            patch(
+                "app.capcut_stage_for_tasks",
+                return_value={
+                    "state": "idle",
+                    "completed": 2,
+                    "failed": 0,
+                    "total": 4,
+                    "stateText": "2 waiting",
+                },
+            ),
+            patch("app.upload_task_index", return_value={}),
+        ):
+            payload = app.current_project_status_payload(current, {})
+
+        voice = next(stage for stage in payload["stages"] if stage["step"] == "voice")
+        self.assertEqual("completed", voice["status"])
+        self.assertEqual(4, voice["completed"])
+        self.assertEqual(4, voice["total"])
+
     def test_upload_rescan_also_requests_live_cloud_verification(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
