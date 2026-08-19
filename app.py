@@ -5523,9 +5523,17 @@ def current_project_status_payload(current: dict[str, Any] | None, selected_box:
         and effective_state in {"failed", "blocked", "stalled", "login_required"}
         and str(item.get("error") or state_text).strip()
     ):
+        structured_code = str(item.get("errorCode") or pipeline_status or status)
+        structured_component = (
+            "voice" if structured_code.startswith("VOICE_") else
+            "stitch" if structured_code.startswith("STITCH_") else
+            "capcut" if structured_code.startswith("CAPCUT_") else
+            "upload" if structured_code.startswith("UPLOAD_") else
+            "workbench"
+        )
         errors.append({
-            "component": "workbench", "phase": pipeline_status or "current",
-            "errorCode": pipeline_status or status, "status": effective_state,
+            "component": structured_component, "phase": str(item.get("currentPhase") or pipeline_status or "current"),
+            "errorCode": structured_code, "status": effective_state,
             "message": str(item.get("error") or state_text),
         })
     for row in capcut_rows:
@@ -5536,6 +5544,16 @@ def current_project_status_payload(current: dict[str, Any] | None, selected_box:
             "errorCode": str(row.get("error_code") or "capcut_failed"), "status": "failed",
             "message": str(row.get("error") or row.get("state_text") or "CapCut task failed"),
             "attemptId": str(row.get("attempt_id") or identity["attemptId"]),
+        })
+    for row in upload_rows:
+        if str(row.get("status") or "").lower() not in {"failed", "blocked"}:
+            continue
+        errors.append({
+            "component": "upload", "phase": str(row.get("phase") or "uploading"),
+            "errorCode": str(row.get("errorCode") or row.get("error_code") or "UPLOAD_FAILED"),
+            "status": "failed",
+            "message": str(row.get("error") or row.get("message") or "Upload task failed"),
+            "attemptId": str(row.get("attemptId") or row.get("attempt_id") or identity["attemptId"]),
         })
     return {
         "identity": identity,
@@ -5656,8 +5674,18 @@ def dashboard_summary_payload() -> dict[str, Any]:
             if isinstance(item, dict)
         ]
     upload = stages.get("upload") if isinstance(stages.get("upload"), dict) else {}
+    try:
+        auto_recovery = control_plane_json("/api/auto-recovery/status", timeout=1.5)
+    except HTTPException as exc:
+        auto_recovery = {
+            "enabled": True,
+            "state": "unavailable",
+            "stateText": "自动恢复状态暂不可用",
+            "attemptCount": 0,
+            "message": str(exc.detail),
+        }
     summary = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "currentTaskBox": active_public,
         "currentProjectStatus": current_status,
         "currentProjectErrors": current_status.get("errors") or [],
@@ -5667,6 +5695,7 @@ def dashboard_summary_payload() -> dict[str, Any]:
         },
         "services": service_health_payload(),
         "controls": {"continue": reconciliation_payload(boxes)},
+        "autoRecovery": auto_recovery,
         "upload": {
             "state": str(upload.get("state") or "not_started"),
             "stateText": str(upload.get("stateText") or "尚未进入上传阶段"),

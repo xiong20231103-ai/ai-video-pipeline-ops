@@ -1620,6 +1620,43 @@ class OpsTests(unittest.TestCase):
         self.assertEqual("blocked_capcut", payload["pipelineStatus"])
         self.assertEqual("blocked", capcut["status"])
 
+    def test_current_project_preserves_structured_recovery_error_code(self):
+        current = {
+            "canonicalTaskId": "task-voice", "batchId": "batch", "productionDate": "8.20",
+            "expected": 5, "downloadCompleted": 5, "status": "completed",
+            "pipelineStatus": "blocked_voice", "currentPhase": "voice_generation",
+            "pipelineStateText": "Fish page heartbeat timed out",
+            "errorCode": "VOICE_PAGE_HEARTBEAT_TIMEOUT",
+        }
+        with (
+            patch("app.production_capcut_tasks", return_value=[]),
+            patch("app.capcut_stage_for_tasks", return_value={"state": "unknown", "completed": 0, "failed": 0, "total": 0}),
+            patch("app.upload_task_index", return_value={}),
+        ):
+            payload = app.current_project_status_payload(current, {})
+        self.assertEqual("voice", payload["errors"][0]["component"])
+        self.assertEqual("voice_generation", payload["errors"][0]["phase"])
+        self.assertEqual("VOICE_PAGE_HEARTBEAT_TIMEOUT", payload["errors"][0]["errorCode"])
+
+    def test_current_project_exposes_structured_upload_failure(self):
+        current = {
+            "canonicalTaskId": "task-upload", "batchId": "batch", "productionDate": "8.20",
+            "expected": 1, "downloadCompleted": 1, "status": "completed", "pipelineStatus": "capcut_running",
+        }
+        rows = [{"task_id": "video-1", "state": "Completed"}]
+        upload = {"video-1": {
+            "status": "failed", "phase": "uploading", "errorCode": "UPLOAD_NETWORK_ERROR",
+            "error": "connection reset",
+        }}
+        with (
+            patch("app.production_capcut_tasks", return_value=rows),
+            patch("app.capcut_stage_for_tasks", return_value={"state": "completed", "completed": 1, "failed": 0, "total": 1}),
+            patch("app.upload_task_index", return_value=upload),
+        ):
+            payload = app.current_project_status_payload(current, {})
+        error = next(item for item in payload["errors"] if item["component"] == "upload")
+        self.assertEqual("UPLOAD_NETWORK_ERROR", error["errorCode"])
+
     def test_current_project_voice_uses_verified_fish_handoff_when_plan_is_omitted(self):
         current = {
             "canonicalTaskId": "task-korean",
