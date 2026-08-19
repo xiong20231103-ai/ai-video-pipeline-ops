@@ -10,6 +10,55 @@ import app
 
 
 class OpsTests(unittest.TestCase):
+    def test_completion_receipt_is_immutable_and_survives_missing_local_rows(self):
+        with tempfile.TemporaryDirectory() as folder, patch("app.TASK_BOX_RECEIPT_DIR", Path(folder)):
+            box = {
+                "batchId": "batch-complete",
+                "productionDate": "8.17",
+                "projectCount": 1,
+                "completedProjects": 1,
+                "totalVideos": 5,
+                "completedVideos": 5,
+                "updatedAt": "2026-08-17T12:00:00+00:00",
+                "items": [{
+                    "taskId": "task-1", "canonicalTaskId": "task-1", "project": "实体机",
+                    "material": "碳岩板", "expected": 5, "finalCompleted": 5, "status": "completed",
+                }],
+            }
+            first = app.persist_task_box_receipt(box)
+            self.assertEqual("completed_verified", first["productionStatus"])
+            box["completedVideos"] = 0
+            second = app.persist_task_box_receipt(box)
+            self.assertEqual(first["receiptHash"], second["receiptHash"])
+            self.assertEqual(5, second["completedVideoCount"])
+
+    def test_summary_etag_ignores_scan_clock_but_tracks_state(self):
+        first = {"updatedAt": "2026-08-19T10:00:00+08:00", "pipeline": {"state": "running", "completed": 3}}
+        later = {"updatedAt": "2026-08-19T10:00:05+08:00", "pipeline": {"state": "running", "completed": 3}}
+        changed = {"updatedAt": "2026-08-19T10:00:05+08:00", "pipeline": {"state": "running", "completed": 4}}
+        self.assertEqual(app.dashboard_summary_etag(first), app.dashboard_summary_etag(later))
+        self.assertNotEqual(app.dashboard_summary_etag(first), app.dashboard_summary_etag(changed))
+
+    def test_authoritative_task_box_does_not_fall_back_to_history(self):
+        historical = {"batchId": "old", "state": "completed", "items": [], "current": None}
+        with patch.object(app.COLLECTOR, "active_workbench_task_id", return_value=""):
+            self.assertIsNone(app.authoritative_active_task_box([historical]))
+
+    def test_control_command_expires_when_workbench_does_not_claim(self):
+        with tempfile.TemporaryDirectory() as folder, \
+            patch("app.CONTROL_COMMAND_DIR", Path(folder) / "commands"), \
+            patch("app.continue_command_file", return_value=Path(folder) / "mailbox.json"):
+            command = {
+                "commandId": "continue-test", "state": "persisted",
+                "requestedAt": "2020-01-01T00:00:00+00:00",
+                "persistedAt": "2020-01-01T00:00:00+00:00",
+                "expiresAt": "2020-01-01T00:05:00+00:00",
+            }
+            app.write_control_command(command)
+            result = app._sync_queued_command_from_mailbox()
+            self.assertEqual("expired", result["state"])
+            self.assertIn("未领取", result["message"])
+
     def test_control_plane_rejects_non_loopback_target(self):
         with patch.dict(app.CONFIG, {"control_plane_url": "http://example.com:18790"}):
             with self.assertRaises(app.HTTPException) as error:
@@ -651,6 +700,42 @@ class OpsTests(unittest.TestCase):
             finally:
                 app.CONFIG["workbench_dir"] = previous
 
+    def test_continue_retires_a_recent_command_for_a_different_project(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            workbench = root / "workbench"
+            control = workbench / "handoff" / "control"
+            runtime = workbench / "handoff" / "download"
+            control.mkdir(parents=True)
+            runtime.mkdir(parents=True)
+            old = {
+                "commandId": "continue-old-project",
+                "state": "recovering",
+                "requestedAt": "2026-08-03T18:00:00+08:00",
+                "lastHeartbeat": "2026-08-03T18:00:05+08:00",
+                "batchId": "batch-old", "taskId": "task-old", "productionDate": "8.2",
+            }
+            target = {
+                "batchId": "batch-new", "taskId": "task-new", "productionDate": "8.3",
+                "snapshotUpdatedAt": "2026-08-03T18:00:06+08:00",
+            }
+            (control / app.CONTINUE_COMMAND_NAME).write_text(json.dumps(old), encoding="utf-8")
+            (runtime / "project_status.json").write_text(json.dumps({"items": {}}), encoding="utf-8")
+            previous = app.CONFIG.get("workbench_dir")
+            app.CONFIG["workbench_dir"] = str(root)
+            try:
+                with patch("app.ensure_receiver_workbench_running", return_value={"started": False, "alreadyRunning": True, "pid": 2468}):
+                    result = app.request_workbench_continue(target)
+                saved = json.loads((control / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8"))
+                archived = list((control / "history").glob("continue-old-project-*.json"))
+                self.assertNotEqual("continue-old-project", result["commandId"])
+                self.assertEqual("requested", saved["state"])
+                self.assertEqual("task-new", saved["taskId"])
+                self.assertEqual(1, len(archived))
+                self.assertEqual("安全继续目标已变化，旧命令已归档", json.loads(archived[0].read_text(encoding="utf-8"))["archiveReason"])
+            finally:
+                app.CONFIG["workbench_dir"] = previous
+
     def test_live_capcut_recovery_command_is_not_expired(self):
         command = {
             "state": "recovering",
@@ -1040,6 +1125,66 @@ class OpsTests(unittest.TestCase):
         finally:
             app.COLLECTOR.project_download_statuses = previous
 
+    def test_task_box_prefers_blocked_capcut_over_download_completed(self):
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            app.COLLECTOR.project_download_statuses = [{
+                "taskId": "capcut-blocked", "batchId": "box", "batchSequence": 1,
+                "batchSize": 1, "date": "7.31", "project": "cloud", "material": "wood",
+                "expectedCount": 24, "completed": 24, "gapActive": False,
+                # This is intentionally only the Step 1/2 status.  The
+                # current full pipeline is blocked in CapCut.
+                "status": "completed", "pipelineStatus": "blocked_capcut",
+                "pipelineStateText": "CapCut waiting for recovery",
+            }]
+            with patch("app.remote_capcut_summaries", return_value={}):
+                box = app.task_box_payloads()[0]
+
+            self.assertEqual("blocked", box["state"])
+            self.assertEqual("blocked", box["current"]["status"])
+            self.assertIn("CapCut", box["current"]["currentStep"])
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
+    def test_safe_continue_prefers_workbench_owned_older_unfinished_batch(self):
+        boxes = [
+            {
+                "batchId": "new-box", "productionDate": "8.3", "state": "blocked",
+                "current": {"taskId": "new-voice", "status": "blocked", "sequence": 6},
+                "items": [{"taskId": "new-voice", "status": "blocked", "sequence": 6}],
+                "updatedAt": "2026-08-03T19:00:00+08:00",
+            },
+            {
+                "batchId": "old-box", "productionDate": "7.31", "state": "blocked",
+                "current": {"taskId": "old-capcut", "status": "blocked", "sequence": 9},
+                "items": [{"taskId": "old-capcut", "status": "blocked", "sequence": 9}],
+                "updatedAt": "2026-08-03T17:00:00+08:00",
+            },
+        ]
+        with patch.object(app.COLLECTOR, "active_workbench_task_id", return_value="old-capcut"):
+            selected = app.authoritative_active_task_box(boxes)
+
+        self.assertEqual("old-box", selected["batchId"])
+        self.assertEqual("old-capcut", selected["current"]["taskId"])
+
+    def test_safe_continue_ignores_terminal_workbench_context(self):
+        boxes = [
+            {
+                "batchId": "new-box", "productionDate": "8.3", "state": "blocked",
+                "current": {"taskId": "new-voice", "status": "blocked", "sequence": 2},
+                "items": [{"taskId": "new-voice", "status": "blocked", "sequence": 2}],
+            },
+            {
+                "batchId": "old-box", "productionDate": "7.31", "state": "completed",
+                "current": None,
+                "items": [{"taskId": "old-capcut", "status": "completed", "sequence": 9}],
+            },
+        ]
+        with patch.object(app.COLLECTOR, "active_workbench_task_id", return_value="old-capcut"):
+            selected = app.authoritative_active_task_box(boxes)
+
+        self.assertEqual("new-box", selected["batchId"])
+
     def test_task_box_shows_current_task_voice_pending_not_stale_global_voice(self):
         previous = app.COLLECTOR.project_download_statuses
         try:
@@ -1285,6 +1430,38 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(task["state_text"], "2K导出")
             self.assertEqual(task["date_label"], "7.17")
 
+    def test_completed_draft_cleanup_warning_is_not_a_production_error(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = app.Store(Path(folder) / "test.db")
+            collector = app.Collector(app.CONFIG, store)
+            task = collector.normalize_task(
+                {
+                    "taskId": "completed-cleanup-pending",
+                    "state": "Completed",
+                    "error": "最终成片已验证并等待上传；草稿待清理: 草稿索引更新失败",
+                },
+                Path("status.json"),
+                100.0,
+                "batch-1",
+            )
+
+            self.assertEqual("", task["error"])
+            self.assertEqual("pending", task["draft_cleanup_status"])
+            self.assertIn("草稿待清理", task["draft_cleanup_warning"])
+            store.upsert_task(task)
+            stored = store.tasks()[0]
+            self.assertEqual("Completed", stored["state"])
+            self.assertEqual("", stored["error"])
+            self.assertEqual("pending", stored["draft_cleanup_status"])
+
+    def test_completed_task_keeps_real_non_cleanup_error_visible(self):
+        error, status, warning = app.split_completed_cleanup_warning(
+            "Completed", "媒体身份校验失败"
+        )
+        self.assertEqual("媒体身份校验失败", error)
+        self.assertEqual("", status)
+        self.assertEqual("", warning)
+
     def test_capcut_remote_contract_is_preserved_and_test_history_is_separate(self):
         with tempfile.TemporaryDirectory() as folder:
             store = app.Store(Path(folder) / "test.db")
@@ -1423,6 +1600,58 @@ class OpsTests(unittest.TestCase):
         self.assertEqual(4, voice["completed"])
         self.assertEqual(4, voice["total"])
 
+    def test_current_project_exposes_full_pipeline_state_not_download_status(self):
+        current = {
+            "canonicalTaskId": "task-capcut", "batchId": "batch", "productionDate": "7.31",
+            "expected": 24, "downloadCompleted": 24, "project": "cloud", "material": "wood",
+            "status": "completed", "pipelineStatus": "blocked_capcut",
+            "pipelineStateText": "CapCut task failed; safe continue is required",
+        }
+        with (
+            patch("app.production_capcut_tasks", return_value=[]),
+            patch("app.capcut_stage_for_tasks", return_value={"state": "unknown", "completed": 0, "failed": 0, "total": 0}),
+            patch("app.upload_task_index", return_value={}),
+        ):
+            payload = app.current_project_status_payload(current, {})
+
+        capcut = next(stage for stage in payload["stages"] if stage["step"] == "capcut")
+        self.assertEqual("completed", payload["downloadStatus"])
+        self.assertEqual("blocked", payload["state"])
+        self.assertEqual("blocked_capcut", payload["pipelineStatus"])
+        self.assertEqual("blocked", capcut["status"])
+
+    def test_current_project_voice_uses_verified_fish_handoff_when_plan_is_omitted(self):
+        current = {
+            "canonicalTaskId": "task-korean",
+            "batchId": "batch-korean",
+            "productionDate": "8.2",
+            "expected": 26,
+            "downloadCompleted": 26,
+            "project": "true-huanghao",
+            "material": "wood",
+            "pipelineStatus": "voice_completed",
+            "languagePlan": [],
+        }
+        handoff = {
+            "status": "completed",
+            "completedItems": [
+                {"taskId": f"voice-{index}", "canonicalTaskId": "task-korean", "voiceVerified": True, "audioPath": f"audio-{index}.mp3"}
+                for index in range(8)
+            ],
+        }
+        with (
+            patch("app.production_capcut_tasks", return_value=[]),
+            patch("app.capcut_stage_for_tasks", return_value={"state": "idle", "completed": 0, "failed": 0, "total": 0}),
+            patch("app.upload_task_index", return_value={}),
+            patch("app.read_json_object", return_value=handoff),
+        ):
+            payload = app.current_project_status_payload(current, {})
+
+        voice = next(stage for stage in payload["stages"] if stage["step"] == "voice")
+        self.assertEqual("completed", voice["status"])
+        self.assertEqual(8, voice["completed"])
+        self.assertEqual(8, voice["total"])
+
     def test_upload_rescan_also_requests_live_cloud_verification(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -1450,6 +1679,37 @@ class OpsTests(unittest.TestCase):
             verification.assert_called_once_with()
             self.assertEqual("requested", result["verificationState"])
             self.assertEqual(16, result["verificationEligible"])
+
+    def test_subtitle_verification_inventory_keeps_historical_batch_audit_only(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            checkpoint_dir = root / "handoff" / "download" / "checkpoints"
+            checkpoint_dir.mkdir(parents=True)
+            checkpoint = checkpoint_dir / "task-85.json"
+            checkpoint.write_text(json.dumps({
+                "taskId": "task-85",
+                "productionDate": "8.5",
+                "items": {
+                    "https://example.test/a": {
+                        "status": "completed",
+                        "outputPath": str(root / "a.mp4"),
+                        "subtitleOutcome": "processed",
+                        "verification": {},
+                    },
+                    "https://example.test/b": {
+                        "status": "failed",
+                        "outputPath": str(root / "b.mp4"),
+                        "verification": {"verificationStatus": "residual_detected"},
+                    },
+                },
+            }, ensure_ascii=False), encoding="utf-8")
+            with patch("app._workbench_root", return_value=root):
+                payload = app.subtitle_verification_inventory("task-85", "8.5")
+
+        self.assertEqual(2, payload["total"])
+        self.assertEqual(1, payload["counts"]["audit_pending"])
+        self.assertEqual(1, payload["counts"]["residual_detected"])
+        self.assertTrue(all(item["historicalAuditOnly"] for item in payload["items"]))
 
 
 if __name__ == "__main__":

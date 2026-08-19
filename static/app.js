@@ -11,7 +11,10 @@ const state = {
   audioFiles: [], audioSnapshot: "", selectedAudioIds: new Set(), audioPreview: null,
   productionFiles: [], productionSnapshot: "", selectedProductionIds: new Set(),
   productionPreview: null, productionCounts: {},
-  safety: null, safetyLoadedAt: 0
+  safety: null, safetyLoadedAt: 0,
+  continueStatusBusy: false, continueCommandId: "", continueStatusFailures: 0,
+  fullDashboardLoaded: false, historyExplicit: false, healthFailures: 0, continueInFlight: false,
+  etags: {}, cachedJson: {}
 };
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? "")
@@ -67,6 +70,12 @@ function renderSafety(data) {
   const updated = $("safetyUpdatedAt");
   if (updated) updated.textContent = `最后检查 ${formatDateTime(data?.updatedAt)}`;
   const entries = [
+    ["去字幕质检", data?.subtitleVerification,
+      value => `干净 ${value.counts?.verified_clean || 0} · 警告 ${value.counts?.warning || 0} · 残留 ${value.counts?.residual_detected || 0} · 待审计 ${value.counts?.audit_pending || 0}`,
+      value => Number(value.counts?.residual_detected || 0) || Number(value.counts?.verification_failed || 0) ? "blocked" : Number(value.counts?.warning || 0) || Number(value.counts?.audit_pending || 0) ? "warning" : "good"],
+    ["自动安全恢复", data?.autoRecovery,
+      value => `${value.stateText || "空闲"} · 已尝试 ${value.attemptCount || 0}/1`,
+      value => value.state === "failed" ? "blocked" : ["observing", "waiting_stable", "starting", "recovering"].includes(value.state) ? "warning" : "good"],
     ["成片质检", data?.quality,
       value => `通过 ${value.passed || 0}/${value.total || 0} · 警告 ${value.warning || 0} · 阻止 ${value.blocked || 0}`,
       value => Number(value.blocked || 0) ? "blocked" : Number(value.warning || 0) ? "warning" : "good"],
@@ -1006,7 +1015,10 @@ function updateMaterialOptions() {
 }
 
 async function postJson(url, payload) {
-  const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 10000);
+  const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
+  window.clearTimeout(timer);
   const result = await response.json();
   if (!response.ok) throw new Error(result.detail || "操作失败");
   return result;
@@ -1153,16 +1165,21 @@ function renderSources(source = {}) {
 function renderContinueResult(result = {}) {
   const node = $("continueResult");
   const stateName = String(result.state || "idle");
+  state.continueCommandId = String(result.commandId || state.continueCommandId || "");
   // A continue command is durable on the receiver.  Keep the button locked for
   // every non-terminal recovery phase, including the v3 accepted/recovering
   // states, so a refresh can never make a second click look safe.
-  const inFlightStates = ["requested", "accepted", "running", "recovering"];
-  const commandInFlight = !result.stale && inFlightStates.includes(stateName);
+  const inFlightStates = ["requested", "accepted", "running", "recovering", "persisted", "receiver_acknowledged", "workbench_acknowledged", "executing"];
+  const commandInFlight = !result.stale && inFlightStates.includes(stateName)
+    && result.continueCanRetry !== true;
   const stateLabel = {
-    idle: "尚未对账", requested: "命令已发送", accepted: "工作台已接收",
+    idle: "尚未对账", requested: "命令已发送", persisted: "命令已保存",
+    receiver_acknowledged: "家里接收器已收到", workbench_acknowledged: "家里工作台已领取",
+    executing: "正在安全继续", accepted: "工作台已接收",
     running: "正在安全继续", recovering: "正在恢复当前项目",
     completed: "恢复已完成", blocked: "已阻止", failed: "执行失败", expired: "命令已过期"
   }[stateName] || stateName;
+  state.continueInFlight = commandInFlight;
   const rows = Array.isArray(result.steps) ? result.steps : [];
   const launchError = inFlightStates.includes(stateName)
     ? String(result.workbenchLaunchError || "")
@@ -1202,20 +1219,59 @@ function renderContinueResult(result = {}) {
   }
   const button = $("continueCurrentButton");
   const allowed = result.allowed !== false;
-  const clickable = allowed && !commandInFlight;
+  const clickable = allowed && (result.continueCanRetry === true || !commandInFlight);
   button.dataset.allowed = clickable ? "true" : "false";
   button.dataset.commandState = stateName;
   button.disabled = !clickable;
-  button.textContent = stateName === "requested"
-    ? "命令已发送，等待工作台…"
-    : stateName === "accepted"
+  button.textContent = ["requested", "persisted"].includes(stateName)
+    ? "命令已保存，等待接收器…"
+    : stateName === "receiver_acknowledged"
+      ? "接收器已收到，等待工作台…"
+    : ["accepted", "workbench_acknowledged"].includes(stateName)
       ? "工作台已接收，正在核对…"
-      : ["running", "recovering"].includes(stateName)
+      : ["running", "recovering", "executing"].includes(stateName)
       ? "正在安全继续，请勿重复点击…"
       : "安全继续当前项目";
   button.title = commandInFlight
-    ? (result.message || "继续命令正在执行，请等待状态更新")
+    ? (result.continueLockReason || result.message || "继续命令正在执行，请等待状态更新")
     : allowed ? "" : (result.message || "接收器状态未对账");
+}
+
+// The continue command has its own durable lifecycle. Poll it independently
+// from the large dashboard payload so a transient error in any unrelated
+// dashboard panel cannot leave the action button showing an obsolete
+// "recovering" state after the receiver has already finished or blocked it.
+async function refreshContinueStatus() {
+  if (state.continueStatusBusy) return;
+  state.continueStatusBusy = true;
+  try {
+    const result = await getJson("/api/control-commands/current");
+    state.continueStatusFailures = 0;
+    renderContinueResult(result || {});
+  } catch (error) {
+    state.continueStatusFailures += 1;
+    // Never leave a stale "recovering" label on screen while the control
+    // service is offline.  The action remains disabled (we cannot prove that
+    // a retry is safe), but the user sees the real reason instead of assuming
+    // that production is still running.  A healthy response restores the
+    // authoritative command state automatically.
+    if (state.continueStatusFailures >= 2) {
+      const button = $("continueCurrentButton");
+      const node = $("continueResult");
+      if (button) {
+        button.disabled = true;
+        button.dataset.allowed = "false";
+        button.textContent = "状态服务离线，正在重连…";
+        button.title = "Dashboard或任务接收器暂时不可用，恢复连接后会自动重新对账";
+      }
+      if (node) {
+        node.className = "reconcile-result failed";
+        node.innerHTML = `<div class="reconcile-head"><strong>状态服务离线</strong></div><p>${escapeHtml(error?.message || "无法读取安全继续状态；正在自动重连")}</p>`;
+      }
+    }
+  } finally {
+    state.continueStatusBusy = false;
+  }
 }
 
 function renderActionResult(id, result = {}) {
@@ -1278,21 +1334,53 @@ async function controlTask(button, action) {
   }
 }
 
-async function getJson(url) {
-  const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`${response.status}`);
-  return response.json();
+async function getJson(url, retries = 1) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 8000);
+    try {
+      const headers = {};
+      if (state.etags[url]) headers["If-None-Match"] = state.etags[url];
+      const response = await fetch(url, { cache: "no-cache", headers, signal: controller.signal });
+      if (response.status === 304 && state.cachedJson[url]) return state.cachedJson[url];
+      if (!response.ok) throw new Error(`${response.status}`);
+      const result = await response.json();
+      const etag = response.headers.get("ETag");
+      if (etag) state.etags[url] = etag;
+      state.cachedJson[url] = result;
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) await new Promise(resolve => window.setTimeout(resolve, 500 * (2 ** attempt)));
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+  throw lastError || new Error("请求失败");
 }
 
 async function refresh() {
   if (state.refreshBusy) return;
   state.refreshBusy = true;
   try {
+    const useSummary = state.fullDashboardLoaded && !state.historyExplicit && !state.batchId;
     const params = new URLSearchParams();
     if (state.date) params.set("date", state.date);
     if (state.batchId) params.set("batchId", state.batchId);
-    const data = await getJson(`/api/dashboard${params.toString() ? `?${params}` : ""}`);
+    const url = useSummary ? "/api/dashboard/summary" : `/api/dashboard${params.toString() ? `?${params}` : ""}`;
+    const data = await getJson(url, 2);
     state.lastGoodDashboard = data;
+    state.healthFailures = 0;
+    if (useSummary) {
+      renderPipelinePayload(data.pipeline || {}, data.currentProjectStatus || {});
+      if (data.currentTaskBox) renderTaskBoxes({items: [data.currentTaskBox], selected: data.currentTaskBox, history: []});
+      renderServices(data.services || []);
+      renderContinueResult(data.controls?.continue || {});
+      try { window.localStorage.setItem("dashboardLastTrustedSummary", JSON.stringify(data)); } catch (_) {}
+      return;
+    }
+    state.fullDashboardLoaded = true;
     state.date = data.selectedDate || state.date;
     renderOverview(data.overview || {});
     renderPipelinePayload(data.pipeline || {}, data.currentProjectStatus || {});
@@ -1314,12 +1402,23 @@ async function refresh() {
     renderActionResult("resetRecordsResult", data.controls?.resetRecords || {});
     await refreshSafety();
   } catch (error) {
-    $("machineBadge").className = "status-badge offline";
-    $("machineBadge").innerHTML = "<span></span>Dashboard 连接失败";
-    $("heroTitle").textContent = "暂时无法读取新状态";
-    $("heroSubtitle").textContent = state.lastGoodDashboard
-      ? "正在显示上一次成功状态；页面会自动重试，不会清空已有信息。"
-      : "页面会继续自动重试，不影响正在运行的生产任务。";
+    try {
+      await getJson("/api/health", 0);
+      state.healthFailures = 0;
+      $("machineBadge").className = "status-badge warning";
+      $("machineBadge").innerHTML = "<span></span>明细同步较慢";
+      $("heroSubtitle").textContent = "家里服务在线，正在显示最后可信状态并继续同步明细。";
+    } catch (_) {
+      state.healthFailures += 1;
+      if (state.healthFailures >= 3) {
+        $("machineBadge").className = "status-badge offline";
+        $("machineBadge").innerHTML = "<span></span>家里服务离线";
+        $("heroTitle").textContent = "暂时无法读取新状态";
+      }
+      $("heroSubtitle").textContent = state.lastGoodDashboard
+        ? "正在显示上一次可信状态；不会清空已有信息。"
+        : "页面会继续自动重试，不影响正在运行的生产任务。";
+    }
   } finally {
     state.refreshBusy = false;
   }
@@ -1327,11 +1426,13 @@ async function refresh() {
 
 $("pipelineDateSelect").addEventListener("change", event => {
   state.date = event.target.value;
+  state.historyExplicit = true;
   refresh();
 });
 $("taskBoxSelect")?.addEventListener("change", event => {
   state.batchId = event.target.value;
   state.date = "";
+  state.historyExplicit = Boolean(state.batchId);
   refresh();
 });
 $("step5ProjectFilter")?.addEventListener("change", event => {
@@ -1627,17 +1728,20 @@ $("continueCurrentButton")?.addEventListener("click", async (event) => {
   button.disabled = true;
   button.textContent = "正在发送继续指令…";
   try {
-    const result = await postJson("/api/controls/continue-current", {});
+    const clientRequestId = (window.crypto?.randomUUID?.() || `dashboard-${Date.now()}-${Math.random()}`);
+    const result = await postJson("/api/control-commands", { clientRequestId });
     renderContinueResult({
       ...result,
-      state: result.state || "requested",
+      state: result.state || "persisted",
       commandId: result.commandId,
-      message: result.message || "继续指令已发送，正在对账",
+      message: result.message || "命令已保存，等待家里接收器确认",
       requestedAt: new Date().toISOString(),
     });
     await refresh();
   } catch (error) {
     renderContinueResult({ state: "failed", message: error.message || "发送继续指令失败" });
+  } finally {
+    window.setTimeout(refreshContinueStatus, 500);
   }
 });
 $("uploadRescanButton")?.addEventListener("click", async (event) => {
@@ -1745,7 +1849,13 @@ $("createTaskForm").addEventListener("submit", async (event) => {
 
 async function refreshLoop() {
   await refresh();
-  window.setTimeout(refreshLoop, document.hidden ? 15000 : 3000);
+  window.setTimeout(refreshLoop, document.hidden ? 20000 : 5000);
+}
+
+async function refreshContinueLoop() {
+  if (state.continueInFlight) await refreshContinueStatus();
+  window.setTimeout(refreshContinueLoop, state.continueInFlight ? (document.hidden ? 5000 : 1500) : 10000);
 }
 
 refreshLoop();
+refreshContinueLoop();
