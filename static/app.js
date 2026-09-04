@@ -67,21 +67,22 @@ function formatDuration(value) {
 
 function renderSafety(data) {
   state.safety = data;
+  const hasActiveProject = data?.productionContext?.hasActiveProject === true;
   const updated = $("safetyUpdatedAt");
   if (updated) updated.textContent = `最后检查 ${formatDateTime(data?.updatedAt)}`;
   const entries = [
     ["去字幕质检", data?.subtitleVerification,
-      value => `干净 ${value.counts?.verified_clean || 0} · 警告 ${value.counts?.warning || 0} · 残留 ${value.counts?.residual_detected || 0} · 待审计 ${value.counts?.audit_pending || 0}`,
+      value => `干净 ${value.counts?.verified_clean || 0} · 少量残留已放行 ${value.counts?.warning || 0} · 完整残留 ${value.counts?.residual_detected || 0} · 待审计 ${value.counts?.audit_pending || 0}`,
       value => Number(value.counts?.residual_detected || 0) || Number(value.counts?.verification_failed || 0) ? "blocked" : Number(value.counts?.warning || 0) || Number(value.counts?.audit_pending || 0) ? "warning" : "good"],
     ["自动安全恢复", data?.autoRecovery,
       value => `${value.stateText || "空闲"} · 已尝试 ${value.attemptCount || 0}/1${value.commandState ? ` · 命令 ${value.commandState}` : ""}`,
       value => ["failed", "unavailable"].includes(value.state) ? "blocked" : ["observing", "waiting_stable", "starting", "command_persisted", "receiver_acknowledged", "workbench_acknowledged", "executing", "recovering"].includes(value.state) ? "warning" : "good"],
     ["成片质检", data?.quality,
-      value => `通过 ${value.passed || 0}/${value.total || 0} · 警告 ${value.warning || 0} · 阻止 ${value.blocked || 0}`,
+      value => `${hasActiveProject ? "当前" : "历史审计"}：通过 ${value.passed || 0}/${value.total || 0} · 提醒 ${value.warning || 0} · 阻止 ${value.blocked || 0}`,
       value => Number(value.blocked || 0) ? "blocked" : Number(value.warning || 0) ? "warning" : "good"],
     ["版本与配置", data?.versions,
-      value => `${value.items?.length || 0} 个组件 · 漂移 ${value.driftCount || 0}`,
-      value => Number(value.driftCount || 0) ? "blocked" : "good"],
+      value => `${value.items?.length || 0} 个组件 · ${Number(value.driftCount || 0) ? `检测到 ${value.driftCount} 项已变更，待确认基线` : "基线一致"}`,
+      value => Number(value.driftCount || 0) ? "warning" : "good"],
     ["云端对账", data?.cloud,
       value => `实时核验 ${value.verified || 0}/${value.total || 0} · 阻止 ${value.blocked || 0}`,
       value => Number(value.blocked || 0) ? "warning" : "good"],
@@ -89,13 +90,17 @@ function renderSafety(data) {
       value => `剩余 ${value.remainingVideos || 0} 条 · 需要 ${formatBytes(value.requiredFreeBytes)} · 可用 ${formatBytes(value.freeBytes)}`,
       value => value.ready ? "good" : "blocked"],
     ["登录状态", data?.credentials,
-      value => `${value.items?.length || 0} 个服务 · ${value.ready ? "可用" : "需要处理"}`,
+      value => {
+        const required = (value.items || []).filter(item => item.required !== false);
+        const optionalOffline = (value.items || []).filter(item => item.required === false && !item.online).length;
+        return `${required.length} 个当前必需服务 · ${value.ready ? "可用" : "需要处理"}${optionalOffline ? ` · ${optionalOffline} 个未到阶段` : ""}`;
+      },
       value => value.ready ? "good" : "warning"],
     ["任务身份", data?.integrity,
       value => `活动 ${value.activeRecords || 0} · 硬错误 ${value.hardFailureCount || 0}`,
       value => value.safe ? "good" : "blocked"],
     ["故障证据", data?.evidence,
-      value => value.incident ? `${value.incident.incidentId || "最新故障"} · 已保存本机证据` : "当前没有故障证据",
+      value => value.incident ? `${value.incident.incidentId || "历史故障"} · 历史证据已保存，不代表当前仍异常` : "当前没有故障证据",
       value => value.incident ? "warning" : "good"],
   ];
   const grid = $("safetyGrid");
@@ -954,11 +959,41 @@ function renderEvents(items) {
   }).join("");
 }
 
+function renderGapQuickBar(items = []) {
+  const bar = $("gapQuickBar");
+  const title = $("gapQuickTitle");
+  const summary = $("gapQuickSummary");
+  const actions = $("gapQuickActions");
+  if (!bar || !title || !summary || !actions) return;
+  const active = items.filter(item => Boolean(item.gapActive) && String(item.taskId || ""));
+  if (!active.length) {
+    bar.classList.add("hidden");
+    actions.innerHTML = "";
+    return;
+  }
+  const missingFor = item => Number(item.missingCount ?? Math.max(
+    0,
+    Number(item.expectedCount || 0) - Number(item.completed || 0),
+  ));
+  const totalMissing = active.reduce((total, item) => total + missingFor(item), 0);
+  title.textContent = active.length === 1 ? "当前项目需要补链" : `${active.length} 个项目需要补链`;
+  summary.textContent = `合计缺少 ${totalMissing} 条，点击项目直接补充`;
+  actions.innerHTML = active.map(item => `
+    <button type="button" data-task-id="${escapeHtml(String(item.taskId || ""))}" onclick="openReplenishment(this.dataset.taskId)">
+      ${escapeHtml(item.project || "未分类")} / ${escapeHtml(item.material || "--")} · 缺 ${missingFor(item)} 条
+    </button>`).join("");
+  bar.classList.remove("hidden");
+}
+
 function renderProjectGaps(items) {
   const node = $("projectGapList");
   if (!node) return;
-  if (!items.length) { node.innerHTML = `<p class="empty">暂无项目级下载记录</p>`; return; }
   state.gaps = {};
+  if (!items.length) {
+    renderGapQuickBar([]);
+    node.innerHTML = `<p class="empty">暂无项目级下载记录</p>`;
+    return;
+  }
   node.innerHTML = items.map(item => {
     const expected = Number(item.expectedCount || 0);
     const completed = Number(item.completed || 0);
@@ -986,6 +1021,7 @@ function renderProjectGaps(items) {
       ${taskRows}
     </div>`;
   }).join("");
+  renderGapQuickBar(items);
 }
 
 function renderTemplates(items) {
@@ -1014,29 +1050,53 @@ function updateMaterialOptions() {
   if (count && template?.expectedCount) count.value = template.expectedCount;
 }
 
-async function postJson(url, payload) {
+// Mutating control actions have different runtimes.  Keep the short default
+// for ordinary UI commands, but let long, explicitly confirmed maintenance
+// jobs wait for their real response instead of aborting the browser request.
+async function postJson(url, payload, options = {}) {
+  const timeoutMs = Number.isFinite(Number(options.timeoutMs))
+    ? Math.max(1000, Number(options.timeoutMs))
+    : 10000;
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 10000);
-  const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
-  window.clearTimeout(timer);
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.detail || "操作失败");
-  return result;
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "操作失败");
+    return result;
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      const timeoutError = new Error(`操作仍在后台处理（已等待 ${Math.ceil(timeoutMs / 60000)} 分钟），请刷新状态后再继续`);
+      timeoutError.code = "CONTROL_REQUEST_TIMEOUT";
+      timeoutError.cause = error;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 
 function openReplenishment(taskId) {
   const item = state.gaps[String(taskId)];
   const panel = $("replenishPanel");
+  const dialog = $("replenishDialog");
   if (!item || !panel) return;
   const expected = Number(item.expectedCount || 0);
   const completed = Number(item.completed || 0);
   const missing = Number(item.missingCount ?? Math.max(0, expected - completed));
-  panel.classList.remove("hidden");
-  panel.innerHTML = `<strong>补链：${escapeHtml(item.project)} / ${escapeHtml(item.material)}</strong>
-    <p>原计划 ${expected} 条，已完成 ${completed} 条；请只粘贴 ${missing} 条新链接。</p>
+  panel.innerHTML = `<header><div><strong>补链：${escapeHtml(item.project)} / ${escapeHtml(item.material)}</strong>
+    <p>原计划 ${expected} 条，已完成 ${completed} 条；请只粘贴 ${missing} 条新链接。</p></div>
+    <button id="closeReplenishDialog" type="button" aria-label="关闭补链窗口">×</button></header>
     <form id="replenishForm"><label class="wide">新链接（每行一条）<textarea id="replenishUrls" rows="4" required></textarea></label>
     <label class="wide checkbox"><input id="replenishStartNow" type="checkbox" checked>补链后继续当前项目</label>
     <button class="primary wide" type="submit">提交补链</button></form>`;
+  $("closeReplenishDialog")?.addEventListener("click", () => dialog?.close());
   $("replenishForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = event.currentTarget.querySelector("button");
@@ -1051,7 +1111,9 @@ function openReplenishment(taskId) {
         message: result.message || "补链任务已提交",
         updatedAt: new Date().toISOString(),
       });
-      panel.classList.add("hidden"); panel.innerHTML = ""; await refresh();
+      if (dialog?.open) dialog.close();
+      panel.innerHTML = "";
+      await refresh();
     } catch (error) {
       renderActionResult("queueActionResult", {
         state: "failed",
@@ -1061,7 +1123,8 @@ function openReplenishment(taskId) {
       button.disabled = false;
     }
   });
-  panel.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (dialog && !dialog.open) dialog.showModal();
+  $("replenishUrls")?.focus();
 }
 
 function renderReceiverQueue(items) {
@@ -1115,6 +1178,7 @@ function renderTaskBoxes(payload = {}) {
     $("taskBoxVideoProgress").textContent = "0 / 0";
     $("taskBoxCurrent").textContent = "--";
     $("taskBoxNext").textContent = "--";
+    $("taskBoxScope").textContent = "本次项目组合：当前无生产任务";
     $("taskBoxItems").innerHTML = `<p class="empty">等待公司投递器提交任务</p>`;
     setBar("taskBoxBar", 0);
     return;
@@ -1123,6 +1187,11 @@ function renderTaskBoxes(payload = {}) {
   select.value = selected.batchId;
   const current = selected.current;
   const next = selected.next;
+  const selectedProjects = Array.isArray(selected.selectedProjects) ? selected.selectedProjects.filter(Boolean) : [];
+  const deferredProjects = Array.isArray(selected.unselectedProjects) ? selected.unselectedProjects.filter(Boolean) : [];
+  $("taskBoxScope").textContent = selectedProjects.length
+    ? `本次项目组合：${selectedProjects.join("、")}${deferredProjects.length ? `；未选择：${deferredProjects.join("、")}` : ""}`
+    : "本次项目组合：按现有任务合同运行";
   const position = current ? `当前第 ${current.sequence} / ${selected.projectCount} 项` : "没有正在运行的项目";
   $("taskBoxTitle").textContent = `${selected.productionDate || "未定日期"}任务箱 · 已完成 ${selected.completedProjects} / ${selected.projectCount}`;
   $("taskBoxProjectProgress").textContent = `${selected.completedProjects} / ${selected.projectCount}`;
@@ -1374,7 +1443,12 @@ async function refresh() {
     state.healthFailures = 0;
     if (useSummary) {
       renderPipelinePayload(data.pipeline || {}, data.currentProjectStatus || {});
-      if (data.currentTaskBox) renderTaskBoxes({items: [data.currentTaskBox], selected: data.currentTaskBox, history: []});
+      // The authoritative summary may legitimately have no active task after
+      // a batch completes or the workbench is stopped.  Clear the current
+      // panel explicitly instead of leaving a stale historical box visible.
+      renderTaskBoxes(data.currentTaskBox
+        ? {items: [data.currentTaskBox], selected: data.currentTaskBox, history: []}
+        : {items: [], selected: null, history: []});
       renderServices(data.services || []);
       renderContinueResult(data.controls?.continue || {});
       try { window.localStorage.setItem("dashboardLastTrustedSummary", JSON.stringify(data)); } catch (_) {}
@@ -1698,11 +1772,15 @@ $("confirmProductionCleanupButton")?.addEventListener("click", async event => {
   button.textContent = "正在移入回收站…";
   try {
     const fileIds = (preview.deletable || []).map(item => item.fileId);
+    // Recycling a large, user-confirmed inventory can legitimately take
+    // several minutes (Windows shell recycling is one file operation at a
+    // time).  The old 10s watchdog aborted the fetch while the server kept
+    // working, which produced the misleading "signal is aborted" alert.
     const result = await postJson("/api/controls/production-files/recycle", {
       fileIds,
       snapshotToken: preview.snapshotToken,
       confirm: "RECYCLE_SELECTED_PRODUCTION_FILES",
-    });
+    }, { timeoutMs: 15 * 60 * 1000 });
     renderActionResult("productionCleanupResult", result);
     state.selectedProductionIds.clear();
     await loadProductionManager();
