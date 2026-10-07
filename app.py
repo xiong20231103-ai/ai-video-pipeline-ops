@@ -47,6 +47,7 @@ CAPCUT_DRAFT_CLEANUP_STATUS_PATH = DATA_DIR / "capcut_draft_cleanup_status.json"
 CAPCUT_DRAFT_CLEANUP_BACKUP_DIR = DATA_DIR / "capcut-draft-cleanup-backups"
 CAPCUT_DRAFT_CLEANUP_CONFIRM = "RECYCLE_SELECTED_CAPCUT_DRAFTS"
 CAPCUT_DRAFT_LOCK = threading.RLock()
+FORMAL_PROJECT_NAMES = ("云手机", "实体机", "黄颢", "真黄颢", "SPC地板", "SPC墙板")
 AUDIO_CLEANUP_STATUS_PATH = DATA_DIR / "audio_cleanup_status.json"
 AUDIO_CLEANUP_BACKUP_DIR = DATA_DIR / "audio-cleanup-records"
 AUDIO_CLEANUP_CONFIRM = "RECYCLE_SELECTED_AUDIO_FILES"
@@ -58,6 +59,9 @@ PRODUCTION_FILE_CLEANUP_INDEX_PATH = DATA_DIR / "production_file_cleanup_index.j
 PRODUCTION_FILE_CLEANUP_CONFIRM = "RECYCLE_SELECTED_PRODUCTION_FILES"
 PRODUCTION_FILE_CLEANUP_LOCK = threading.RLock()
 PRODUCTION_VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
+SAFETY_CACHE_TTL_SECONDS = 20.0
+SAFETY_CACHE_LOCK = threading.Lock()
+SAFETY_CACHE: dict[str, Any] = {"payload": None, "expiresAt": 0.0}
 LOCAL_PATH_PATTERN = re.compile(r"(?i)(?<![A-Za-z0-9])[A-Z]:[\\/][^\"\r\n]*")
 SENSITIVE_KEY_PARTS = ("accesstoken", "access_token", "password", "secret", "authorization")
 
@@ -309,7 +313,7 @@ def _persist_continue_launch_state(command_file: Path, command_id: str, launch: 
     os.replace(temp, command_file)
 
 
-def _continue_target_signature(payload: dict[str, Any] | None) -> tuple[str, str, str, str, str]:
+def _continue_target_signature(payload: dict[str, Any] | None) -> tuple[str, str, str, str, str, str, str, str]:
     """The identity a safe-continue command is allowed to own.
 
     ``batchId/taskId/date`` was enough before retries had their own CapCut
@@ -317,9 +321,23 @@ def _continue_target_signature(payload: dict[str, Any] | None) -> tuple[str, str
     recovery from silently owning the next attempt of the same project.
     """
     value = payload or {}
-    return tuple(str(value.get(key) or "") for key in (
-        "batchId", "taskId", "productionDate", "manifestId", "attemptId",
-    ))
+    selected = value.get("selectedProjects")
+    if isinstance(selected, (list, tuple, set)):
+        selected_scope = ",".join(sorted({
+            str(item or "").strip() for item in selected if str(item or "").strip()
+        }))
+    else:
+        selected_scope = str(selected or "").strip()
+    return (
+        str(value.get("batchId") or ""),
+        str(value.get("taskId") or ""),
+        str(value.get("productionDate") or ""),
+        str(value.get("manifestId") or ""),
+        str(value.get("attemptId") or ""),
+        str(value.get("runGroupId") or ""),
+        str(value.get("batchKind") or ""),
+        selected_scope,
+    )
 
 
 def _continue_target_changed(command: dict[str, Any] | None, target: dict[str, Any] | None) -> bool:
@@ -336,6 +354,10 @@ def _continue_target_changed(command: dict[str, Any] | None, target: dict[str, A
     if not any(command_signature[:3]) or not any(target_signature[:3]):
         return False
     if command_signature[:3] != target_signature[:3]:
+        return True
+    if command_signature[5:] != target_signature[5:]:
+        # A scoped submission is a separate safety domain. Retire an older
+        # unscoped mailbox instead of allowing it to claim this run group.
         return True
     return any(
         command_value and target_value and command_value != target_value
@@ -402,159 +424,36 @@ def _capcut_recovery_command_is_stale(command: dict[str, Any], runtime_item: dic
 
 
 def request_workbench_continue(target: dict[str, Any]) -> dict[str, Any]:
-    """Queue one safe-resume request for the local workbench."""
+    """Submit an independent request; only the workbench delivers the mailbox."""
+    import importlib.util
     workbench_dir = resolve_path(str(CONFIG.get("workbench_dir") or ""))
-    # The deployed Dashboard config points at the suite root while the desktop
-    # workbench itself owns the nested workbench/ handoff mailbox.
     if (workbench_dir / "workbench").is_dir():
         workbench_dir = workbench_dir / "workbench"
-    if not workbench_dir.is_dir():
-        raise HTTPException(status_code=503, detail="工作台目录不可用，无法发送继续指令")
-    command_file = workbench_dir / "handoff" / "control" / CONTINUE_COMMAND_NAME
-    command_file.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        existing = json.loads(command_file.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        existing = {}
-    # A command can remain behind when an older workbench wrote finishedAt
-    # while retaining state=running, or after its project has completed.
-    in_flight_states = {"requested", "accepted", "running", "recovering"}
-    if isinstance(existing, dict) and existing.get("state") in in_flight_states:
-        existing_target = _continue_target_signature(existing)
-        requested_target = _continue_target_signature(target)
-        old_runtime = read_json_object(workbench_dir / "handoff" / "download" / "project_status.json")
-        old_items = old_runtime.get("items") if isinstance(old_runtime.get("items"), dict) else {}
-        old_item = old_items.get(existing_target[1]) if isinstance(old_items, dict) else {}
-        old_pipeline = str(old_item.get("pipelineStatus") or "").lower() if isinstance(old_item, dict) else ""
-        heartbeat = parse_time(str(existing.get("lastHeartbeat") or existing.get("startedAt") or existing.get("requestedAt") or ""))
-        expired_reason = ""
-        if existing.get("finishedAt"):
-            expired_reason = "运行命令已含完成时间"
-        elif old_pipeline in {"completed", "cancelled", "withdrawn"}:
-            expired_reason = "命令所属项目已结束"
-        elif isinstance(old_item, dict) and _capcut_recovery_command_is_stale(existing, old_item):
-            expired_reason = "CapCut 恢复命令心跳已失效，且客户端未运行；允许重新安全继续"
-        elif (
-            existing.get("state") in {"requested", "accepted"}
-            and existing_target == requested_target
-            and old_pipeline in {
-                "step1_completed", "step12_completed", "voice_pending", "voice_completed",
-                "stitch_pending", "blocked_voice", "blocked_stitch", "blocked_reconcile",
-            }
-            and heartbeat
-            and time.time() - heartbeat > 120
-            and not existing.get("lastHeartbeat")
-        ):
-            # Workbench owns the transition to running and writes a heartbeat
-            # only after it has actually started a task-scoped recovery.
-            # A Dashboard/receiver startup acknowledgement alone is not a
-            # running production command and must not block another click.
-            expired_reason = "继续命令未确认启动，已允许安全重试"
-        elif existing_target != requested_target:
-            # ``continue_current_project`` has exactly one owner.  Once the
-            # current identity differs, an old command must not keep the new
-            # task's button locked, even if it was recently written.
-            expired_reason = "安全继续目标已变化，旧命令已归档"
-        if expired_reason:
-            existing = _expire_continue_command(command_file, existing, expired_reason)
-    # A prior command can remain marked running after the task-scoped Fish
-    # handoff has already entered a terminal voice failure.  Only that same
-    # task is allowed to supersede the stale command.
-    runtime_status = read_json_object(workbench_dir / "handoff" / "download" / "project_status.json")
-    runtime_items = runtime_status.get("items") if isinstance(runtime_status.get("items"), dict) else {}
-    runtime_item = runtime_items.get(str(target.get("taskId") or "")) if isinstance(runtime_items, dict) else {}
-    pipeline_status = str(runtime_item.get("pipelineStatus") or "").lower() if isinstance(runtime_item, dict) else ""
-    task_id = str(target.get("taskId") or "")
-    voice_handoff = read_json_object(resolve_path(str(CONFIG.get("voice_handoff_file") or "")))
-    voice_status = str(voice_handoff.get("status") or "").lower()
-    handoff_task_ids = {
-        str(item.get("canonicalTaskId") or "")
-        for item in (voice_handoff.get("failedItems") or [])
-        if isinstance(item, dict)
-    }
-    handoff_task_ids.update(str(value or "") for value in (voice_handoff.get("canonicalTaskIds") or []))
-    terminal_voice_for_task = (
-        task_id in handoff_task_ids
-        and voice_status in {"failed", "completed_with_errors", "cancelled", "canceled"}
+    module_path = workbench_dir / "recovery_control.py"
+    if not module_path.is_file():
+        raise HTTPException(status_code=503, detail="共享恢复控制模块不可用")
+    spec = importlib.util.spec_from_file_location("dashboard_recovery_control", module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    control_dir = workbench_dir / "handoff" / "control"
+    controller = module.RecoveryControl(
+        control_dir / "automatic_recovery.json",
+        control_dir / "automatic_recovery.lock",
+        control_dir / CONTINUE_COMMAND_NAME,
     )
-    handoff_terminal_at = parse_time(str(
-        voice_handoff.get("finishedAt")
-        or voice_handoff.get("completedAt")
-        or voice_handoff.get("updatedAt")
-        or ""
-    ))
-    command_requested_at = parse_time(str(
-        existing.get("requestedAt")
-        or existing.get("startedAt")
-        or ""
-    )) if isinstance(existing, dict) else None
-    voice_failure_for_task = terminal_voice_for_task and (
-        not command_requested_at
-        or not handoff_terminal_at
-        or handoff_terminal_at >= command_requested_at
-    )
-    retryable_terminal_voice = (
-        pipeline_status in {"blocked_voice", "voice_failed", "voice_login_required"}
-        or voice_failure_for_task
-    )
-    if (
-        isinstance(existing, dict)
-        and existing.get("state") in in_flight_states
-        and voice_failure_for_task
-        and _continue_target_signature(existing)[1] == task_id
-    ):
-        existing["state"] = "expired"
-        existing["stale"] = True
-        existing["expiredReason"] = "Fish 配音批次已进入终态失败，已解除旧安全继续命令"
-        existing["phase"] = "voice_failed"
-        existing["finishedAt"] = now_iso()
-        existing["message"] = "配音批次失败，可安全继续重试缺失语音"
-        _write_json_atomic(command_file, existing)
-        existing = {}
-    if (
-        isinstance(existing, dict)
-        and existing.get("state") in in_flight_states
-        and not retryable_terminal_voice
-    ):
-        existing_target = _continue_target_signature(existing)
-        requested_target = _continue_target_signature(target)
-        if existing_target != requested_target:
-            raise HTTPException(status_code=409, detail="已有另一项目的安全继续命令正在处理")
-        response = {
-            "accepted": True,
-            "commandId": str(existing.get("commandId") or ""),
-            "state": existing.get("state"),
-        }
-        launch = _ensure_workbench_for_continue()
-        _persist_continue_launch_state(command_file, response["commandId"], launch)
-        response.update(launch)
-        return response
     payload = {
-        "command": "continue_current_project",
-        "commandId": str(target.get("commandId") or f"continue-{uuid.uuid4().hex[:12]}"),
-        "clientRequestId": str(target.get("clientRequestId") or ""),
-        "state": "requested",
-        "requestedAt": now_iso(),
-        "requestedBy": "dashboard",
-        "batchId": str(target.get("batchId") or ""),
-        "taskId": str(target.get("taskId") or ""),
-        "productionDate": str(target.get("productionDate") or ""),
-        "manifestId": str(target.get("manifestId") or ""),
-        "attemptId": str(target.get("attemptId") or ""),
-        "snapshotUpdatedAt": str(target.get("snapshotUpdatedAt") or ""),
+        **target, "command": "continue_current_project",
+        "commandId": str(target.get("commandId") or f"continue-{uuid.uuid4().hex}"),
+        "requestedAt": now_iso(), "requestedBy": "dashboard",
     }
-    temp = command_file.with_suffix(".tmp")
-    temp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(temp, command_file)
-    response = {
-        "accepted": True,
-        "commandId": payload["commandId"],
-        "state": "requested",
+    try:
+        queued = controller.enqueue_request(payload)
+    except (module.RecoveryControlError, OSError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail=f"继续请求未提交：{exc}") from exc
+    return {
+        "accepted": True, "commandId": queued["commandId"], "state": queued["state"],
+        **_ensure_workbench_for_continue(),
     }
-    launch = _ensure_workbench_for_continue()
-    _persist_continue_launch_state(command_file, response["commandId"], launch)
-    response.update(launch)
-    return response
 
 
 def enqueue_control_command(target: dict[str, Any], client_request_id: str = "") -> dict[str, Any]:
@@ -606,7 +505,9 @@ def enqueue_control_command(target: dict[str, Any], client_request_id: str = "")
         "requestedBy": "dashboard",
         **{key: str(target.get(key) or "") for key in (
             "batchId", "taskId", "productionDate", "manifestId", "attemptId", "snapshotUpdatedAt",
+            "runGroupId", "batchKind",
         )},
+        "selectedProjects": list(target.get("selectedProjects") or []),
         "message": "命令已保存，等待家里接收器确认",
     }
     write_control_command(command)
@@ -2275,9 +2176,93 @@ def _sync_queued_command_from_mailbox() -> dict[str, Any]:
             "expiredReason": "安全继续命令已超过5分钟有效期",
             "message": "命令已过期，不会延迟执行",
         })
+    elif state == "executing" and expires_at and now_ts > expires_at:
+        stale_reason = _stale_step12_recovery_reason(payload, now_ts)
+        if stale_reason:
+            payload.update({
+                "state": "expired",
+                "stale": True,
+                "finishedAt": now_iso(),
+                "terminalObservedAt": now_iso(),
+                "expiredReason": stale_reason,
+                "message": "第 1/2 步恢复会话已中断；25条已完成结果保留，可安全继续剩余条目",
+            })
+            # The mailbox is the workbench-facing source.  Retire the same
+            # command there as well; otherwise its old ``recovering`` value
+            # would map the durable queue record back to ``executing`` on the
+            # next Dashboard poll.
+            if mailbox_matches:
+                retired_mailbox = dict(mailbox)
+                retired_mailbox.update({
+                    "state": "expired",
+                    "stale": True,
+                    "finishedAt": payload["finishedAt"],
+                    "terminalObservedAt": payload["terminalObservedAt"],
+                    "expiredReason": stale_reason,
+                    "message": payload["message"],
+                })
+                try:
+                    _write_json_atomic(continue_command_file(), retired_mailbox)
+                except OSError:
+                    # Read-only diagnostics and unit tests may intentionally
+                    # mount the workbench mailbox without write access.  The
+                    # durable Dashboard command still becomes terminal; the
+                    # next writable reconciliation retires the mailbox too.
+                    pass
     if payload != queued:
         write_control_command(payload)
     return payload
+
+
+def _stale_step12_recovery_reason(command: dict[str, Any], now_ts: float | None = None) -> str:
+    """Explain a dead 1/2-step recovery without mistaking service liveness for work.
+
+    A live workbench process is not proof that its download/OCR child session
+    survived.  The recovery state is relevant only when it belongs to this
+    command and was updated after the command started.  Fresh state keeps the
+    command locked; an explicit bridge failure or an interrupted state with no
+    heartbeat for 90 seconds safely releases it.
+    """
+    now_value = float(now_ts if now_ts is not None else time.time())
+    heartbeat = parse_time(str(
+        command.get("lastHeartbeat")
+        or command.get("executingAt")
+        or command.get("startedAt")
+        or command.get("requestedAt")
+        or ""
+    ))
+    if not heartbeat or now_value - heartbeat <= CONTROL_COMMAND_CLAIM_TIMEOUT_SECONDS:
+        return ""
+
+    state_path = workbench_runtime_dir() / "handoff" / "download" / "download_batch_state.json"
+    download_state = read_json_object(state_path)
+    request = ((download_state.get("context") or {}).get("request") or {}) if isinstance(download_state, dict) else {}
+    active_task = download_state.get("activeExternalTask") if isinstance(download_state, dict) else {}
+    task_id = str(command.get("taskId") or "")
+    state_task_id = str(request.get("taskId") or (active_task or {}).get("taskId") or "")
+    if not task_id or state_task_id != task_id or not bool(request.get("resumeInterrupted")):
+        return ""
+
+    command_started = parse_time(str(command.get("startedAt") or command.get("requestedAt") or ""))
+    state_updated = parse_time(str(download_state.get("updatedAt") or ""))
+    runtime_failure = download_state.get("downloadRuntimeFailure") if isinstance(download_state, dict) else {}
+    failure_observed = parse_time(str((runtime_failure or {}).get("observedAt") or ""))
+    relevant_update = max(state_updated, failure_observed)
+    # A stale download state from an earlier phase of the same task must not
+    # expire a later Fish/CapCut/upload recovery command.
+    if command_started and relevant_update < command_started:
+        return ""
+
+    if runtime_failure and failure_observed and (not command_started or failure_observed >= command_started):
+        error_code = str(runtime_failure.get("errorCode") or "DOWNLOAD_BRIDGE_RUNTIME_FAILED")
+        return f"第 1/2 步恢复会话已终止（{error_code}），命令已过期并解除锁定"
+
+    stats = download_state.get("stats") if isinstance(download_state, dict) else {}
+    status_text = str((stats or {}).get("status") or "")
+    state_is_stale = not state_updated or now_value - state_updated > CONTROL_COMMAND_CLAIM_TIMEOUT_SECONDS
+    if state_is_stale and any(marker in status_text for marker in ("运行中断", "已中断", "可安全继续")):
+        return "第 1/2 步恢复状态已超过90秒未更新且明确中断，命令已过期并解除锁定"
+    return ""
 
 
 def continue_command_status() -> dict[str, Any]:
@@ -2793,6 +2778,49 @@ def control_plane_json(path: str, timeout: float = 8) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise HTTPException(status_code=502, detail="生产安全控制面返回无效数据")
     return sanitize_public_value(payload)
+
+
+def local_recovery_status() -> dict[str, Any]:
+    """Read the Workbench's shared recovery facts when the optional control
+    plane is unavailable.  Dashboard never invents a new budget or command;
+    it only presents the same durable file owned by the Workbench.
+    """
+    workbench_dir = resolve_path(str(CONFIG.get("workbench_dir") or ""))
+    if (workbench_dir / "workbench").is_dir():
+        workbench_dir = workbench_dir / "workbench"
+    state_path = workbench_dir / "handoff" / "control" / "automatic_recovery.json"
+    try:
+        payload = json.loads(state_path.read_text(encoding="utf-8-sig"))
+    except FileNotFoundError:
+        return {"enabled": False, "state": "paused", "stateText": "自动恢复尚未启用", "entries": []}
+    except (OSError, ValueError, TypeError, UnicodeError) as exc:
+        return {"enabled": False, "state": "paused", "stateText": "自动恢复状态不可确认", "errorCode": "RECOVERY_STATE_UNREADABLE", "message": str(exc)}
+    if not isinstance(payload, dict) or payload.get("schemaVersion") not in {3, 4}:
+        return {"enabled": False, "state": "paused", "stateText": "自动恢复状态需要迁移", "errorCode": "RECOVERY_STATE_SCHEMA_UNSUPPORTED"}
+    entries = []
+    for key, item in (payload.get("entries") or {}).items():
+        if not isinstance(item, dict):
+            continue
+        entries.append({
+            "stableRecoveryKey": key,
+            "step": item.get("step"),
+            "childTaskId": item.get("childTaskId"),
+            "state": item.get("state"),
+            "commandState": item.get("commandState"),
+            "automaticAttemptCount": item.get("automaticAttemptCount", 0),
+            "failureEventId": item.get("failureEventId"),
+            "nextEligibleAt": item.get("nextEligibleAt"),
+            "primaryError": item.get("primaryError"),
+            "manualPause": bool(payload.get("manualPause", True)),
+        })
+    return {
+        "enabled": not bool(payload.get("manualPause", True)) and not bool(payload.get("readError")),
+        "state": "paused" if payload.get("manualPause", True) or payload.get("readError") else "ready",
+        "stateText": "自动恢复已暂停" if payload.get("manualPause", True) else "自动恢复已启用",
+        "entries": entries,
+        "readError": payload.get("readError"),
+        "migrationBlocked": bool(payload.get("migrationBlocked")),
+    }
 
 
 class Store:
@@ -4395,6 +4423,22 @@ def task_category(state: str) -> str:
     return "running"
 
 
+def capcut_error_code(row: dict[str, Any]) -> str:
+    """Return a stable code for new and legacy CapCut status files."""
+    explicit = str(row.get("error_code") or row.get("errorCode") or "").strip()
+    if explicit and explicit.lower() != "capcut_failed":
+        return explicit
+    message = str(row.get("error") or row.get("state_text") or "")
+    if "未出现系统文件选择窗口" in message:
+        return "CAPCUT_IMPORT_DIALOG_TIMEOUT"
+    if "创建本条独立草稿" in message and "剪映主窗口不可用" in message:
+        # Compatibility for v0.4.0 status rows written before the client began
+        # emitting typed window-transition failures.  New rows carry the code
+        # explicitly; this only lets the in-flight DENOR batch recover safely.
+        return "CAPCUT_MAIN_WINDOW_TRANSITION_TIMEOUT"
+    return explicit or "capcut_failed"
+
+
 STAGE_META = {
     "download": ("1", "下载与AI去字幕", "工作台", "workbench"),
     "voice": ("2", "批量语音生成", "语音客户端", "voice"),
@@ -4729,6 +4773,9 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
             normalized.append({
                 "taskId": task_id,
                 "batchId": batch_id,
+                "runGroupId": str(raw.get("runGroupId") or ""),
+                "batchKind": str(raw.get("batchKind") or ("denor-natural-flow" if str(raw.get("project") or "") == "DENOR" else "formal")),
+                "selectedProjects": list(raw.get("selectedProjects") or []),
                 # Keep the durable workbench identity on the public task-box
                 # record.  Consumers must never recover these values from a
                 # date-wide pipeline ledger: a task can keep its production
@@ -4795,6 +4842,9 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
         )
         box = {
             "batchId": batch_id,
+            "runGroupId": str(next((item.get("runGroupId") for item in normalized if item.get("runGroupId")), "")),
+            "batchKind": str(next((item.get("batchKind") for item in normalized if item.get("batchKind")), "formal")),
+            "selectedProjects": sorted({project for item in normalized for project in (item.get("selectedProjects") or [])}),
             "productionDate": next((item["productionDate"] for item in normalized if item["productionDate"]), ""),
             "projectCount": project_count,
             "completedProjects": completed_projects,
@@ -4808,6 +4858,18 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
             "items": normalized,
             "updatedAt": max((item["updatedAt"] for item in normalized), default="", key=parse_time),
         }
+        scope_declared = any(
+            str(item.get("runGroupId") or "").strip()
+            and isinstance(item.get("selectedProjects"), list)
+            and bool(item.get("selectedProjects"))
+            for item in normalized
+        )
+        if box["batchKind"] == "formal" and scope_declared:
+            selected_scope = set(box["selectedProjects"] or [])
+            # The project selector scopes the batch; it never edits a project's
+            # fixed contract count.  Keep deferred projects explicit so the
+            # Dashboard cannot present them as missing or failed.
+            box["unselectedProjects"] = [project for project in FORMAL_PROJECT_NAMES if project not in selected_scope]
         receipt = load_task_box_receipt(batch_id)
         if not receipt and box_state == "completed":
             receipt = persist_task_box_receipt(box)
@@ -4878,7 +4940,25 @@ def authoritative_active_task_box(boxes: list[dict[str, Any]]) -> dict[str, Any]
                 None,
             )
             return selected
-    return next((box for box in boxes if box.get("state") in {"running", "blocked"}), None)
+        # A stale Workbench context can point at a task that just reached a
+        # terminal state while a newer, already-owned task is still blocked.
+        # In that narrow case keep the unique non-terminal box available for
+        # Safe Continue.  With no explicit context at all we still return
+        # None, so historical rows can never become the current task merely
+        # because they were updated recently.
+        non_terminal = [
+            box for box in boxes
+            if isinstance(box, dict)
+            and str(box.get("state") or "") not in {"completed", "cancelled", "historical_incomplete_evidence"}
+            and isinstance(box.get("current"), dict)
+            and str(box.get("current", {}).get("status") or "") not in {"completed", "cancelled"}
+        ]
+        if len(non_terminal) == 1:
+            return non_terminal[0]
+    # Without an explicit Workbench-owned current task there is no safe
+    # current production identity.  Do not silently promote the most recently
+    # updated historical/running-looking box into the control target.
+    return None
 
 
 def archived_task_payloads() -> list[dict[str, Any]]:
@@ -5182,6 +5262,9 @@ def reconciliation_payload(boxes: list[dict[str, Any]]) -> dict[str, Any]:
         "productionDate": date_label,
         "manifestId": str((current or {}).get("manifestId") or ""),
         "attemptId": str((current or {}).get("attemptId") or ""),
+        "runGroupId": str((selected_box or {}).get("runGroupId") or (current or {}).get("runGroupId") or ""),
+        "batchKind": str((selected_box or {}).get("batchKind") or (current or {}).get("batchKind") or "formal"),
+        "selectedProjects": list((selected_box or {}).get("selectedProjects") or (current or {}).get("selectedProjects") or []),
     }
     if current and remote_id and _continue_target_changed(command, current_target):
         # Never let a command for an earlier project masquerade as the active
@@ -5190,7 +5273,7 @@ def reconciliation_payload(boxes: list[dict[str, Any]]) -> dict[str, Any]:
         # immediately unblocks the UI after a project switch/reload.
         command["archivedCommandTarget"] = {
             key: command.get(key, "")
-            for key in ("batchId", "taskId", "productionDate", "manifestId", "attemptId")
+            for key in ("batchId", "taskId", "productionDate", "manifestId", "attemptId", "runGroupId", "batchKind", "selectedProjects")
         }
         command["state"] = "expired"
         command["stale"] = True
@@ -5518,12 +5601,28 @@ def current_project_status_payload(current: dict[str, Any] | None, selected_box:
         effective_state = "completed"
     # A download gap has its own deterministic watchdog event and must not
     # simultaneously become a generic workbench failure notification.
+    has_specific_capcut_failure = any(
+        task_category(str(row.get("state") or "")) == "failed"
+        for row in capcut_rows
+    )
     if (
         not download_gap_active
         and effective_state in {"failed", "blocked", "stalled", "login_required"}
         and str(item.get("error") or state_text).strip()
+        and not (pipeline_status in {"blocked_capcut", "capcut_failed"} and has_specific_capcut_failure)
     ):
-        structured_code = str(item.get("errorCode") or pipeline_status or status)
+        structured_code = str(item.get("errorCode") or "").strip()
+        if not structured_code:
+            # Older workbench snapshots exposed only their pipeline state.
+            # Translate the known task-scoped terminal states into the same
+            # structured codes used by the auto-recovery allowlist.  Login is
+            # deliberately kept as a hard error; an incomplete Fish batch may
+            # safely retry only its missing languages.
+            structured_code = {
+                "blocked_voice": "VOICE_BATCH_INCOMPLETE",
+                "voice_failed": "VOICE_BATCH_INCOMPLETE",
+                "voice_login_required": "VOICE_LOGIN_REQUIRED",
+            }.get(pipeline_status, pipeline_status or status)
         structured_component = (
             "voice" if structured_code.startswith("VOICE_") else
             "stitch" if structured_code.startswith("STITCH_") else
@@ -5541,9 +5640,9 @@ def current_project_status_payload(current: dict[str, Any] | None, selected_box:
             continue
         errors.append({
             "component": "capcut", "phase": str(row.get("phase") or "capcut"),
-            "errorCode": str(row.get("error_code") or "capcut_failed"), "status": "failed",
+            "errorCode": capcut_error_code(row), "status": "failed",
             "message": str(row.get("error") or row.get("state_text") or "CapCut task failed"),
-            "attemptId": str(row.get("attempt_id") or identity["attemptId"]),
+            "attemptId": str(row.get("attemptId") or row.get("attempt_id") or identity["attemptId"]),
         })
     for row in upload_rows:
         if str(row.get("status") or "").lower() not in {"failed", "blocked"}:
@@ -5656,7 +5755,8 @@ def dashboard_summary_payload() -> dict[str, Any]:
         active_public = {
             key: active_box.get(key)
             for key in (
-                "batchId", "productionDate", "projectCount", "completedProjects",
+                "batchId", "runGroupId", "batchKind", "selectedProjects", "productionDate", "projectCount", "completedProjects",
+                "unselectedProjects",
                 "totalVideos", "completedVideos", "state", "currentSequence",
                 "current", "next", "updatedAt",
             )
@@ -5665,7 +5765,7 @@ def dashboard_summary_payload() -> dict[str, Any]:
             {
                 key: item.get(key)
                 for key in (
-                    "taskId", "canonicalTaskId", "sequence", "project", "material",
+                    "taskId", "canonicalTaskId", "runGroupId", "batchKind", "selectedProjects", "sequence", "project", "material",
                     "expected", "downloadCompleted", "finalCompleted", "status",
                     "currentStep", "stateText", "updatedAt",
                 )
@@ -5677,15 +5777,10 @@ def dashboard_summary_payload() -> dict[str, Any]:
     try:
         auto_recovery = control_plane_json("/api/auto-recovery/status", timeout=1.5)
     except HTTPException as exc:
-        auto_recovery = {
-            "enabled": True,
-            "state": "unavailable",
-            "stateText": "自动恢复状态暂不可用",
-            "attemptCount": 0,
-            "message": str(exc.detail),
-        }
+        auto_recovery = local_recovery_status()
+        auto_recovery.setdefault("controlPlaneError", str(exc.detail))
     summary = {
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "currentTaskBox": active_public,
         "currentProjectStatus": current_status,
         "currentProjectErrors": current_status.get("errors") or [],
@@ -5858,9 +5953,85 @@ def reconcile_task_box(batch_id: str, request: Request):
     return result
 
 
+def compact_safety_payload(key: str, value: Any) -> Any:
+    """Keep the remote safety card response small and free of task detail.
+
+    The control-plane integrity endpoint can contain hundreds of thousands of
+    bytes of record-level evidence.  The Dashboard safety cards only render
+    aggregate counters, so forwarding the full payload made the remote page
+    time out even though every local source was healthy.
+    """
+    if not isinstance(value, dict):
+        return value
+    common = {
+        name: value.get(name)
+        for name in ("ok", "checkedAt", "modelCalled", "text", "error", "message")
+        if name in value
+    }
+    fields = {
+        "quality": ("total", "passed", "warning", "blocked"),
+        "versions": ("driftCount",),
+        "cloud": ("total", "verified", "blocked"),
+        "disk": ("remainingVideos", "estimatedPeakBytes", "requiredFreeBytes", "freeBytes", "ready", "reason"),
+        "credentials": ("ready",),
+        "integrity": ("totalRecords", "activeRecords", "hardFailureCount", "safe"),
+        "evidence": (),
+        "autoRecovery": (
+            "schemaVersion", "enabled", "stableSeconds", "activeKey", "updatedAt",
+            "state", "stateText", "attemptCount", "phase", "errorCode",
+            "commandId", "commandState", "nextUserAction",
+        ),
+    }
+    compact = {**common, **{name: value.get(name) for name in fields.get(key, ()) if name in value}}
+    if key == "versions":
+        # The UI only displays the component/service count.  Empty placeholders
+        # retain the existing public contract without leaking their details.
+        compact["items"] = [{} for _ in (value.get("items") or [])]
+    if key == "credentials":
+        compact["items"] = [
+            {
+                "service": str(item.get("service") or item.get("id") or "service"),
+                "online": bool(item.get("online")),
+                "required": bool(item.get("required", True)),
+            }
+            for item in (value.get("items") or [])
+            if isinstance(item, dict)
+        ]
+    if key == "evidence":
+        incident = value.get("incident")
+        compact["incident"] = (
+            {"incidentId": str(incident.get("incidentId") or "")}
+            if isinstance(incident, dict)
+            else None
+        )
+    return compact
+
+
 @app.get("/api/safety")
 def production_safety(request: Request):
     require_control_permission(request)
+    now_mono = time.monotonic()
+    cached = SAFETY_CACHE.get("payload")
+    if isinstance(cached, dict) and now_mono < float(SAFETY_CACHE.get("expiresAt") or 0):
+        return cached
+
+    # The control plane obtains its authoritative task snapshot from this
+    # Dashboard.  Letting every browser poll synchronously fan out to seven
+    # control-plane endpoints created Dashboard -> control-plane -> Dashboard
+    # request amplification and could exhaust Starlette's worker threads.  A
+    # single caller refreshes the aggregate; concurrent callers get the last
+    # trustworthy snapshot instead of opening another recursive request tree.
+    if not SAFETY_CACHE_LOCK.acquire(blocking=False):
+        if isinstance(cached, dict):
+            return cached
+        return {
+            "updatedAt": now_iso(),
+            "modelCalled": False,
+            "refreshing": True,
+            "sources": {},
+            "productionContext": {"hasActiveProject": False, "taskBoxCompleted": False},
+        }
+
     endpoints = {
         "quality": "/api/quality/current",
         "versions": "/api/versions",
@@ -5870,52 +6041,69 @@ def production_safety(request: Request):
         "integrity": "/api/task-integrity",
         "evidence": "/api/incidents/latest/evidence",
     }
-    result: dict[str, Any] = {
-        "updatedAt": now_iso(),
-        "modelCalled": False,
-        "sources": {},
-    }
-    for key, endpoint in endpoints.items():
+    try:
+        result: dict[str, Any] = {
+            "updatedAt": now_iso(),
+            "modelCalled": False,
+            "sources": {},
+            "productionContext": {"hasActiveProject": False, "taskBoxCompleted": False},
+        }
+        for key, endpoint in endpoints.items():
+            try:
+                result[key] = compact_safety_payload(key, control_plane_json(endpoint))
+                result["sources"][key] = {"state": "ok"}
+            except HTTPException as exc:
+                result[key] = {
+                    "ok": False,
+                    "error": "source_unavailable",
+                    "message": str(exc.detail),
+                }
+                result["sources"][key] = {
+                    "state": "stale",
+                    "message": str(exc.detail),
+                }
         try:
-            result[key] = control_plane_json(endpoint)
-            result["sources"][key] = {"state": "ok"}
+            boxes = task_box_payloads()
+            selected = authoritative_active_task_box(boxes)
+            current = selected.get("current") if isinstance(selected, dict) else {}
+            result["productionContext"] = {
+                "hasActiveProject": bool((current or {}).get("hasActiveProject")),
+                "taskBoxCompleted": bool((current or {}).get("taskBoxCompleted")),
+            }
+            subtitle_inventory = subtitle_verification_inventory(
+                task_id=str((current or {}).get("canonicalTaskId") or (current or {}).get("taskId") or ""),
+                production_date=str((current or {}).get("productionDate") or (current or {}).get("date") or ""),
+            )
+            result["subtitleVerification"] = {
+                "generatedAt": subtitle_inventory.get("generatedAt"),
+                "total": subtitle_inventory.get("total", 0),
+                "counts": subtitle_inventory.get("counts") or {},
+            }
+            result["sources"]["subtitleVerification"] = {"state": "ok"}
+        except Exception as exc:  # pragma: no cover - defensive status aggregation
+            result["subtitleVerification"] = {
+                "ok": False,
+                "error": "source_unavailable",
+                "message": f"去字幕质检状态不可用：{exc}",
+            }
+            result["sources"]["subtitleVerification"] = {"state": "stale", "message": str(exc)}
+        try:
+            result["autoRecovery"] = compact_safety_payload(
+                "autoRecovery", control_plane_json("/api/auto-recovery/status")
+            )
+            result["sources"]["autoRecovery"] = {"state": "ok"}
         except HTTPException as exc:
-            result[key] = {
+            result["autoRecovery"] = {
                 "ok": False,
                 "error": "source_unavailable",
                 "message": str(exc.detail),
             }
-            result["sources"][key] = {
-                "state": "stale",
-                "message": str(exc.detail),
-            }
-    try:
-        boxes = task_box_payloads()
-        selected = authoritative_active_task_box(boxes)
-        current = selected.get("current") if isinstance(selected, dict) else {}
-        result["subtitleVerification"] = subtitle_verification_inventory(
-            task_id=str((current or {}).get("canonicalTaskId") or (current or {}).get("taskId") or ""),
-            production_date=str((current or {}).get("productionDate") or (current or {}).get("date") or ""),
-        )
-        result["sources"]["subtitleVerification"] = {"state": "ok"}
-    except Exception as exc:  # pragma: no cover - defensive status aggregation
-        result["subtitleVerification"] = {
-            "ok": False,
-            "error": "source_unavailable",
-            "message": f"去字幕质检状态不可用：{exc}",
-        }
-        result["sources"]["subtitleVerification"] = {"state": "stale", "message": str(exc)}
-    try:
-        result["autoRecovery"] = control_plane_json("/api/auto-recovery/status")
-        result["sources"]["autoRecovery"] = {"state": "ok"}
-    except HTTPException as exc:
-        result["autoRecovery"] = {
-            "ok": False,
-            "error": "source_unavailable",
-            "message": str(exc.detail),
-        }
-        result["sources"]["autoRecovery"] = {"state": "stale", "message": str(exc.detail)}
-    return result
+            result["sources"]["autoRecovery"] = {"state": "stale", "message": str(exc.detail)}
+        SAFETY_CACHE["payload"] = result
+        SAFETY_CACHE["expiresAt"] = time.monotonic() + SAFETY_CACHE_TTL_SECONDS
+        return result
+    finally:
+        SAFETY_CACHE_LOCK.release()
 
 
 @app.get("/api/project-gaps")
@@ -6010,6 +6198,9 @@ def control_continue_current(request: Request):
         "productionDate": current_date,
         "manifestId": str(current.get("manifestId") or ""),
         "attemptId": str(current.get("attemptId") or ""),
+        "runGroupId": str(selected_box.get("runGroupId") or current.get("runGroupId") or ""),
+        "batchKind": str(selected_box.get("batchKind") or current.get("batchKind") or "formal"),
+        "selectedProjects": list(selected_box.get("selectedProjects") or current.get("selectedProjects") or []),
         "snapshotUpdatedAt": str(COLLECTOR.receiver_data_updated_at or ""),
     })
 
@@ -6027,6 +6218,9 @@ def _current_continue_target() -> dict[str, Any]:
         "productionDate": str(selected_box.get("productionDate") or current.get("productionDate") or ""),
         "manifestId": str(current.get("manifestId") or ""),
         "attemptId": str(current.get("attemptId") or ""),
+        "runGroupId": str(selected_box.get("runGroupId") or current.get("runGroupId") or ""),
+        "batchKind": str(selected_box.get("batchKind") or current.get("batchKind") or "formal"),
+        "selectedProjects": list(selected_box.get("selectedProjects") or current.get("selectedProjects") or []),
         "snapshotUpdatedAt": str(COLLECTOR.receiver_data_updated_at or ""),
     }
 

@@ -281,6 +281,18 @@ tr:hover td { background: #fafcff; }
 .replenish-panel { margin: 8px 0 12px; padding: 10px; border-radius: 9px; background: var(--red-soft); border: 1px solid #fecaca; }
 .replenish-panel strong { font-size: 12px; }
 .replenish-panel p { margin: 4px 0 0; color: var(--red); font-size: 11px; }
+.gap-quick-bar { position: sticky; top: 10px; z-index: 80; width: min(1180px, calc(100% - 32px)); margin: 10px auto -2px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #fca5a5; border-radius: 12px; background: rgba(254, 242, 242, .96); box-shadow: 0 8px 24px rgba(127, 29, 29, .12); backdrop-filter: blur(10px); }
+.gap-quick-bar > div:first-child { display: grid; gap: 2px; min-width: 0; }
+.gap-quick-bar strong { color: #991b1b; font-size: 13px; }
+.gap-quick-bar span { color: #b91c1c; font-size: 11px; }
+.gap-quick-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.gap-quick-actions button { border: 0; border-radius: 8px; padding: 8px 11px; color: #fff; background: #dc2626; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.replenish-dialog { width: min(540px, calc(100vw - 24px)); max-width: none; padding: 0; border: 0; border-radius: 14px; background: transparent; box-shadow: 0 24px 70px rgba(15, 23, 42, .28); }
+.replenish-dialog::backdrop { background: rgba(15, 23, 42, .42); backdrop-filter: blur(2px); }
+.replenish-dialog .replenish-panel { margin: 0; padding: 18px; border-radius: 14px; background: #fff; }
+.replenish-dialog .replenish-panel > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.replenish-dialog .replenish-panel > header strong { color: #991b1b; font-size: 15px; }
+.replenish-dialog .replenish-panel > header button { border: 0; background: #f1f5f9; color: #475569; width: 30px; height: 30px; border-radius: 8px; font-size: 18px; cursor: pointer; }
 .project-task-details { margin-top: 9px; font-size: 12px; }
 .project-task-details summary { cursor: pointer; color: #2563eb; }
 .project-task-details ul { list-style: none; padding: 6px 0 0; margin: 0; display: grid; gap: 5px; }
@@ -597,6 +609,9 @@ footer {
   .task-cards { display: grid; gap: 9px; max-height: 640px; overflow: auto; }
   .side-column { grid-template-columns: 1fr; }
   .web-task-form form, .replenish-panel form { grid-template-columns: 1fr; }
+  .gap-quick-bar { top: 6px; width: calc(100% - 12px); margin-top: 6px; align-items: stretch; flex-direction: column; }
+  .gap-quick-actions { justify-content: stretch; }
+  .gap-quick-actions button { flex: 1 1 auto; }
   .draft-manager-dialog { width: calc(100vw - 12px); max-height: calc(100vh - 12px); }
   .draft-manager-shell { max-height: calc(100vh - 12px); }
   .draft-manager-shell > header, .draft-manager-shell > footer { padding-left: 14px; padding-right: 14px; }
