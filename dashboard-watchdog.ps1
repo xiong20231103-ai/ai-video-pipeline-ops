@@ -38,7 +38,12 @@ try {
         } catch {}
 
         Write-WatchdogStatus "starting" "Dashboard is unavailable; starting it now"
-        $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$launch`"")
+        # Start-Process does not reliably quote individual ArgumentList array
+        # elements on Windows PowerShell 5.1.  When the repository path
+        # contains spaces it previously truncated the script to
+        # ``E:\Backup\Documents\New`` and the watchdog silently died after a
+        # dashboard outage.  Pass one explicitly quoted command line instead.
+        $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$launch`""
         $process = Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -WindowStyle Hidden -PassThru
         $healthy = $false
         for ($attempt = 0; $attempt -lt 30; $attempt++) {

@@ -13,3 +13,11 @@ data/offline.flag
 ops-startup.*.log
 .test-deps/
 
+
+# Local runtime data, logs and backups
+data/
+implementation-backups/
+*.log
+*.log.err
+*.bak
+*.before-*

@@ -59,6 +59,81 @@ class OpsTests(unittest.TestCase):
             self.assertEqual("expired", result["state"])
             self.assertIn("未领取", result["message"])
 
+    def test_executing_step12_command_expires_after_bridge_failure(self):
+        with tempfile.TemporaryDirectory() as folder, \
+            patch("app.CONTROL_COMMAND_DIR", Path(folder) / "commands"), \
+            patch("app.continue_command_file", return_value=Path(folder) / "workbench" / "handoff" / "control" / "mailbox.json"), \
+            patch("app.workbench_runtime_dir", return_value=Path(folder) / "workbench"):
+            root = Path(folder) / "workbench" / "handoff"
+            (root / "control").mkdir(parents=True)
+            (root / "download").mkdir(parents=True)
+            command = {
+                "commandId": "continue-step12-stale",
+                "state": "persisted",
+                "requestedAt": "2026-08-20T23:15:16+08:00",
+                "persistedAt": "2026-08-20T23:15:16+08:00",
+                "expiresAt": "2026-08-20T23:20:16+08:00",
+                "taskId": "task-step12",
+            }
+            mailbox = {
+                **command,
+                "state": "recovering",
+                "startedAt": "2026-08-20T23:15:16+08:00",
+                "lastHeartbeat": "2026-08-20T23:15:16+08:00",
+            }
+            app.write_control_command(command)
+            app._write_json_atomic(app.continue_command_file(), mailbox)
+            app._write_json_atomic(root / "download" / "download_batch_state.json", {
+                "updatedAt": "2026-08-20T23:17:42+08:00",
+                "context": {"request": {"taskId": "task-step12", "resumeInterrupted": True}},
+                "downloadRuntimeFailure": {
+                    "errorCode": "DOWNLOAD_BRIDGE_RUNTIME_FAILED",
+                    "observedAt": "2026-08-20T23:15:22+08:00",
+                },
+                "stats": {"status": "后台任务运行中断 · 可安全继续"},
+            })
+            now_value = app.parse_time("2026-08-20T23:43:58+08:00")
+            with patch("app.time.time", return_value=now_value):
+                result = app._sync_queued_command_from_mailbox()
+            self.assertEqual("expired", result["state"])
+            self.assertTrue(result["stale"])
+            self.assertIn("DOWNLOAD_BRIDGE_RUNTIME_FAILED", result["expiredReason"])
+            saved_mailbox = json.loads(app.continue_command_file().read_text(encoding="utf-8"))
+            self.assertEqual("expired", saved_mailbox["state"])
+
+    def test_fresh_step12_session_keeps_executing_command_locked(self):
+        with tempfile.TemporaryDirectory() as folder, \
+            patch("app.CONTROL_COMMAND_DIR", Path(folder) / "commands"), \
+            patch("app.continue_command_file", return_value=Path(folder) / "workbench" / "handoff" / "control" / "mailbox.json"), \
+            patch("app.workbench_runtime_dir", return_value=Path(folder) / "workbench"):
+            root = Path(folder) / "workbench" / "handoff"
+            (root / "control").mkdir(parents=True)
+            (root / "download").mkdir(parents=True)
+            command = {
+                "commandId": "continue-step12-live",
+                "state": "persisted",
+                "requestedAt": "2026-08-20T23:15:16+08:00",
+                "persistedAt": "2026-08-20T23:15:16+08:00",
+                "expiresAt": "2026-08-20T23:20:16+08:00",
+                "taskId": "task-step12",
+            }
+            app.write_control_command(command)
+            app._write_json_atomic(app.continue_command_file(), {
+                **command,
+                "state": "recovering",
+                "startedAt": "2026-08-20T23:15:16+08:00",
+                "lastHeartbeat": "2026-08-20T23:43:30+08:00",
+            })
+            app._write_json_atomic(root / "download" / "download_batch_state.json", {
+                "updatedAt": "2026-08-20T23:43:45+08:00",
+                "context": {"request": {"taskId": "task-step12", "resumeInterrupted": True}},
+                "stats": {"status": "后台任务运行中"},
+            })
+            now_value = app.parse_time("2026-08-20T23:43:58+08:00")
+            with patch("app.time.time", return_value=now_value):
+                result = app._sync_queued_command_from_mailbox()
+            self.assertEqual("executing", result["state"])
+
     def test_control_plane_rejects_non_loopback_target(self):
         with patch.dict(app.CONFIG, {"control_plane_url": "http://example.com:18790"}):
             with self.assertRaises(app.HTTPException) as error:
@@ -1637,6 +1712,52 @@ class OpsTests(unittest.TestCase):
         self.assertEqual("voice", payload["errors"][0]["component"])
         self.assertEqual("voice_generation", payload["errors"][0]["phase"])
         self.assertEqual("VOICE_PAGE_HEARTBEAT_TIMEOUT", payload["errors"][0]["errorCode"])
+
+    def test_current_project_classifies_legacy_capcut_import_dialog_timeout_once(self):
+        current = {
+            "canonicalTaskId": "task-capcut", "batchId": "batch", "productionDate": "8.20",
+            "expected": 5, "downloadCompleted": 5, "status": "completed",
+            "pipelineStatus": "blocked_capcut", "currentPhase": "capcut",
+            "pipelineStateText": "第 5 步 CapCut 需要处理",
+        }
+        rows = [{
+            "task_id": "video-1", "state": "Failed", "phase": "importing",
+            "error": "导入第一条主视频失败: 未出现系统文件选择窗口。当前剪映版本可能需要调整 Import 定位规则。",
+            "attempt_id": "attempt-1",
+        }]
+        with (
+            patch("app.production_capcut_tasks", return_value=rows),
+            patch("app.capcut_stage_for_tasks", return_value={"state": "failed", "completed": 0, "failed": 1, "total": 1}),
+            patch("app.upload_task_index", return_value={}),
+        ):
+            payload = app.current_project_status_payload(current, {})
+
+        self.assertEqual(1, len(payload["errors"]))
+        self.assertEqual("capcut", payload["errors"][0]["component"])
+        self.assertEqual("CAPCUT_IMPORT_DIALOG_TIMEOUT", payload["errors"][0]["errorCode"])
+
+    def test_current_project_migrates_legacy_capcut_window_transition_error(self):
+        current = {
+            "canonicalTaskId": "denor-current", "batchId": "denor-batch", "productionDate": "9.2",
+            "expected": 21, "downloadCompleted": 21, "status": "completed",
+            "pipelineStatus": "blocked_capcut", "currentPhase": "capcut",
+            "pipelineStateText": "第 5 步 CapCut 需要处理",
+        }
+        rows = [{
+            "task_id": "output-02", "state": "Failed", "phase": "draft_creation",
+            "error": "创建本条独立草稿失败: 剪映主窗口不可用",
+            "attemptId": "attempt-denor",
+        }]
+        with (
+            patch("app.production_capcut_tasks", return_value=rows),
+            patch("app.capcut_stage_for_tasks", return_value={"state": "failed", "completed": 1, "failed": 1, "total": 21}),
+            patch("app.upload_task_index", return_value={}),
+        ):
+            payload = app.current_project_status_payload(current, {})
+
+        self.assertEqual(1, len(payload["errors"]))
+        self.assertEqual("CAPCUT_MAIN_WINDOW_TRANSITION_TIMEOUT", payload["errors"][0]["errorCode"])
+        self.assertEqual("attempt-denor", payload["errors"][0]["attemptId"])
 
     def test_current_project_exposes_structured_upload_failure(self):
         current = {

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>家庭 AI 视频生产线 · OPS</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20260819-reliable-control">
+  <link rel="stylesheet" href="/static/styles.css?v=20260820-gap-shortcut">
 </head>
 <body>
   <header class="topbar">
@@ -18,6 +18,11 @@
       <div class="last-update">最后更新 <strong id="lastUpdated">--</strong></div>
     </div>
   </header>
+
+  <section id="gapQuickBar" class="gap-quick-bar hidden" aria-live="polite">
+    <div><strong id="gapQuickTitle">当前项目需要补链</strong><span id="gapQuickSummary">--</span></div>
+    <div id="gapQuickActions" class="gap-quick-actions"></div>
+  </section>
 
   <main>
     <section class="hero panel">
@@ -34,6 +39,7 @@
         <div><p class="eyebrow">TASK BOX</p><h2 id="taskBoxTitle">正在读取任务箱</h2></div>
         <label class="taskbox-filter">任务箱<select id="taskBoxSelect" aria-label="选择任务箱"></select></label>
       </div>
+      <p id="taskBoxScope" class="taskbox-scope" aria-live="polite">本次项目组合：--</p>
       <div class="taskbox-summary">
         <div><small>项目进度</small><strong id="taskBoxProjectProgress">0 / 0</strong></div>
         <div><small>成片进度</small><strong id="taskBoxVideoProgress">0 / 0</strong></div>
@@ -220,7 +226,6 @@
               <button class="primary wide" type="submit">提交任务</button>
             </form>
           </details>
-          <div id="replenishPanel" class="replenish-panel hidden"></div>
           <div id="receiverQueue" class="receiver-queue"><p class="empty">正在读取接收器队列…</p></div>
         </section>
         <section class="panel project-gaps-card"><div class="section-heading compact"><div><p class="eyebrow">PROJECT STATUS</p><h2 id="batchStatusTitle">项目状态</h2></div></div><div id="projectGapList" class="project-gap-list"><p class="empty">正在读取项目状态…</p></div></section>
@@ -376,7 +381,10 @@
       <button id="closeProductionProtectionButton" class="primary" type="button">我知道了</button>
     </div>
   </dialog>
+  <dialog id="replenishDialog" class="replenish-dialog">
+    <div id="replenishPanel" class="replenish-panel"></div>
+  </dialog>
   <footer><span>AI视频生产线 OPS · Tailscale安全控制</span><span id="footerMachine">--</span></footer>
-  <script src="/static/app.js?v=20260819-reliable-control"></script>
+  <script src="/static/app.js?v=20260827-project-selection-2"></script>
 </body>
 </html>
