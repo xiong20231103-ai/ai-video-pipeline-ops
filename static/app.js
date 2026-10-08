@@ -14,7 +14,7 @@ const state = {
   safety: null, safetyLoadedAt: 0,
   continueStatusBusy: false, continueCommandId: "", continueStatusFailures: 0,
   fullDashboardLoaded: false, historyExplicit: false, healthFailures: 0, continueInFlight: false,
-  etags: {}, cachedJson: {}
+  etags: {}, cachedJson: {}, runtime: null, lastContinueResult: null
 };
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? "")
@@ -1215,6 +1215,50 @@ function renderServices(items = []) {
   </div>`).join("");
 }
 
+// Combine the process scan with the current project so the page states the
+// real situation: a "running" project whose workbench is gone has stopped,
+// and CapCut/Fish need the PC left alone while they drive the UI.
+function runtimeFacts(services = [], currentProjectStatus = {}) {
+  const items = Array.isArray(services) ? services : [];
+  const online = key => Boolean(items.find(item => item.key === key)?.online);
+  const stages = Array.isArray(currentProjectStatus?.stages) ? currentProjectStatus.stages : [];
+  const download = stages.find(item => item.step === "download") || {};
+  const identity = currentProjectStatus?.identity || {};
+  const facts = {
+    known: items.length > 0,
+    workbench: online("workbench"),
+    voice: online("voice"),
+    capcut: online("capcut"),
+    downloading: String(download.status || "").toLowerCase() === "running",
+    projectRunning: String(currentProjectStatus?.state || "").toLowerCase() === "running",
+    projectLabel: [identity.project, identity.material].filter(Boolean).join(" / ")
+  };
+  facts.offline = facts.known && !facts.workbench && facts.projectRunning;
+  facts.busy = facts.known && facts.workbench && (facts.capcut || facts.voice || facts.downloading);
+  return facts;
+}
+
+function renderRuntimeGuidance(services = [], currentProjectStatus = {}) {
+  const facts = runtimeFacts(services, currentProjectStatus);
+  state.runtime = facts;
+  const node = $("runtimeGuidance");
+  let tone = "";
+  let html = "";
+  if (facts.offline) {
+    tone = "offline";
+    html = `<strong>工作台已离线，生产实际已停止</strong>当前项目${facts.projectLabel ? `（${escapeHtml(facts.projectLabel)}）` : ""}显示为运行中，但工作台没有在运行。点击“安全继续当前项目”会自动启动工作台，并从断点继续。`;
+  } else if (facts.workbench && facts.capcut) {
+    tone = "hands-off";
+    html = "<strong>CapCut 正在自动剪辑：请勿操作这台电脑</strong>剪映需要独占前台，移动鼠标、敲键盘或切换窗口都会让它失败。即使出现失败，客户端也会先自动重试，无需马上点击安全继续。";
+  } else if (facts.workbench && facts.voice) {
+    tone = "hands-off";
+    html = "<strong>正在生成语音：请勿切换或关闭 Fish Audio 页面</strong>Fish 页面需要保持在文本转语音页，并保持窗口最大化。";
+  }
+  node.className = `runtime-guidance ${tone}${tone ? "" : " hidden"}`;
+  node.innerHTML = html;
+  if (state.lastContinueResult) renderContinueResult(state.lastContinueResult);
+}
+
 function renderSources(source = {}) {
   const panel = $("sourceWarningPanel");
   const errors = Array.isArray(source.errors) ? source.errors : [];
@@ -1232,6 +1276,7 @@ function renderSources(source = {}) {
 }
 
 function renderContinueResult(result = {}) {
+  state.lastContinueResult = result;
   const node = $("continueResult");
   const stateName = String(result.state || "idle");
   state.continueCommandId = String(result.commandId || state.continueCommandId || "");
@@ -1288,11 +1333,18 @@ function renderContinueResult(result = {}) {
   }
   const button = $("continueCurrentButton");
   const allowed = result.allowed !== false;
-  const clickable = allowed && (result.continueCanRetry === true || !commandInFlight);
+  // The workbench is already working on the project (download, Fish or
+  // CapCut). A click then starts nothing, and touching the PC can break
+  // CapCut, so the button explains instead of inviting a click. An offline
+  // workbench never sets runtimeBusy: that is exactly when Safe Continue helps.
+  const runtimeBusy = !commandInFlight && Boolean(state.runtime?.busy);
+  const clickable = allowed && !runtimeBusy && (result.continueCanRetry === true || !commandInFlight);
   button.dataset.allowed = clickable ? "true" : "false";
   button.dataset.commandState = stateName;
   button.disabled = !clickable;
-  button.textContent = ["requested", "persisted"].includes(stateName)
+  button.textContent = runtimeBusy
+    ? "流水线正在运行，无需点击"
+    : ["requested", "persisted"].includes(stateName)
     ? "命令已保存，等待接收器…"
     : stateName === "receiver_acknowledged"
       ? "接收器已收到，等待工作台…"
@@ -1301,7 +1353,9 @@ function renderContinueResult(result = {}) {
       : ["running", "recovering", "executing"].includes(stateName)
       ? "正在安全继续，请勿重复点击…"
       : "安全继续当前项目";
-  button.title = commandInFlight
+  button.title = runtimeBusy
+    ? "工作台正在自动处理当前项目（下载/语音/CapCut），点击不会启动任何新步骤；运行结束或出现阻断后按钮会恢复"
+    : commandInFlight
     ? (result.continueLockReason || result.message || "继续命令正在执行，请等待状态更新")
     : allowed ? "" : (result.message || "接收器状态未对账");
 }
@@ -1450,6 +1504,7 @@ async function refresh() {
         ? {items: [data.currentTaskBox], selected: data.currentTaskBox, history: []}
         : {items: [], selected: null, history: []});
       renderServices(data.services || []);
+      renderRuntimeGuidance(data.services || [], data.currentProjectStatus || {});
       renderContinueResult(data.controls?.continue || {});
       try { window.localStorage.setItem("dashboardLastTrustedSummary", JSON.stringify(data)); } catch (_) {}
       return;
@@ -1466,6 +1521,7 @@ async function refresh() {
     renderTemplates(data.templates?.items || []);
     renderTaskBoxes(data.taskBoxes || {});
     renderServices(data.services || []);
+    renderRuntimeGuidance(data.services || [], data.currentProjectStatus || {});
     renderSources(data.sources || {});
     renderContinueResult(data.controls?.continue || {});
     renderActionResult("uploadActionResult", data.controls?.uploadRescan || {});
