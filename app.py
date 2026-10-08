@@ -4805,6 +4805,14 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
                 status = "running"
                 current_step = "第 5 步CapCut剪辑"
                 state_text = pipeline_state_text or "正在准备或运行CapCut"
+            elif pipeline_status == "completed":
+                # The workbench marks a project completed only after Step 5
+                # verified it.  Upload cleanup can later remove the CapCut
+                # rows; without this branch a finished project fell through to
+                # "第1/2步完成，等待后续步骤" (10.7 box read 0/8 on 2026-10-09).
+                status = "completed"
+                current_step = "第5步完成，最终成片已验证"
+                state_text = pipeline_state_text or f"完整流程完成 {expected} / {expected}"
             elif pipeline_status in {"step1_completed", "step12_completed"} and download_completed >= expected and expected:
                 # A replenishment can close after the original step-1 runner
                 # has exited.  Until the workbench consumes the task-scoped
@@ -4846,7 +4854,8 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
                 "material": str(raw.get("material") or ""),
                 "expected": expected,
                 "downloadCompleted": download_completed,
-                "finalCompleted": min(expected, safe_int(capcut_state.get("valid"))),
+                "finalCompleted": expected if status == "completed" and pipeline_status == "completed"
+                else min(expected, safe_int(capcut_state.get("valid"))),
                 "historicalFailed": safe_int(raw.get("historicalFailed")),
                 "status": status,
                 "stateText": state_text,

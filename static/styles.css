@@ -379,6 +379,9 @@ tr:hover td { background: #fafcff; }
 .runtime-guidance strong { display: block; font-size: 15px; margin-bottom: 2px; }
 .runtime-guidance.offline { border: 1px solid #f2a7b0; background: var(--red-soft); color: #8a1c2a; }
 .runtime-guidance.hands-off { border: 1px solid #f5d08d; background: var(--amber-soft); color: #7b4b08; }
+.runtime-guidance.needs-action { border: 1px solid #f2a7b0; background: var(--red-soft); color: #8a1c2a; }
+.runtime-guidance .next-action-reason, .runtime-guidance .next-action-do { display: block; overflow-wrap: anywhere; }
+.runtime-guidance .next-action-do { font-weight: 700; margin-top: 2px; }
 .source-warning-panel { margin-bottom: 14px; padding: 11px 13px; border: 1px solid #f5d08d; border-radius: 10px; background: var(--amber-soft); color: #7b4b08; font-size: 11px; }
 .source-warning-panel ul { margin: 6px 0 0; padding-left: 18px; }
 .source-warning-panel li { margin: 3px 0; overflow-wrap: anywhere; }
