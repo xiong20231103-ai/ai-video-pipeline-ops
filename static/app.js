@@ -1263,6 +1263,61 @@ function renderRuntimeGuidance(services = [], currentProjectStatus = {}) {
   if (state.lastContinueResult) renderContinueResult(state.lastContinueResult);
 }
 
+// One line on what is stuck and what to do.  The workbench already writes a
+// readable reason into each current-project error; this names the step and
+// adds the matching action.  Download gaps keep their own 补链 bar.
+function nextActionFor(currentProjectStatus = {}) {
+  const errors = Array.isArray(currentProjectStatus?.errors) ? currentProjectStatus.errors : [];
+  if (!errors.length) return null;
+  const identity = currentProjectStatus?.identity || {};
+  const label = [identity.project, identity.material].filter(Boolean).join(" / ");
+  const where = label ? `${label}：` : "";
+  const first = errors[0] || {};
+  const reasons = items => items.map(item => String(item.message || "").trim()).filter(Boolean);
+  const capcut = errors.filter(item => item.component === "capcut");
+  const upload = errors.filter(item => item.component === "upload");
+  const resume = "点“安全继续当前项目”。";
+  if (String(first.errorCode || "") === "VOICE_LOGIN_REQUIRED") {
+    return {title: `${where}Fish Audio 登录已失效`, reasons: reasons([first]),
+      action: "请先在浏览器重新登录 Fish Audio，再点“安全继续当前项目”。"};
+  }
+  if (first.component === "voice") {
+    return {title: `${where}第 3 步配音没有完成`, reasons: reasons([first]),
+      action: "点“安全继续当前项目”：只补做缺少的语音，不会重新下载。"};
+  }
+  if (first.component === "stitch") {
+    return {title: `${where}第 4 步拼接被卡住`, reasons: reasons([first]), action: resume};
+  }
+  if (capcut.length) {
+    return {title: `${where}第 5 步剪映有 ${capcut.length} 条失败`, reasons: reasons(capcut),
+      action: "点“安全继续当前项目”从失败处继续；剪映运行时请不要操作这台电脑。"};
+  }
+  if (upload.length) {
+    return {title: `${where}百度网盘上传有 ${upload.length} 条失败`, reasons: reasons(upload),
+      action: "请在下方上传面板查看原因。"};
+  }
+  return {title: `${where}当前项目被卡住`, reasons: reasons([first]), action: resume};
+}
+
+function renderNextAction(currentProjectStatus = {}) {
+  const node = $("nextAction");
+  if (!node) return;
+  const facts = state.runtime || {};
+  // While a client is working (or the workbench is offline) the banner above
+  // already says what to do; a "click Safe Continue" line would contradict it.
+  const next = facts.busy || facts.offline ? null : nextActionFor(currentProjectStatus);
+  node.classList.toggle("hidden", !next);
+  if (!next) {
+    node.innerHTML = "";
+    return;
+  }
+  const shown = next.reasons.slice(0, 3);
+  const more = next.reasons.length > shown.length ? `（另有 ${next.reasons.length - shown.length} 条）` : "";
+  node.innerHTML = `<strong>${escapeHtml(next.title)}</strong>`
+    + (shown.length ? `<span class="next-action-reason">原因：${shown.map(escapeHtml).join("；")}${more}</span>` : "")
+    + `<span class="next-action-do">${escapeHtml(next.action)}</span>`;
+}
+
 function renderSources(source = {}) {
   const panel = $("sourceWarningPanel");
   const errors = Array.isArray(source.errors) ? source.errors : [];
@@ -1509,6 +1564,7 @@ async function refresh() {
         : {items: [], selected: null, history: []});
       renderServices(data.services || []);
       renderRuntimeGuidance(data.services || [], data.currentProjectStatus || {});
+      renderNextAction(data.currentProjectStatus || {});
       renderContinueResult(data.controls?.continue || {});
       try { window.localStorage.setItem("dashboardLastTrustedSummary", JSON.stringify(data)); } catch (_) {}
       return;
@@ -1526,6 +1582,7 @@ async function refresh() {
     renderTaskBoxes(data.taskBoxes || {});
     renderServices(data.services || []);
     renderRuntimeGuidance(data.services || [], data.currentProjectStatus || {});
+    renderNextAction(data.currentProjectStatus || {});
     renderSources(data.sources || {});
     renderContinueResult(data.controls?.continue || {});
     renderActionResult("uploadActionResult", data.controls?.uploadRescan || {});

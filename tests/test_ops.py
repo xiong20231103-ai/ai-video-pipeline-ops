@@ -1216,6 +1216,31 @@ class OpsTests(unittest.TestCase):
         finally:
             app.COLLECTOR.project_download_statuses = previous
 
+    def test_workbench_completed_project_stays_completed_without_capcut_rows(self):
+        # 2026-10-09: after upload cleanup the 10.7 CapCut rows were gone and
+        # five finished projects read "第1/2步完成，等待后续步骤" (box 0/8).
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            app.COLLECTOR.project_download_statuses = [
+                {"taskId": "done", "batchId": "box-done", "batchSequence": 1, "batchSize": 2, "date": "10.7",
+                 "project": "实体机", "material": "PU石", "expectedCount": 3, "completed": 3,
+                 "status": "completed", "pipelineStatus": "completed",
+                 "pipelineStateText": "第 5 步 CapCut 成片完成，已交给自动上传"},
+                {"taskId": "parked", "batchId": "box-done", "batchSequence": 2, "batchSize": 2, "date": "10.7",
+                 "project": "SPC地板", "material": "塑木地板", "expectedCount": 4, "completed": 3,
+                 "status": "blocked_missing_links", "gapActive": True, "pipelineStatus": "blocked_missing_links",
+                 "stateText": "待补链：已完成 3 / 4，还差 1 条"},
+            ]
+            with patch("app.remote_capcut_summaries", return_value={}), \
+                    patch("app.load_task_box_receipt", return_value={}):
+                box = app.task_box_payloads()[0]
+            done, parked = box["items"]
+            self.assertEqual(("completed", 3), (done["status"], done["finalCompleted"]))
+            self.assertEqual("blocked", parked["status"])
+            self.assertEqual((1, 3), (box["completedProjects"], box["completedVideos"]))
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
     def test_task_box_does_not_complete_at_23_of_24(self):
         previous = app.COLLECTOR.project_download_statuses
         try:
