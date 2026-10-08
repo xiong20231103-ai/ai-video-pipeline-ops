@@ -1164,7 +1164,11 @@ function renderTaskBoxes(payload = {}) {
   </article>`).join("");
   const selected = payload.selected || boxes.find(item => item.batchId === state.batchId) || boxes[0];
   const select = $("taskBoxSelect");
-  const signature = boxes.map(item => `${item.batchId}:${item.updatedAt}`).join("|");
+  // Rebuild only when the options themselves change; an update time alone
+  // re-rendered the list (and closed it) while it was being used.
+  const signature = boxes.map(item =>
+    `${item.batchId}:${item.productionDate}:${item.completedProjects}/${item.projectCount}`
+  ).join("|");
   if (select.dataset.signature !== signature) {
     select.innerHTML = boxes.length ? boxes.map(item =>
       `<option value="${escapeHtml(item.batchId)}">${escapeHtml(item.productionDate || "未定日期")} · ${item.completedProjects}/${item.projectCount} 项 · ${escapeHtml(item.batchId.slice(-8))}</option>`
