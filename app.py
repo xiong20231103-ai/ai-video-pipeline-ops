@@ -4680,14 +4680,16 @@ def task_box_created_at(batch_id: str) -> datetime | None:
 
 
 def task_box_sort_key(box: dict[str, Any]) -> tuple[int, tuple[int, int, int], float, str]:
-    """Order task boxes newest production date first, open boxes on top.
+    """Order task boxes newest production date first, a running box on top.
 
     The old order (latest ``updatedAt``) let any reconciliation pass move an
     old box to the top, and compared nothing about the production date.
     The label has no year, so it is taken from the box's creation time
     (a box created on 12-31 for production date 1.2 belongs to next year).
     """
-    open_box = 1 if str(box.get("state") or "") in {"running", "blocked"} else 0
+    # Only "running" is pinned: old boxes stay "blocked" for good (8.4/8.5
+    # with one unfinished item) and must not sit above newer ones.
+    open_box = 1 if str(box.get("state") or "") == "running" else 0
     created = task_box_created_at(str(box.get("batchId") or ""))
     reference = created or datetime.fromtimestamp(parse_time(box.get("updatedAt"), time.time()))
     production = (0, 0, 0)

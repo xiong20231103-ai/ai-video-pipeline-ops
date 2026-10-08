@@ -1186,14 +1186,15 @@ class OpsTests(unittest.TestCase):
             box("dispatch-20260802-101000-abcdef", "8.2"),
             box("formal-batch-1787641200000-bbbbbbbbbb", "8.25", updated="2026-08-25T10:00:00+08:00"),
             box("formal-batch-1791361570062-cccccccccc", "10.7", updated="2026-10-08T10:15:00+08:00"),
-            box("formal-batch-1791250637841-dddddddddd", "10.6", state="blocked",
+            box("formal-batch-1791250637841-dddddddddd", "10.6", state="running",
                 updated="2026-10-07T13:00:00+08:00"),
+            box("dispatch-20260804-153049-d4469c", "8.4", state="blocked"),     # old, stuck for good
             box("formal-batch-1798646400000-eeeeeeeeee", "1.2"),               # created 2026-12-31
             box("formal-batch-1791370000000-ffffffffff", "10.7", updated="2026-10-07T12:00:00+08:00"),
         ]
         ordered = [item["batchId"][-10:] for item in sorted(boxes, key=app.task_box_sort_key, reverse=True)]
         self.assertEqual(
-            ["dddddddddd", "eeeeeeeeee", "ffffffffff", "cccccccccc", "bbbbbbbbbb", "aaaaaaaaaa", "000-abcdef"],
+            ["dddddddddd", "eeeeeeeeee", "ffffffffff", "cccccccccc", "bbbbbbbbbb", "049-d4469c", "aaaaaaaaaa", "000-abcdef"],
             ordered,
         )
 
