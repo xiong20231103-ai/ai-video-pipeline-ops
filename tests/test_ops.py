@@ -1175,6 +1175,47 @@ class OpsTests(unittest.TestCase):
         finally:
             app.COLLECTOR.project_download_statuses = previous
 
+    def test_task_boxes_are_ordered_by_production_date_with_open_boxes_first(self):
+        # Reported 2026-10-08: the dropdown read 8.3, 8.2, 8.25 … 7.28, 10.7,
+        # 7.22, 10.6 because it followed the latest update time.
+        def box(batch_id, date, state="completed", updated="2026-10-07T21:22:00+08:00"):
+            return {"batchId": batch_id, "productionDate": date, "state": state, "updatedAt": updated}
+
+        boxes = [
+            box("formal-batch-1785728400000-aaaaaaaaaa", "8.3"),               # 2026-08-03
+            box("dispatch-20260802-101000-abcdef", "8.2"),
+            box("formal-batch-1787641200000-bbbbbbbbbb", "8.25", updated="2026-08-25T10:00:00+08:00"),
+            box("formal-batch-1791361570062-cccccccccc", "10.7", updated="2026-10-08T10:15:00+08:00"),
+            box("formal-batch-1791250637841-dddddddddd", "10.6", state="blocked",
+                updated="2026-10-07T13:00:00+08:00"),
+            box("formal-batch-1798646400000-eeeeeeeeee", "1.2"),               # created 2026-12-31
+            box("formal-batch-1791370000000-ffffffffff", "10.7", updated="2026-10-07T12:00:00+08:00"),
+        ]
+        ordered = [item["batchId"][-10:] for item in sorted(boxes, key=app.task_box_sort_key, reverse=True)]
+        self.assertEqual(
+            ["dddddddddd", "eeeeeeeeee", "ffffffffff", "cccccccccc", "bbbbbbbbbb", "aaaaaaaaaa", "000-abcdef"],
+            ordered,
+        )
+
+    def test_task_box_payloads_use_the_production_order(self):
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            app.COLLECTOR.project_download_statuses = [
+                {"taskId": f"{batch}-01", "batchId": batch, "batchSequence": 1, "batchSize": 1,
+                 "date": date, "project": "云手机", "material": "碳岩板", "expectedCount": 1,
+                 "completed": 0, "status": "planned", "notStarted": True, "updatedAt": updated}
+                for batch, date, updated in (
+                    ("formal-batch-1785728400000-aaaaaaaaaa", "8.3", "2026-10-07T21:22:00+08:00"),
+                    ("formal-batch-1791361570062-cccccccccc", "10.7", "2026-10-07T16:00:00+08:00"),
+                )
+            ]
+            with patch("app.remote_capcut_summaries", return_value={}), \
+                    patch("app.load_task_box_receipt", return_value={}):
+                dates = [item["productionDate"] for item in app.task_box_payloads()]
+            self.assertEqual(["10.7", "8.3"], dates)
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
     def test_task_box_does_not_complete_at_23_of_24(self):
         previous = app.COLLECTOR.project_download_statuses
         try:

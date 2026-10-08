@@ -4657,6 +4657,57 @@ def remote_capcut_summaries() -> dict[str, dict[str, Any]]:
     return summaries
 
 
+def task_box_created_at(batch_id: str) -> datetime | None:
+    """Read the creation time embedded in a task box ID.
+
+    Formal/DENOR boxes are ``*-batch-<epoch ms>-<hex>``; older dispatcher
+    boxes are ``dispatch-YYYYMMDD-HHMMSS-<hex>``.
+    """
+    text = str(batch_id or "")
+    match = re.search(r"(?<!\d)(\d{13})(?!\d)", text)
+    if match:
+        try:
+            return datetime.fromtimestamp(int(match.group(1)) / 1000)
+        except (OverflowError, OSError, ValueError):
+            return None
+    match = re.search(r"(?<!\d)(\d{8})-(\d{6})(?!\d)", text)
+    if match:
+        try:
+            return datetime.strptime("".join(match.groups()), "%Y%m%d%H%M%S")
+        except ValueError:
+            return None
+    return None
+
+
+def task_box_sort_key(box: dict[str, Any]) -> tuple[int, tuple[int, int, int], float, str]:
+    """Order task boxes newest production date first, open boxes on top.
+
+    The old order (latest ``updatedAt``) let any reconciliation pass move an
+    old box to the top, and compared nothing about the production date.
+    The label has no year, so it is taken from the box's creation time
+    (a box created on 12-31 for production date 1.2 belongs to next year).
+    """
+    open_box = 1 if str(box.get("state") or "") in {"running", "blocked"} else 0
+    created = task_box_created_at(str(box.get("batchId") or ""))
+    reference = created or datetime.fromtimestamp(parse_time(box.get("updatedAt"), time.time()))
+    production = (0, 0, 0)
+    try:
+        month, day = (int(part) for part in str(box.get("productionDate") or "").split(".", 1))
+        candidates = []
+        for year in (reference.year - 1, reference.year, reference.year + 1):
+            try:
+                candidates.append(datetime(year, month, day))
+            except ValueError:
+                continue
+        if candidates:
+            nearest = min(candidates, key=lambda value: abs((value - reference).total_seconds()))
+            production = (nearest.year, month, day)
+    except (TypeError, ValueError):
+        pass
+    created_seconds = created.timestamp() if created else parse_time(box.get("updatedAt"))
+    return open_box, production, created_seconds, str(box.get("batchId") or "")
+
+
 def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
     capcut = remote_capcut_summaries()
     projects = [
@@ -4898,13 +4949,13 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
             box["state"] = "historical_incomplete_evidence"
             box["historyWarning"] = "历史记录不完整，等待对账"
         boxes.append(box)
-    return sorted(boxes, key=lambda item: parse_time(item.get("updatedAt")), reverse=True)
+    return sorted(boxes, key=task_box_sort_key, reverse=True)
 
 
 def authoritative_active_task_box(boxes: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Select the task box currently owned by Workbench.
 
-    Task boxes are sorted by their latest update time for display.  That order
+    Task boxes are sorted by production date for display.  That order
     is not a production scheduling contract: a later batch can receive a voice
     or download update while an earlier batch still has unfinished CapCut
     rows.  Safe Continue must therefore follow Workbench's durable current
