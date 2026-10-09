@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>家庭 AI 视频生产线 · OPS</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20261009-next-action">
+  <link rel="stylesheet" href="/static/styles.css?v=20261009-health">
 </head>
 <body>
   <header class="topbar">
@@ -55,6 +55,11 @@
         <summary>撤回历史 <span id="taskBoxHistoryCount">0</span></summary>
         <div id="taskBoxHistoryItems" class="taskbox-history-items"></div>
       </details>
+    </section>
+
+    <section id="healthPanel" class="panel health-panel" aria-label="系统健康" aria-live="polite">
+      <div class="section-heading"><div><p class="eyebrow">HEALTH</p><h2 id="healthTitle">系统健康</h2></div></div>
+      <div id="healthBody" class="health-body"><p class="empty">正在读取…</p></div>
     </section>
 
     <section class="metrics-grid" aria-label="系统资源">
@@ -388,6 +393,6 @@
     <div id="replenishPanel" class="replenish-panel"></div>
   </dialog>
   <footer><span>AI视频生产线 OPS · Tailscale安全控制</span><span id="footerMachine">--</span></footer>
-  <script src="/static/app.js?v=20261009-next-action"></script>
+  <script src="/static/app.js?v=20261009-health"></script>
 </body>
 </html>

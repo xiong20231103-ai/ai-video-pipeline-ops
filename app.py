@@ -17,7 +17,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from contextlib import asynccontextmanager, contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -2438,6 +2438,85 @@ def workbench_runtime_dir() -> Path:
     return path
 
 
+OPEN_RECOVERY_COMMAND_STATES = {
+    "claimed", "dispatched", "accepted", "executing", "running", "reconciling",
+    "reconciliation_required",
+}
+HEALTH_LOG_KEYWORDS = ("失败", "错误", "异常", "Traceback", "拒绝访问")
+HEALTH_LOG_IGNORED = ("Ignored cross-date", "已完成第 5 步")
+HEALTH_LOG_LINE = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}) \[pid \d+\] (.*)$")
+_HEALTH_CACHE: dict[str, Any] = {"at": 0.0, "payload": None}
+
+
+def workbench_health_payload(now: datetime | None = None) -> dict[str, Any]:
+    """Open Safe Continue commands and the workbench log's recent errors.
+
+    A step 1/2 command once sat in reconciliation_required for 8 days and
+    another for a night before anyone read the log; both are shown here.
+    Cached for 10 s because the summary is polled every 5 s.
+    """
+    if now is None and _HEALTH_CACHE["payload"] is not None and time.time() - _HEALTH_CACHE["at"] < 10:
+        return _HEALTH_CACHE["payload"]
+    current = now or datetime.now()
+    root = workbench_runtime_dir()
+    commands: list[dict[str, Any]] = []
+    recovery = read_json_object(root / "handoff" / "control" / "automatic_recovery.json")
+    for command in (recovery.get("commands") or {}).values():
+        if not isinstance(command, dict) or str(command.get("state") or "") not in OPEN_RECOVERY_COMMAND_STATES:
+            continue
+        since = str(command.get("acceptedAt") or command.get("claimedAt") or command.get("updatedAt") or "")
+        started = parse_time(since)
+        commands.append({
+            "commandId": str(command.get("commandId") or ""),
+            "taskId": str(command.get("taskId") or command.get("canonicalTaskId") or ""),
+            "step": str(command.get("step") or ""),
+            "state": str(command.get("state") or ""),
+            "since": since,
+            "ageSeconds": max(0, int(current.timestamp() - started)) if started else None,
+        })
+    commands.sort(key=lambda item: -(item["ageSeconds"] or 0))
+    errors: dict[str, dict[str, Any]] = {}
+    log_found = False
+    for days_back in (1, 0):
+        day = current - timedelta(days=days_back)
+        path = root / "handoff" / "logs" / f"workbench-{day:%Y%m%d}.log"
+        try:
+            with path.open("rb") as handle:
+                handle.seek(0, os.SEEK_END)
+                handle.seek(max(0, handle.tell() - 512 * 1024))
+                text = handle.read().decode("utf-8", errors="replace")
+            log_found = True
+        except OSError:
+            continue
+        for line in text.splitlines():
+            match = HEALTH_LOG_LINE.match(line)
+            if not match:
+                continue
+            stamp, message = match.groups()
+            if not any(word in message for word in HEALTH_LOG_KEYWORDS) or any(
+                    word in message for word in HEALTH_LOG_IGNORED):
+                continue
+            try:
+                seen = datetime.fromisoformat(stamp)
+            except ValueError:
+                continue
+            if (current - seen).total_seconds() > 24 * 3600:
+                continue
+            entry = errors.setdefault(message, {"message": message[:300], "count": 0, "lastAt": stamp})
+            entry["count"] += 1
+            entry["lastAt"] = max(entry["lastAt"], stamp)
+    payload = {
+        "openCommands": commands[:10],
+        "openCommandCount": len(commands),
+        "recentErrors": sorted(errors.values(), key=lambda item: item["lastAt"], reverse=True)[:8],
+        "logAvailable": log_found,
+        "updatedAt": now_iso(),
+    }
+    if now is None:
+        _HEALTH_CACHE.update({"at": time.time(), "payload": payload})
+    return payload
+
+
 def inspect_upload_backlog(records_root: Path, upload_state_file: Path) -> dict[str, Any]:
     """Find verified CapCut outputs that are not yet in a terminal upload state."""
     try:
@@ -4657,6 +4736,9 @@ def remote_capcut_summaries() -> dict[str, dict[str, Any]]:
     return summaries
 
 
+TASK_BOX_STALE_SECONDS = 14 * 24 * 3600
+
+
 def task_box_created_at(batch_id: str) -> datetime | None:
     """Read the creation time embedded in a task box ID.
 
@@ -4959,6 +5041,15 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
         elif project_count > len(normalized) and not current:
             box["state"] = "historical_incomplete_evidence"
             box["historyWarning"] = "历史记录不完整，等待对账"
+        created = task_box_created_at(batch_id)
+        if (box["state"] in {"blocked", "idle", "running"} and created is not None
+                and (datetime.now() - created).total_seconds() > TASK_BOX_STALE_SECONDS):
+            # 8.4, 8.5 and 8.25 each kept one unfinished item for good and sat
+            # in the "blocked" list beside live production.  Display only:
+            # nothing in the box or the receiver changes.  (updatedAt cannot
+            # be used here: every collector pass refreshes it.)
+            box["state"] = "stale"
+            box["historyWarning"] = "创建已超过 14 天且仍未完成，按历史未完成显示"
         boxes.append(box)
     return sorted(boxes, key=task_box_sort_key, reverse=True)
 
@@ -5011,7 +5102,7 @@ def authoritative_active_task_box(boxes: list[dict[str, Any]]) -> dict[str, Any]
         non_terminal = [
             box for box in boxes
             if isinstance(box, dict)
-            and str(box.get("state") or "") not in {"completed", "cancelled", "historical_incomplete_evidence"}
+            and str(box.get("state") or "") not in {"completed", "cancelled", "historical_incomplete_evidence", "stale"}
             and isinstance(box.get("current"), dict)
             and str(box.get("current", {}).get("status") or "") not in {"completed", "cancelled"}
         ]
@@ -5749,9 +5840,16 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
     # not reached CapCut yet, filtering by that project made every completed
     # earlier project appear to disappear.
     tasks = public_task_items(selected_date)
+    # A project parked for links stays in view after midnight: on 10-09 the
+    # three 10.7 gaps (and their 补链 buttons) vanished once the date changed.
+    live_batches = {
+        str(box.get("batchId") or "") for box in boxes
+        if str(box.get("state") or "") not in {"completed", "cancelled", "stale"}
+    }
     gaps = [
         item for item in COLLECTOR.project_download_statuses
         if not selected_date or str(item.get("date") or "") == selected_date
+        or (bool(item.get("gapActive")) and str(item.get("batchId") or "") in live_batches)
     ]
     queue_payload: dict[str, Any] = {"items": [], "error": ""}
     template_payload: dict[str, Any] = {"items": [], "error": ""}
@@ -5780,6 +5878,7 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
         # current-project notifications.
         "currentProjectStatus": current_project_status,
         "currentProjectErrors": current_project_status.get("errors") or [],
+        "health": workbench_health_payload(),
         "controls": {
             "continue": reconciliation_payload(boxes),
             "uploadRescan": load_control_actions().get("uploadRescan") or {"state": "idle", "message": "尚未手动检查上传缺口"},
@@ -5846,6 +5945,7 @@ def dashboard_summary_payload() -> dict[str, Any]:
         "currentTaskBox": active_public,
         "currentProjectStatus": current_status,
         "currentProjectErrors": current_status.get("errors") or [],
+        "health": workbench_health_payload(),
         "pipeline": {
             "date": production_date,
             "items": list(stages.values()),

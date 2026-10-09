@@ -651,3 +651,14 @@ footer {
   footer { padding: 16px; display: block; }
   footer span { display: block; margin: 4px 0; }
 }
+
+.health-panel { margin-bottom: 14px; }
+.health-panel.needs-action { border-color: #f2a7b0; background: var(--red-soft); }
+.health-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.health-body h3 { margin: 0 0 6px; font-size: 13px; }
+.health-body ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.health-body li { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.health-body li b { font-weight: 700; }
+.health-body li em { font-style: normal; color: var(--muted); }
+.health-body li.ok { color: var(--green); }
+.receiver-queue-older > summary { cursor: pointer; padding: 8px 2px; color: var(--muted); font-weight: 700; }
