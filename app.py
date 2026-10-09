@@ -2444,6 +2444,8 @@ OPEN_RECOVERY_COMMAND_STATES = {
 }
 HEALTH_LOG_KEYWORDS = ("失败", "错误", "异常", "Traceback", "拒绝访问")
 HEALTH_LOG_IGNORED = ("Ignored cross-date", "已完成第 5 步")
+# Progress lines such as "成功 3，失败 0" are not errors.
+HEALTH_LOG_ZERO_FAILURES = re.compile(r"失败\s*0(?!\d)")
 HEALTH_LOG_LINE = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}) \[pid \d+\] (.*)$")
 _HEALTH_CACHE: dict[str, Any] = {"at": 0.0, "payload": None}
 
@@ -2493,7 +2495,7 @@ def workbench_health_payload(now: datetime | None = None) -> dict[str, Any]:
             if not match:
                 continue
             stamp, message = match.groups()
-            if not any(word in message for word in HEALTH_LOG_KEYWORDS) or any(
+            if not any(word in HEALTH_LOG_ZERO_FAILURES.sub("", message) for word in HEALTH_LOG_KEYWORDS) or any(
                     word in message for word in HEALTH_LOG_IGNORED):
                 continue
             try:

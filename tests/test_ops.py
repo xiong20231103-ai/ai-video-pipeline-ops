@@ -1259,6 +1259,8 @@ class OpsTests(unittest.TestCase):
                 "2026-10-08T10:00:05 [pid 1] 同步 CapCut 状态失败：[WinError 5] 拒绝访问。",
                 "2026-10-08T10:01:00 [pid 1] Ignored cross-date CapCut attribution: 失败 noise",
                 "2026-10-08T10:02:00 [pid 1] 下载与去字幕完成",
+                "2026-10-08T10:03:00 [pid 1] 批次完成：成功 3，失败 0。",
+                "2026-10-08T10:04:00 [pid 1] 第 3 步配音：0/1，失败 0，当前 英语",
                 "continuation line 失败 without a timestamp",
                 "2026-10-06T10:00:00 [pid 1] 旧的失败（超过 24 小时）",
             ]), encoding="utf-8")
