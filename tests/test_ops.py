@@ -1242,6 +1242,75 @@ class OpsTests(unittest.TestCase):
         finally:
             app.COLLECTOR.project_download_statuses = previous
 
+    def test_health_reports_open_commands_and_recent_log_errors(self):
+        from datetime import datetime as real_datetime
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "handoff" / "control").mkdir(parents=True)
+            (root / "handoff" / "logs").mkdir(parents=True)
+            (root / "handoff" / "control" / "automatic_recovery.json").write_text(json.dumps({"commands": {
+                "continue-stuck": {"commandId": "continue-stuck", "taskId": "t-07", "step": "step12",
+                                   "state": "reconciliation_required", "acceptedAt": "2026-10-08T01:27:19+00:00"},
+                "continue-done": {"commandId": "continue-done", "state": "completed",
+                                  "acceptedAt": "2026-10-08T01:00:00+00:00"},
+            }}), encoding="utf-8")
+            (root / "handoff" / "logs" / "workbench-20261008.log").write_text("\n".join([
+                "2026-10-08T10:00:00 [pid 1] 同步 CapCut 状态失败：[WinError 5] 拒绝访问。",
+                "2026-10-08T10:00:05 [pid 1] 同步 CapCut 状态失败：[WinError 5] 拒绝访问。",
+                "2026-10-08T10:01:00 [pid 1] Ignored cross-date CapCut attribution: 失败 noise",
+                "2026-10-08T10:02:00 [pid 1] 下载与去字幕完成",
+                "continuation line 失败 without a timestamp",
+                "2026-10-06T10:00:00 [pid 1] 旧的失败（超过 24 小时）",
+            ]), encoding="utf-8")
+            now = real_datetime(2026, 10, 8, 12, 0, 0)
+            with patch("app.workbench_runtime_dir", return_value=root):
+                health = app.workbench_health_payload(now=now)
+        self.assertEqual(1, health["openCommandCount"])
+        self.assertEqual("continue-stuck", health["openCommands"][0]["commandId"])
+        self.assertGreater(health["openCommands"][0]["ageSeconds"], 0)
+        self.assertEqual(1, len(health["recentErrors"]))
+        self.assertEqual(2, health["recentErrors"][0]["count"])
+        self.assertTrue(health["logAvailable"])
+
+    def test_health_without_files_is_not_reported_as_log_available(self):
+        from datetime import datetime as real_datetime
+        with tempfile.TemporaryDirectory() as temp, \
+                patch("app.workbench_runtime_dir", return_value=Path(temp)):
+            health = app.workbench_health_payload(now=real_datetime(2026, 10, 8, 12, 0, 0))
+        self.assertEqual((0, [], False), (health["openCommandCount"], health["recentErrors"], health["logAvailable"]))
+
+    def test_boxes_older_than_14_days_are_history_not_blocked(self):
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            app.COLLECTOR.project_download_statuses = [
+                {"taskId": f"{batch}-01", "batchId": batch, "batchSequence": 1, "batchSize": 1,
+                 "date": date, "project": "SPC地板", "material": "塑木地板", "expectedCount": 4,
+                 "completed": 3, "status": "blocked_missing_links", "gapActive": True,
+                 "stateText": "待补链：已完成 3 / 4，还差 1 条"}
+                for batch, date in (("dispatch-20260825-130521-bf3ccf", "8.25"),
+                                    ("formal-batch-1791361570062-8bde7d0437", "10.7"))
+            ]
+            from datetime import datetime as real_datetime
+            fixed_now = real_datetime(2026, 10, 9, 2, 0, 0)
+
+            class FixedDatetime(real_datetime):
+                @classmethod
+                def now(cls, tz=None):
+                    return fixed_now if tz is None else fixed_now.astimezone(tz)
+
+            with patch("app.remote_capcut_summaries", return_value={}), \
+                    patch("app.load_task_box_receipt", return_value={}), \
+                    patch("app.datetime", FixedDatetime), \
+                    patch.object(app.COLLECTOR, "active_workbench_task_id", return_value="finished-task"):
+                boxes = app.task_box_payloads()
+                states = {box["productionDate"]: box["state"] for box in boxes}
+                active = app.authoritative_active_task_box(boxes)
+            self.assertEqual({"8.25": "stale", "10.7": "blocked"}, states)
+            self.assertEqual("10.7", (active or {}).get("productionDate"),
+                             "the only live box is offered as the current one")
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
     def test_task_box_does_not_complete_at_23_of_24(self):
         previous = app.COLLECTOR.project_download_statuses
         try:
@@ -1386,6 +1455,25 @@ class OpsTests(unittest.TestCase):
             self.assertIn("overview", payload)
             self.assertIn("pipeline", payload)
             self.assertIn("services", payload)
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
+    def test_parked_projects_of_live_boxes_stay_listed_on_another_date(self):
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            app.COLLECTOR.project_download_statuses = [
+                {"taskId": f"{batch}-05", "batchId": batch, "batchSequence": 1, "batchSize": 1,
+                 "date": date, "project": "SPC地板", "material": "塑木地板", "expectedCount": 4,
+                 "completed": 3, "missingCount": 1, "status": "blocked_missing_links", "gapActive": True}
+                for batch, date in (("dispatch-20260825-130521-bf3ccf", "8.25"),
+                                    (f"formal-batch-{int(time.time() * 1000) - 86400000}-8bde7d0437", "10.7"))
+            ]
+            with patch("app.receiver_json", side_effect=app.HTTPException(status_code=503, detail="offline")), \
+                    patch("app.remote_capcut_summaries", return_value={}), \
+                    patch("app.load_task_box_receipt", return_value={}):
+                payload = app.dashboard_payload("10.9")
+            self.assertEqual(["10.7"], [item["date"] for item in payload["projectGaps"]["items"]],
+                             "a live parked project stays listed; a 14-day-old one does not")
         finally:
             app.COLLECTOR.project_download_statuses = previous
 

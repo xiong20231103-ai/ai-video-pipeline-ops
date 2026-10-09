@@ -833,7 +833,7 @@ function step5FilterKey(item) {
   return JSON.stringify([item.project || "未分类", item.material || "--"]);
 }
 
-function renderOverview(data) {
+function renderOverview(data, projectGaps = []) {
   state.overview = data;
   const machine = data.machine || {};
   const badge = $("machineBadge");
@@ -863,8 +863,19 @@ function renderOverview(data) {
     $("heroTitle").textContent = current.state_text || "生产线等待中";
     $("heroSubtitle").textContent = `${current.date_label || "未定日期"} · ${current.project || "未分类"} · ${current.material || "未指定材料"} · ${current.language || "未指定语言"}`;
   } else {
-    $("heroTitle").textContent = "暂时没有生产任务";
-    $("heroSubtitle").textContent = "Dashboard 正常运行，正在等待工作台或客户端写入状态。";
+    // Nothing runs, but parked projects still wait for links: say so instead
+    // of "no production task" (10.7 kept 3 parked projects on 2026-10-09).
+    const parked = (Array.isArray(projectGaps) ? projectGaps : []).filter(item => item.gapActive);
+    if (parked.length) {
+      const missing = parked.reduce((total, item) => total + Number(item.missingCount || 0), 0);
+      $("heroTitle").textContent = `没有正在运行的项目 · ${parked.length} 个项目等待补链（共缺 ${missing} 条）`;
+      $("heroSubtitle").textContent = parked.slice(0, 4).map(item =>
+        `${item.date || ""} ${item.project || "未分类"}/${item.material || "--"} 缺 ${Number(item.missingCount || 0)} 条`).join("；")
+        + "。点上方“补链”按钮提交链接。";
+    } else {
+      $("heroTitle").textContent = "暂时没有生产任务";
+      $("heroSubtitle").textContent = "Dashboard 正常运行，正在等待工作台或客户端写入状态。";
+    }
   }
   if (current) {
     const category = categoryFor(current.state);
@@ -1134,7 +1145,14 @@ function renderReceiverQueue(items) {
     node.innerHTML = `<p class="empty">暂无可确认或撤回的队列任务</p>`;
     return;
   }
-  node.innerHTML = items.map(item => {
+  // 223 items imported in July-September stayed "imported_waiting_start" and
+  // made this list 25,000 px long.  Keep what can need a decision in view.
+  const recentMs = 3 * 24 * 3600 * 1000;
+  const isRecent = item => String(item.status || "") === "pending_confirmation" ||
+    Date.now() - Date.parse(item.importedAt || item.createdAt || "") < recentMs;
+  const recent = items.filter(isRecent);
+  const older = items.filter(item => !isRecent(item));
+  const render = list => list.map(item => {
     const taskId = String(item.taskId || "");
     const status = String(item.status || "");
     const canStart = status === "pending_confirmation" && !["auto_start_first", "auto_start_sequential"].includes(String(item.startMode || ""));
@@ -1150,6 +1168,10 @@ function renderReceiverQueue(items) {
       ${actions ? `<div class="queue-actions">${actions}</div>` : ""}
     </article>`;
   }).join("");
+  const wasOpen = Boolean(node.querySelector("details.receiver-queue-older")?.open);
+  node.innerHTML = (recent.length ? render(recent) : `<p class="empty">最近 3 天没有需要确认或撤回的任务</p>`)
+    + (older.length ? `<details class="receiver-queue-older"${wasOpen ? " open" : ""}>
+        <summary>更早导入的 ${older.length} 条任务（超过 3 天，通常无需操作）</summary>${render(older)}</details>` : "");
 }
 
 function renderTaskBoxes(payload = {}) {
@@ -1167,11 +1189,11 @@ function renderTaskBoxes(payload = {}) {
   // Rebuild only when the options themselves change; an update time alone
   // re-rendered the list (and closed it) while it was being used.
   const signature = boxes.map(item =>
-    `${item.batchId}:${item.productionDate}:${item.completedProjects}/${item.projectCount}`
+    `${item.batchId}:${item.productionDate}:${item.completedProjects}/${item.projectCount}:${item.state}`
   ).join("|");
   if (select.dataset.signature !== signature) {
     select.innerHTML = boxes.length ? boxes.map(item =>
-      `<option value="${escapeHtml(item.batchId)}">${escapeHtml(item.productionDate || "未定日期")} · ${item.completedProjects}/${item.projectCount} 项 · ${escapeHtml(item.batchId.slice(-8))}</option>`
+      `<option value="${escapeHtml(item.batchId)}">${escapeHtml(item.productionDate || "未定日期")} · ${item.completedProjects}/${item.projectCount} 项${item.state === "stale" ? " · 历史未完成" : ""} · ${escapeHtml(item.batchId.slice(-8))}</option>`
     ).join("") : `<option value="">暂无任务箱</option>`;
     select.dataset.signature = signature;
   }
@@ -1197,7 +1219,8 @@ function renderTaskBoxes(payload = {}) {
     ? `本次项目组合：${selectedProjects.join("、")}${deferredProjects.length ? `；未选择：${deferredProjects.join("、")}` : ""}`
     : "本次项目组合：按现有任务合同运行";
   const position = current ? `当前第 ${current.sequence} / ${selected.projectCount} 项` : "没有正在运行的项目";
-  $("taskBoxTitle").textContent = `${selected.productionDate || "未定日期"}任务箱 · 已完成 ${selected.completedProjects} / ${selected.projectCount}`;
+  $("taskBoxTitle").textContent = `${selected.productionDate || "未定日期"}任务箱 · 已完成 ${selected.completedProjects} / ${selected.projectCount}`
+    + (selected.state === "stale" ? " · 历史未完成（超过 14 天）" : "");
   $("taskBoxProjectProgress").textContent = `${selected.completedProjects} / ${selected.projectCount}`;
   $("taskBoxVideoProgress").textContent = `${selected.completedVideos} / ${selected.totalVideos}`;
   $("taskBoxCurrent").textContent = current ? `${current.sequence}/${selected.projectCount} ${current.project}/${current.material}` : position;
@@ -1318,6 +1341,48 @@ function renderNextAction(currentProjectStatus = {}) {
     + `<span class="next-action-do">${escapeHtml(next.action)}</span>`;
 }
 
+function renderHealth(health = {}) {
+  const body = $("healthBody");
+  if (!body) return;
+  // No data (older backend or a failed read) must never read as "healthy".
+  $("healthPanel").classList.toggle("hidden", !health.updatedAt);
+  if (!health.updatedAt) return;
+  const commands = Array.isArray(health.openCommands) ? health.openCommands : [];
+  const errors = Array.isArray(health.recentErrors) ? health.recentErrors : [];
+  const stuck = commands.filter(item => Number(item.ageSeconds || 0) > 600 || item.state === "reconciliation_required");
+  $("healthTitle").textContent = stuck.length
+    ? `系统健康 · ${stuck.length} 条安全继续命令未结束`
+    : errors.length ? `系统健康 · 最近 24 小时 ${errors.length} 类报错` : "系统健康 · 正常";
+  $("healthPanel").classList.toggle("needs-action", stuck.length > 0);
+  const commandRows = commands.length
+    ? commands.map(item => `<li><b>${escapeHtml(item.step || "--")} · ${escapeHtml(item.state)}</b>
+        <span>${escapeHtml(item.taskId || item.commandId)}</span>
+        <em>已持续 ${escapeHtml(formatAge(item.ageSeconds).replace("前", ""))}</em></li>`).join("")
+    : `<li class="ok">没有未结束的安全继续命令</li>`;
+  const errorRows = errors.length
+    ? errors.map(item => `<li><b>${escapeHtml(String(item.lastAt || "").slice(5, 16).replace("T", " "))}</b>
+        <span>${escapeHtml(item.message)}</span>${Number(item.count) > 1 ? `<em>${Number(item.count)} 次</em>` : ""}</li>`).join("")
+    : `<li class="ok">${health.logAvailable === false ? "未找到工作台日志文件" : "最近 24 小时工作台日志没有报错"}</li>`;
+  body.innerHTML = `<div><h3>安全继续命令</h3><ul>${commandRows}</ul></div>
+    <div><h3>工作台最近报错</h3><ul>${errorRows}</ul></div>`;
+}
+
+// Turn known source failures into what they mean for the operator.
+function describeSourceErrors(errors = []) {
+  const groups = new Map();
+  errors.forEach(item => {
+    const name = String(item.name || "");
+    const key = name === "第四步到第五步.json" ? "handoff"
+      : name === "last_batch_handoff.json" ? "voice" : `other:${name}:${item.error || ""}`;
+    groups.set(key, [...(groups.get(key) || []), item]);
+  });
+  return [...groups.entries()].map(([key, items]) => {
+    if (key === "handoff") return `${items.length} 个日期的剪映交接记录（第四步到第五步.json）无法读取，这些日期的第 5 步历史暂时不完整`;
+    if (key === "voice") return "语音交接记录（last_batch_handoff.json）无法读取；下一批配音开始后会重新生成";
+    return `${items[0].name}：${items[0].error}`;
+  });
+}
+
 function renderSources(source = {}) {
   const panel = $("sourceWarningPanel");
   const errors = Array.isArray(source.errors) ? source.errors : [];
@@ -1327,7 +1392,7 @@ function renderSources(source = {}) {
   if (source.watchdog && source.watchdog.state === "failed") {
     messages.push(`Dashboard守护启动失败：${source.watchdog.message || "原因未知"}`);
   }
-  errors.slice(0, 5).forEach(item => messages.push(`${item.name}：${item.error}`));
+  describeSourceErrors(errors).slice(0, 5).forEach(message => messages.push(message));
   panel.classList.toggle("hidden", !messages.length);
   panel.innerHTML = messages.length
     ? `<strong>状态源提醒</strong><ul>${messages.map(message => `<li>${escapeHtml(message)}</li>`).join("")}</ul>`
@@ -1565,13 +1630,14 @@ async function refresh() {
       renderServices(data.services || []);
       renderRuntimeGuidance(data.services || [], data.currentProjectStatus || {});
       renderNextAction(data.currentProjectStatus || {});
+      renderHealth(data.health || {});
       renderContinueResult(data.controls?.continue || {});
       try { window.localStorage.setItem("dashboardLastTrustedSummary", JSON.stringify(data)); } catch (_) {}
       return;
     }
     state.fullDashboardLoaded = true;
     state.date = data.selectedDate || state.date;
-    renderOverview(data.overview || {});
+    renderOverview(data.overview || {}, data.projectGaps?.items || []);
     renderPipelinePayload(data.pipeline || {}, data.currentProjectStatus || {});
     state.step5Items = data.tasks?.items || [];
     renderTasks(state.step5Items);
@@ -1583,6 +1649,7 @@ async function refresh() {
     renderServices(data.services || []);
     renderRuntimeGuidance(data.services || [], data.currentProjectStatus || {});
     renderNextAction(data.currentProjectStatus || {});
+    renderHealth(data.health || {});
     renderSources(data.sources || {});
     renderContinueResult(data.controls?.continue || {});
     renderActionResult("uploadActionResult", data.controls?.uploadRescan || {});
