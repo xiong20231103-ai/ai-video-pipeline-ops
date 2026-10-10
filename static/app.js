@@ -226,7 +226,7 @@ async function loadDraftManager() {
   if (button) { button.disabled = true; button.textContent = "正在读取草稿…"; }
   if (refreshButton) refreshButton.disabled = true;
   try {
-    const payload = await getJson("/api/controls/capcut-drafts");
+    const payload = await getJson("/api/controls/capcut-drafts", 1, 60000);
     state.drafts = payload.items || [];
     state.draftSnapshot = payload.snapshotToken || "";
     renderDraftDateFilter();
@@ -370,7 +370,7 @@ async function loadAudioManager() {
   if (button) { button.disabled = true; button.textContent = "正在读取音频…"; }
   if (refreshButton) refreshButton.disabled = true;
   try {
-    const payload = await getJson("/api/controls/audio-files");
+    const payload = await getJson("/api/controls/audio-files", 1, 60000);
     state.audioFiles = payload.items || [];
     state.audioSnapshot = payload.snapshotToken || "";
     renderAudioFilters();
@@ -562,7 +562,7 @@ async function loadProductionManager({ applyDefaults = false } = {}) {
   if (button) { button.disabled = true; button.textContent = "正在读取生产文件…"; }
   if (refreshButton) refreshButton.disabled = true;
   try {
-    const payload = await getJson("/api/controls/production-files");
+    const payload = await getJson("/api/controls/production-files", 1, 60000);
     state.productionFiles = payload.items || [];
     state.productionCounts = payload.counts || {};
     state.productionSnapshot = payload.snapshotToken || "";
@@ -1581,11 +1581,14 @@ async function controlTask(button, action) {
   }
 }
 
-async function getJson(url, retries = 1) {
+// The 5-second status refresh keeps an 8 s limit; the file managers scan
+// thousands of files (production files: 2,752 in about 12 s on 2026-10-11)
+// and pass a longer one.
+async function getJson(url, retries = 1, timeoutMs = 8000) {
   let lastError;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 8000);
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
       const headers = {};
       if (state.etags[url]) headers["If-None-Match"] = state.etags[url];
@@ -1731,7 +1734,7 @@ $("previewDraftCleanupButton")?.addEventListener("click", async event => {
   button.disabled = true;
   button.textContent = "正在核对…";
   try {
-    const preview = await postJson("/api/controls/capcut-drafts/preview", { draftIds });
+    const preview = await postJson("/api/controls/capcut-drafts/preview", { draftIds }, { timeoutMs: 60000 });
     state.draftPreview = preview;
     state.draftSnapshot = preview.snapshotToken || "";
     const blocked = (preview.blocked || []).map(item =>
@@ -1820,7 +1823,7 @@ $("previewAudioCleanupButton")?.addEventListener("click", async event => {
   button.disabled = true;
   button.textContent = "正在重新对账…";
   try {
-    const preview = await postJson("/api/controls/audio-files/preview", { audioIds });
+    const preview = await postJson("/api/controls/audio-files/preview", { audioIds }, { timeoutMs: 60000 });
     state.audioPreview = preview;
     state.audioSnapshot = preview.snapshotToken || "";
     const blocked = (preview.blocked || []).map(item =>
@@ -1916,7 +1919,7 @@ $("previewProductionCleanupButton")?.addEventListener("click", async event => {
   button.disabled = true;
   button.textContent = "正在重新核验云端与引用…";
   try {
-    const preview = await postJson("/api/controls/production-files/preview", { fileIds });
+    const preview = await postJson("/api/controls/production-files/preview", { fileIds }, { timeoutMs: 60000 });
     state.productionPreview = preview;
     state.productionSnapshot = preview.snapshotToken || "";
     const categories = (preview.categories || []).map(item =>
