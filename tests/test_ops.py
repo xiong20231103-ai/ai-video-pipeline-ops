@@ -1359,6 +1359,39 @@ class OpsTests(unittest.TestCase):
         finally:
             app.COLLECTOR.project_download_statuses = previous
 
+    def test_task_box_targets_project_whose_draft_release_is_pending(self):
+        """2026-10-10 02:01: all outputs verified but the draft not released;
+        Dashboard counted it completed and aimed Safe Continue at the next
+        project, which the workbench refused."""
+        previous = app.COLLECTOR.project_download_statuses
+        try:
+            app.COLLECTOR.project_download_statuses = [
+                {
+                    "taskId": "release-pending", "batchId": "box", "batchSequence": 3,
+                    "batchSize": 2, "date": "10.9", "project": "黄颢", "material": "碳岩板",
+                    "expectedCount": 4, "completed": 4, "gapActive": False,
+                    "status": "completed", "pipelineStatus": "capcut_draft_release_pending",
+                },
+                {
+                    "taskId": "next-project", "batchId": "box", "batchSequence": 4,
+                    "batchSize": 2, "date": "10.9", "project": "黄颢", "material": "金属板",
+                    "expectedCount": 4, "completed": 4, "gapActive": False,
+                    "status": "completed", "pipelineStatus": "step12_completed",
+                },
+            ]
+            summaries = {"release-pending": {
+                "expected": 4, "total": 4, "completed": 4, "valid": 4, "failed": 0,
+                "waiting": 0, "running": 0, "complete": True, "updatedAt": "",
+            }}
+            with patch("app.remote_capcut_summaries", return_value=summaries):
+                box = app.task_box_payloads()[0]
+
+            self.assertEqual("blocked", box["state"])
+            self.assertEqual("release-pending", box["current"]["taskId"])
+            self.assertIn("草稿待清理", box["current"]["currentStep"])
+        finally:
+            app.COLLECTOR.project_download_statuses = previous
+
     def test_safe_continue_prefers_workbench_owned_older_unfinished_batch(self):
         boxes = [
             {
