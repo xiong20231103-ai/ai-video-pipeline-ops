@@ -4834,6 +4834,14 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
                 status = "running"
                 current_step = "第 5 步 CapCut 成片"
                 state_text = pipeline_state_text or "正在准备或运行 CapCut"
+            elif pipeline_status == "capcut_draft_release_pending":
+                # Every final video is verified, but the workbench will not
+                # start the next project until the CapCut draft is released.
+                # Counting this as completed moved Safe Continue to the next
+                # project, which the workbench refused (2026-10-10 02:01).
+                status = "blocked"
+                current_step = "第 5 步剪映草稿待清理"
+                state_text = "成片已完成，剪映草稿待清理；点安全继续即可清理，不会重新剪辑"
             elif capcut_state.get("complete"):
                 status = "completed"
                 current_step = "第5步完成，最终成片已验证"
