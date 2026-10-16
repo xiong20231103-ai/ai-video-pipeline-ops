@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import socket
 import sys
 import tempfile
 import unittest
@@ -59,7 +60,20 @@ with tempfile.TemporaryDirectory(prefix="ops-isolated-") as scratch:
         elif event == "sqlite3.connect" and str(args[0]) != ":memory:":
             paths = args[:1]
         elif event in {"socket.connect", "socket.bind", "subprocess.Popen", "os.system"}:
-            raise RuntimeError("Production network/process execution blocked: " + event)
+            # Windows asyncio implements its internal socketpair with ephemeral
+            # loopback TCP. Permit ONLY that exact stdlib frame, never arbitrary
+            # localhost/service connections or application listeners.
+            frame = sys._getframe()
+            pair_code = getattr(getattr(socket, "_fallback_socketpair", None), "__code__", None)
+            internal_pair = False
+            while frame:
+                if pair_code is not None and frame.f_code is pair_code:
+                    internal_pair = True
+                    break
+                frame = frame.f_back
+            address = args[1] if event in {"socket.connect", "socket.bind"} else None
+            if not (internal_pair and isinstance(address, tuple) and address[0] in {"127.0.0.1", "::1"} and (event != "socket.bind" or address[1] == 0)):
+                raise RuntimeError("Production network/process execution blocked: " + event)
         if any(not permitted(path) for path in paths):
             raise RuntimeError("Write outside worktree/temp blocked: " + event)
     sys.addaudithook(audit)

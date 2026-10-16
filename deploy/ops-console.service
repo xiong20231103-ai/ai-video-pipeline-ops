@@ -1,0 +1,29 @@
+[Unit]
+Description=Private OPS cloud console (M1a read-only)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+Requires=tailscaled.service
+ConditionPathExists=/etc/ops-console/config.json
+
+[Service]
+Type=simple
+User=ops-console
+Group=ops-console
+WorkingDirectory=/opt/ops-console/current
+Environment=OPS_CONSOLE_CONFIG=/etc/ops-console/config.json
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/ops-console/current/.venv/bin/python -m uvicorn cloud.app:create_app --factory --host 127.0.0.1 --port 8000 --workers 1 --no-access-log --no-proxy-headers
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/ops-console
+MemoryHigh=300M
+MemoryMax=400M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target
