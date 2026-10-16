@@ -14,6 +14,7 @@ const state = {
   safety: null, safetyLoadedAt: 0,
   continueStatusBusy: false, continueCommandId: "", continueStatusFailures: 0,
   fullDashboardLoaded: false, historyExplicit: false, healthFailures: 0, continueInFlight: false,
+  freshnessStartedAt: performance.now(), freshnessReceivedAt: null, freshnessReceivedTick: null,
   etags: {}, cachedJson: {}, runtime: null, lastContinueResult: null
 };
 const $ = (id) => document.getElementById(id);
@@ -27,6 +28,26 @@ function formatClock(value) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString("zh-CN", {
     hour: "2-digit", minute: "2-digit", second: "2-digit"
   });
+}
+
+// Page freshness measures successful dashboard reception on this browser.
+// It is independent of the home PC clock, health checks and saved local data.
+function updateDataFreshness() {
+  const received = state.freshnessReceivedAt !== null;
+  const elapsed = Math.max(0, performance.now() - (state.freshnessReceivedTick ?? state.freshnessStartedAt));
+  const level = elapsed > 120000 ? "stale" : elapsed > 30000 ? "warning" : "fresh";
+  const node = $("dataFreshness");
+  node.classList.toggle("warning", level === "warning");
+  node.classList.toggle("stale", level === "stale");
+  $("lastUpdated").textContent = received ? formatClock(state.freshnessReceivedAt) : "等待首次同步";
+  $("freshnessAge").textContent = received ? `（${Math.floor(elapsed / 1000)} 秒前）` : "";
+  $("freshnessWarning").hidden = level === "fresh";
+}
+
+function recordDashboardReception() {
+  state.freshnessReceivedAt = new Date();
+  state.freshnessReceivedTick = performance.now();
+  updateDataFreshness();
 }
 
 function formatDateTime(value) {
@@ -839,7 +860,6 @@ function renderOverview(data, projectGaps = []) {
   const badge = $("machineBadge");
   badge.className = `status-badge ${machine.online ? "online" : "offline"}`;
   badge.innerHTML = `<span></span>${escapeHtml(machine.name || "--")} · ${machine.online ? "在线" : "离线"}`;
-  $("lastUpdated").textContent = formatClock(data.updatedAt);
   $("footerMachine").textContent = `${machine.name || "--"} · ${machine.status || "--"}`;
   const counts = data.counts || {};
   $("countTotal").textContent = counts.total || 0;
@@ -1620,6 +1640,7 @@ async function refresh() {
     if (state.batchId) params.set("batchId", state.batchId);
     const url = useSummary ? "/api/dashboard/summary" : `/api/dashboard${params.toString() ? `?${params}` : ""}`;
     const data = await getJson(url, 2);
+    recordDashboardReception();
     state.lastGoodDashboard = data;
     state.healthFailures = 0;
     if (useSummary) {
@@ -2122,5 +2143,8 @@ async function refreshContinueLoop() {
   window.setTimeout(refreshContinueLoop, state.continueInFlight ? (document.hidden ? 5000 : 1500) : 10000);
 }
 
+updateDataFreshness();
+window.setInterval(updateDataFreshness, 1000);
+document.addEventListener("visibilitychange", updateDataFreshness);
 refreshLoop();
 refreshContinueLoop();
