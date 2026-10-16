@@ -66,9 +66,15 @@ with tempfile.TemporaryDirectory(prefix="ops-isolated-") as scratch:
     with patch.object(Path, "read_text", read_text):
         import app
     assert app.BASE_DIR == root
+    if os.environ.get("OPS_WRITE_GOLDEN") == "fixture-receiver-only":
+        from contracts.golden import replay_receiver
+        fixtures = json.loads((root / "tests/fixtures/golden/receiver-inputs.json").read_text(encoding="utf-8"))
+        expected = {name: replay_receiver(app, fixture) for name, fixture in fixtures.items()}
+        (root / "tests/fixtures/golden/receiver-expected.json").write_text(json.dumps(expected, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print("Generated frozen receiver adapter fixtures only; no live inputs.")
     with patch("app.urllib.request.urlopen", side_effect=RuntimeError("Live HTTP blocked")), \
          patch.object(subprocess, "Popen", side_effect=RuntimeError("Process launch blocked")):
-        suite = unittest.defaultTestLoader.discover(str(root / "tests"), pattern="test_ops.py")
+        suite = unittest.defaultTestLoader.discover(str(root / "tests"), pattern="test_*.py")
         result = unittest.TextTestRunner(verbosity=1).run(suite)
     print("Isolation: worktree/temp writes only; live HTTP and process launches blocked.")
     sys.exit(0 if result.wasSuccessful() else 1)

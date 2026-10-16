@@ -1,0 +1,416 @@
+{
+  "running": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "stateText": "",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "planned": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 0,
+        "failed": 0,
+        "status": "pending_confirmation",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "stateText": "",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 0,
+        "missingCount": 3,
+        "notStarted": true,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "completed_with_historical_failure": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 3,
+        "failed": 0,
+        "status": "completed",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "stateText": "已完成 3 / 3",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 1,
+        "missingCount": 0,
+        "notStarted": false,
+        "terminal": true,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "missing_links": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 2,
+        "failed": 1,
+        "status": "blocked_missing_links",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "error": "MISSING_LINKS",
+        "stateText": "",
+        "currentTask": "",
+        "historicalFailed": 0,
+        "missingCount": 1,
+        "notStarted": false,
+        "terminal": true,
+        "gapActive": true
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "voice_login_failure": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "pipelineStatus": "voice_failed",
+        "error": "VOICE_LOGIN_REQUIRED",
+        "stateText": "",
+        "currentTask": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "voice_partial": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 1,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "pipelineStatus": "voice_partial",
+        "stateText": "",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "generation_failure": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "pipelineStatus": "generation_failed",
+        "error": "FFMPEG_FAILED",
+        "stateText": "",
+        "currentTask": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "capcut_safe_checkpoint": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "pipelineStatus": "blocked_capcut",
+        "currentPhase": "waiting_client",
+        "failureFingerprint": "draft_checkpoint_current_lease_files_missing",
+        "stateText": "",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "upload_failure": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "pipelineStatus": "upload_failed",
+        "error": "UPLOAD_FAILED",
+        "stateText": "",
+        "currentTask": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "denor": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "batchKind": "denor",
+        "stateText": "",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "selected_scope": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "runGroupId": "fixture-run-1",
+        "selectedProjects": [
+          "fixture-project"
+        ],
+        "unselectedProjects": [
+          "fixture-deferred"
+        ],
+        "stateText": "",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "legacy_schema": {
+    "projects": [],
+    "archivedProjects": [],
+    "controlReady": false,
+    "receiverError": "接收器状态未对账"
+  },
+  "bad_local_json": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "stateText": "",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "missing_local_json": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "stateText": "",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "late_manifest_overlay": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "pipelineStatus": "blocked_capcut",
+        "attemptId": "fixture-old-attempt",
+        "manifestId": "fixture-old-manifest",
+        "stateText": "",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  },
+  "after_midnight": {
+    "projects": [
+      {
+        "taskId": "fixture-task-1",
+        "batchId": "fixture-batch-1",
+        "date": "10.16",
+        "project": "fixture-project",
+        "expectedCount": 3,
+        "completed": 1,
+        "failed": 0,
+        "status": "running",
+        "updatedAt": "2026-10-16T23:59:59+08:00",
+        "stateText": "",
+        "currentTask": "",
+        "error": "",
+        "historicalFailed": 0,
+        "missingCount": 2,
+        "notStarted": false,
+        "terminal": false,
+        "gapActive": false
+      }
+    ],
+    "archivedProjects": [],
+    "controlReady": true,
+    "receiverError": ""
+  }
+}
