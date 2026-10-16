@@ -11,7 +11,7 @@ def main():
     path=state/'config.json'
     if path.exists(): raise SystemExit('Existing agent configuration retained; no overwrite performed')
     token=getpass('The same agent token entered on the cloud server (hidden): ')
-    if len(token)<32: raise SystemExit('Token too short; nothing written')
+    if not 32<=len(token)<=256 or not all(33<=ord(char)<=126 for char in token): raise SystemExit('Invalid token length/format; nothing written')
     origin='https://izbp187vys3zuj6vk9xw9lz.tail830b6f.ts.net'
     state.mkdir(parents=True,exist_ok=True)
     if os.name=='nt':

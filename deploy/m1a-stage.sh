@@ -5,15 +5,17 @@ test "$(id -u)" = 0
 ARCHIVE=${1:?archive path required}
 EXPECTED_SHA=${2:?archive checksum required}
 RELEASE=${3:?release id required}
+MODE=${4:-new}
 [[ "$RELEASE" =~ ^[a-f0-9]{40}$ ]] || exit 2
 BACKUP=/root/ops-console-backup-m1a-20261017
-test ! -e "$BACKUP"
+if [ "$MODE" = new ]; then test ! -e "$BACKUP"; else test "$MODE" = resume-before-install; test -d "$BACKUP"; fi
 test ! -e /opt/ops-console
 test ! -e /etc/ops-console
 test ! -e /var/lib/ops-console
 test ! -e /etc/systemd/system/ops-console.service
 printf '%s  %s\n' "$EXPECTED_SHA" "$ARCHIVE" | sha256sum -c -
 umask 077
+if [ "$MODE" = new ]; then
 install -d -m 700 "$BACKUP"
 iptables-save > "$BACKUP/iptables.rules"
 ip6tables-save > "$BACKUP/ip6tables.rules"
@@ -48,9 +50,26 @@ diff -u /root/ops-console-backup-m1a-20261017/ufw.before.txt /root/ops-console-b
 echo 'M0 project endpoint restored; cloud data/config retained privately, no firewall changes.'
 ROLLBACK
 chmod 700 "$BACKUP/rollback.sh"
+else
+  test -x "$BACKUP/rollback.sh"
+  ufw status verbose > "$BACKUP/ufw.before-resume.txt"
+  diff -u "$BACKUP/ufw.before.txt" "$BACKUP/ufw.before-resume.txt"
+  tailscale serve status --json > "$BACKUP/serve.before-resume.json"
+  diff -u "$BACKUP/serve.before.json" "$BACKUP/serve.before-resume.json"
+fi
 if ! python3 -c 'import ensurepip' >/dev/null 2>&1; then
-  apt-get update
-  DEBIAN_FRONTEND=noninteractive apt-get install -y python3-venv
+  # Alibaba's internal mirror overlaps Tailscale CGNAT. Do not widen firewall.
+  # Use a signed official public source for this invocation only; /etc/apt is untouched.
+  test -f /usr/share/keyrings/ubuntu-archive-keyring.gpg
+  cp -an /var/lib/dpkg/status "$BACKUP/dpkg-status.before"
+  cat > "$BACKUP/ubuntu-public.list" <<'SOURCES'
+deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] https://archive.ubuntu.com/ubuntu noble main restricted universe multiverse
+deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] https://archive.ubuntu.com/ubuntu noble-updates main restricted universe multiverse
+deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] https://security.ubuntu.com/ubuntu noble-security main restricted universe multiverse
+SOURCES
+  APT_OPTIONS=(-o "Dir::Etc::sourcelist=$BACKUP/ubuntu-public.list" -o 'Dir::Etc::sourceparts=-' -o Acquire::ForceIPv4=true -o Acquire::Retries=1 -o Acquire::https::Timeout=20)
+  apt-get "${APT_OPTIONS[@]}" update
+  DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTIONS[@]}" install -y python3-venv
 fi
 if ! id ops-console >/dev/null 2>&1; then useradd --system --home-dir /var/lib/ops-console --shell /usr/sbin/nologin ops-console; fi
 install -d -m 755 /opt/ops-console/releases

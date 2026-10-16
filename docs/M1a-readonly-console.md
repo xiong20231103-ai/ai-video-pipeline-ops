@@ -52,13 +52,19 @@ verified; no unperformed shadow or production test is called passed.
    before changes, writes rollback.sh, prepares a private no-login service user,
    release venv, data/config directories and unit. It does NOT start/enable the
    new service, change Serve or stop M0. Existing project paths abort staging.
+   If initial staging stopped before any project path was installed, an explicit
+   fourth argument resume-before-install reuses the original backup only after
+   proving Serve/UFW unchanged and all project paths still absent. Ubuntu venv
+   bootstrap uses a temporary signed official public source list under the
+   backup directory; it does not relax CGNAT rules or modify /etc/apt sources.
 3. USER ONLY in the cloud terminal:
 
    ```bash
    sudo /opt/ops-console/current/.venv/bin/python /opt/ops-console/current/cloud/admin.py configure
    ```
 
-   Input an invitation (12+ characters) and a fixed agent token (32+ characters)
+   Input an invitation (12-256 characters) and a fixed agent token (32-256
+   printable ASCII characters, without spaces/control characters)
    using hidden prompts. Keep the token privately for Claude's later home-agent
    deployment. Do not send either value to chat. Only invitation/agent verifiers
    are stored in owner-only /etc/ops-console/config.json; nothing echoes secrets.

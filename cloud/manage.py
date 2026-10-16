@@ -16,8 +16,9 @@ def main():
     if args.command=='configure':
         if config_path.exists(): raise SystemExit('Configuration already exists; no overwrite performed')
         invite=getpass('Registration invitation (at least 12 characters, hidden): ')
-        token=getpass('Home agent token (at least 32 characters, hidden): ')
-        if len(invite)<12 or len(token)<32: raise SystemExit('Values too short; nothing written')
+        token=getpass('Home agent token (32-256 printable ASCII characters, hidden): ')
+        if not 12<=len(invite)<=256 or not 32<=len(token)<=256 or not all(33<=ord(char)<=126 for char in token):
+            raise SystemExit('Invalid length/format; nothing written')
         config={'origin':os.environ.get('OPS_CONSOLE_ORIGIN','https://izbp187vys3zuj6vk9xw9lz.tail830b6f.ts.net'),
                 'state_dir':'/var/lib/ops-console','max_accounts':2,'invite_hash':HASHER.hash(invite),
                 'agent_token_sha256':hashlib.sha256(token.encode()).hexdigest()}
