@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>家庭 AI 视频生产线 · OPS</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20261009-health">
+  <link rel="stylesheet" href="/static/styles.css?v=20261016-freshness">
 </head>
 <body>
   <header class="topbar">
@@ -15,7 +15,10 @@
     </div>
     <div class="header-status">
       <div id="machineBadge" class="status-badge neutral"><span></span>正在连接</div>
-      <div class="last-update">最后更新 <strong id="lastUpdated">--</strong></div>
+      <div id="dataFreshness" class="last-update" title="按本浏览器最后成功接收 Dashboard 数据的时间计时，不代表家里状态源的更新时间">
+        数据截至 <strong id="lastUpdated">等待首次同步</strong><span id="freshnessAge"></span>
+        <small id="freshnessWarning" role="status" hidden>页面数据可能已过期，按 Ctrl+F5 刷新</small>
+      </div>
     </div>
   </header>
 
@@ -393,6 +396,6 @@
     <div id="replenishPanel" class="replenish-panel"></div>
   </dialog>
   <footer><span>AI视频生产线 OPS · Tailscale安全控制</span><span id="footerMachine">--</span></footer>
-  <script src="/static/app.js?v=20261011-manager-timeout2"></script>
+  <script src="/static/app.js?v=20261016-freshness"></script>
 </body>
 </html>

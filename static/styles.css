@@ -67,6 +67,10 @@ h1, h2, p { margin: 0; }
 .status-badge.neutral { color: var(--muted); background: #eef2f7; }
 .last-update { color: var(--muted); font-size: 12px; }
 .last-update strong { color: var(--text); margin-left: 4px; }
+.last-update.warning, .last-update.warning strong { color: var(--amber); }
+.last-update.stale, .last-update.stale strong { color: var(--red); }
+.last-update small { display: block; margin-top: 4px; line-height: 1.5; }
+.last-update small[hidden] { display: none; }
 
 main { max-width: 1680px; margin: 0 auto; padding: 24px clamp(16px, 3vw, 48px) 40px; }
 .panel {
@@ -588,7 +592,9 @@ footer {
   .topbar { height: auto; padding: 14px 16px; align-items: flex-start; }
   .brand h1 { font-size: 15px; }
   .brand-mark { width: 36px; height: 36px; border-radius: 10px; }
-  .last-update { display: none; }
+  .topbar { flex-wrap: wrap; gap: 10px; }
+  .header-status { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .last-update { display: block; max-width: 100%; }
   main { padding: 14px 10px 28px; }
   .hero { padding: 18px; display: block; }
   .hero h2 { font-size: 19px; }
