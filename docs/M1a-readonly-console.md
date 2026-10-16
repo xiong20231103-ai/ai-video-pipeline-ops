@@ -57,6 +57,10 @@ verified; no unperformed shadow or production test is called passed.
    proving Serve/UFW unchanged and all project paths still absent. Ubuntu venv
    bootstrap uses a temporary signed official public source list under the
    backup directory; it does not relax CGNAT rules or modify /etc/apt sources.
+   resume-unactivated-install additionally permits existing release scaffolding
+   only when there is no current link, unit, credential configuration or data.
+   Venv pip uses an explicit official PyPI URL and isolated configuration; the
+   system's internal pip mirror is not changed or added to firewall exceptions.
 3. USER ONLY in the cloud terminal:
 
    ```bash

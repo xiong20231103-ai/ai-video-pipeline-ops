@@ -8,10 +8,20 @@ RELEASE=${3:?release id required}
 MODE=${4:-new}
 [[ "$RELEASE" =~ ^[a-f0-9]{40}$ ]] || exit 2
 BACKUP=/root/ops-console-backup-m1a-20261017
-if [ "$MODE" = new ]; then test ! -e "$BACKUP"; else test "$MODE" = resume-before-install; test -d "$BACKUP"; fi
-test ! -e /opt/ops-console
-test ! -e /etc/ops-console
-test ! -e /var/lib/ops-console
+if [ "$MODE" = new ]; then test ! -e "$BACKUP"; else
+  [[ "$MODE" = resume-before-install || "$MODE" = resume-unactivated-install ]]
+  test -d "$BACKUP"
+fi
+if [ "$MODE" = resume-unactivated-install ]; then
+  test -d /opt/ops-console/releases
+  test ! -e /opt/ops-console/current
+  test ! -e /etc/ops-console/config.json
+  test -z "$(find /var/lib/ops-console -mindepth 1 -maxdepth 1 -print -quit)"
+else
+  test ! -e /opt/ops-console
+  test ! -e /etc/ops-console
+  test ! -e /var/lib/ops-console
+fi
 test ! -e /etc/systemd/system/ops-console.service
 printf '%s  %s\n' "$EXPECTED_SHA" "$ARCHIVE" | sha256sum -c -
 umask 077
@@ -86,7 +96,7 @@ with tarfile.open(sys.argv[1],'r:gz') as archive:
 PY
 chmod -R go-w "/opt/ops-console/releases/$RELEASE"
 python3 -m venv "/opt/ops-console/releases/$RELEASE/.venv"
-"/opt/ops-console/releases/$RELEASE/.venv/bin/python" -m pip install --disable-pip-version-check -r "/opt/ops-console/releases/$RELEASE/cloud/requirements.txt"
+"/opt/ops-console/releases/$RELEASE/.venv/bin/python" -m pip --isolated install --disable-pip-version-check --index-url https://pypi.org/simple --timeout 20 --retries 2 -r "/opt/ops-console/releases/$RELEASE/cloud/requirements.txt"
 chmod -R a+rX,go-w "/opt/ops-console/releases/$RELEASE"
 ln -s "/opt/ops-console/releases/$RELEASE" /opt/ops-console/current
 install -m 644 "/opt/ops-console/current/deploy/ops-console.service" /etc/systemd/system/ops-console.service
