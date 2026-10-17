@@ -62,7 +62,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Source replacement failed; maintenance retaine
 & $python -B $helper finish --target $agentRoot --backup $BackupPath
 if ($LASTEXITCODE -ne 0) { throw 'Maintenance identity changed; no task started.' }
 $expectedVersion=if ($Action -eq 'Update') { $ExpectedCommit } else { (Get-Content -LiteralPath (Join-Path $BackupPath 'operation.json') -Raw | ConvertFrom-Json).before }
-Start-ScheduledTask -TaskName $taskName -TaskPath ''
+Start-ScheduledTask -TaskName $taskName -TaskPath '\'
 $started=$false
 for ($attempt=0;$attempt -lt 150;$attempt++) {
     if (Test-Path -LiteralPath $runtimePath) {

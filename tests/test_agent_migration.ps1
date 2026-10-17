@@ -37,3 +37,22 @@ foreach ($name in @('agent-run.ps1','agent-task.ps1','agent-source-update.ps1','
     [void][Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot ('..\deploy\'+$name)),[ref]$tokens,[ref]$errors)
     if ($errors.Count) { throw ('Parse failure: '+$name) }
 }
+
+# Every controller task operation must explicitly target the root task folder.
+$updater=[Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot '..\deploy\agent-source-update.ps1'),[ref]$tokens,[ref]$errors)
+$commands=$updater.FindAll({param($node) $node -is [Management.Automation.Language.CommandAst]},$true)
+$taskCommands=0
+foreach ($command in $commands) {
+    if ($command.GetCommandName() -in @('Stop-ScheduledTask','Disable-ScheduledTask')) { throw 'Routine updater must use cooperative stop only.' }
+    if ($command.GetCommandName() -notin @('Get-ScheduledTask','Export-ScheduledTask','Start-ScheduledTask')) { continue }
+    $taskCommands++
+    $elements=$command.CommandElements;$found=$false
+    for ($index=0;$index -lt $elements.Count-1;$index++) {
+        if ($elements[$index] -is [Management.Automation.Language.CommandParameterAst] -and $elements[$index].ParameterName -eq 'TaskPath') {
+            $found=($elements[$index+1] -is [Management.Automation.Language.StringConstantExpressionAst] -and $elements[$index+1].Value -eq '\')
+        }
+    }
+    if (-not $found) { throw 'Routine updater task command must explicitly use root TaskPath.' }
+}
+if ($taskCommands -lt 3) { throw 'Expected task inspection/start operations missing.' }
+Write-Output 'PASS: updater task operations target the explicit root folder; no Stop/Disable task calls.'
