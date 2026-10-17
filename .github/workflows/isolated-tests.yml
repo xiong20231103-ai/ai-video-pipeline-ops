@@ -27,3 +27,7 @@ jobs:
         run: |
           bash -n deploy/m1a-stage.sh
           bash -n deploy/m1a-activate.sh
+          bash -n deploy/m1a-upgrade.sh
+      - name: Validate Windows agent task without registering it
+        shell: powershell
+        run: ./tests/test_agent_task.ps1

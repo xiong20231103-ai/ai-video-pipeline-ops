@@ -1,10 +1,9 @@
-"""Interactive home configuration. Claude runs this only during approved deployment."""
+"""User-only hidden credential entry. Configuration never starts the agent."""
 from getpass import getpass
 import json
 import os
 from pathlib import Path
 import subprocess
-from agent.readonly import ReadOnlyAgent
 
 def main():
     state=Path(os.environ.get('LOCALAPPDATA',str(Path.home()))) / 'OpsAgent'

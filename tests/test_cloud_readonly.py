@@ -6,7 +6,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from fastapi.testclient import TestClient
-from cloud.app import create_app,HASHER,COOKIE
+from cloud.app import create_app,HASHER,COOKIE,rate_identity
+from starlette.requests import Request
 from cloud.store import Store
 from contracts.cache import cache_key
 
@@ -145,3 +146,46 @@ class CloudTests(unittest.TestCase):
         with socket.socket() as connection:
             with self.assertRaisesRegex(RuntimeError,'Production network/process execution blocked'):
                 connection.connect(('127.0.0.1',8765))
+
+    def test_only_authenticated_visible_page_reads_extend_viewer_lease(self):
+        self.assertFalse(self.store.viewer_state()['viewerActive'])
+        self.client.get('/login'); self.client.get('/api/health')
+        self.assertFalse(self.store.viewer_state()['viewerActive'])
+        self.register(); self.login(); self.client.get('/api/dashboard')
+        self.assertEqual(120,self.store.viewer_state()['viewerLeaseSeconds'])
+        self.now[0]+=119
+        self.client.get('/console/status',headers={'X-Ops-Page-Visible':'false'})
+        self.client.get('/api/dashboard/summary',headers={'X-Ops-Page-Visible':'false'})
+        self.assertEqual(1,self.store.viewer_state()['viewerLeaseSeconds'])
+        self.now[0]+=1; self.assertFalse(self.store.viewer_state()['viewerActive'])
+        auth={'Authorization':'Bearer '+self.token}
+        result=self.client.post('/agent/heartbeat',json={'engineState':'healthy'},headers=auth)
+        self.assertFalse(result.json()['viewerActive'])
+        self.assertFalse(self.client.get('/agent/fetch-requests',headers=auth).json()['viewerActive'])
+        self.client.get('/console/status',headers={'X-Ops-Page-Visible':'true'})
+        self.assertTrue(self.client.post('/agent/heartbeat',json={},headers=auth).json()['viewerActive'])
+        self.now[0]-=1; self.assertFalse(self.store.viewer_state()['viewerActive'])
+
+    def test_viewer_lease_survives_reopen_but_does_not_become_permanent(self):
+        self.store.page_view(); self.now[0]+=100
+        reopened=Store(self.store.path,clock=lambda:self.now[0])
+        self.assertEqual(20,reopened.viewer_state()['viewerLeaseSeconds'])
+        self.now[0]+=20; self.assertFalse(reopened.viewer_state()['viewerActive'])
+
+    def test_serve_user_rate_limits_are_independent_and_same_user_shares_budget(self):
+        proxy=TestClient(self.application,base_url=self.config['origin'],client=('127.0.0.1',12345),headers={'Origin':self.config['origin'],'X-Forwarded-Proto':'https','X-Forwarded-For':'100.64.1.10'})
+        data={'username':'missing','password':self.password}
+        for _ in range(10): self.assertEqual(401,proxy.post('/auth/login',json=data,headers={'Tailscale-User-Login':'fixture-a@example.invalid'}).status_code)
+        self.assertEqual(429,proxy.post('/auth/login',json=data,headers={'Tailscale-User-Login':'fixture-a@example.invalid','X-Forwarded-For':'100.64.1.11'}).status_code)
+        self.assertEqual(401,proxy.post('/auth/login',json=data,headers={'Tailscale-User-Login':'fixture-b@example.invalid'}).status_code)
+        # Tagged nodes have no user header; distinct validated Serve IPs get distinct buckets.
+        self.assertEqual(401,proxy.post('/auth/login',json=data,headers={'X-Forwarded-For':'100.64.2.1'}).status_code)
+        self.assertEqual(401,proxy.post('/auth/login',json=data,headers={'X-Forwarded-For':'fd7a:115c:a1e0::1'}).status_code)
+
+    def test_remote_or_malformed_proxy_headers_cannot_rotate_rate_bucket(self):
+        def request(peer,headers):
+            return Request({'type':'http','client':(peer,1234),'headers':[(key.lower().encode(),value.encode()) for key,value in headers.items()]})
+        forged={'X-Forwarded-Proto':'https','X-Forwarded-For':'100.64.1.10','Tailscale-User-Login':'fixture@example.invalid'}
+        self.assertEqual(rate_identity(request('100.64.2.10',forged)),rate_identity(request('100.64.2.10',{})))
+        for bad in ['100.64.1.1, 100.64.1.2','foreign.invalid','8.8.8.8','127.0.0.1','']:
+            self.assertEqual(rate_identity(request('127.0.0.1',{**forged,'X-Forwarded-For':bad})),rate_identity(request('127.0.0.1',{})))

@@ -69,7 +69,7 @@ verified; no unperformed shadow or production test is called passed.
 
    Input an invitation (12-256 characters) and a fixed agent token (32-256
    printable ASCII characters, without spaces/control characters)
-   using hidden prompts. Keep the token privately for Claude's later home-agent
+   using hidden prompts. Keep the token privately for the later home-agent
    deployment. Do not send either value to chat. Only invitation/agent verifiers
    are stored in owner-only /etc/ops-console/config.json; nothing echoes secrets.
    Login password is chosen by the user on the private registration page later.
@@ -121,3 +121,110 @@ discarding version state cannot safely force old data over cloud state.
 
 Future M1b adds exact-file encrypted-secret backups/restore drill; H3 adds atomic
 target validation; M2a/M2b add writes/notifications behind deployed dependencies.
+
+## Review amendment: viewer-aware polling, identity limits and independent deployment
+
+Cloud persists the latest authenticated GET page/API request time. Anonymous
+health, login/static resources and agent traffic do not count. The frontend
+marks API/status requests from hidden tabs `X-Ops-Page-Visible: false`; a hidden
+legacy timer therefore does not keep viewing active. Heartbeat and fetch replies
+carry a bounded 0..120 second relative lease, used with agent monotonic time.
+Missing/malformed lease information or two minutes without a visible request
+falls back to idle, including if the cloud goes offline.
+
+| Scheduled home GETs per hour | Before (always) | After: viewing | After: idle |
+|---|---:|---:|---:|
+| Dashboard summary | 720 | 720 | 60 |
+| Dashboard + receiver health (two GETs per collection) | 240 | 240 | 120 |
+| Full dashboard (no date) | 60 | 60 | 6 |
+| Eight other current-state routes (unchanged 60s) | 480 | 480 | 480 |
+| 14 dates x 3 history routes | 252 | 252 | 0 |
+| Total | 1752 | 1752 | 666 |
+
+These are nominal steady-state maxima at zero response cost; they exclude first
+load and on-demand GETs. Collection is serialized, with intervals measured from
+completion, and never catches up missed polling bursts. Actual totals are lower
+when requests take time. Idle history remains available only through the 202
+on-demand flow. Counters include failed GET attempts and receiver health, by
+minute/target/port/active-or-idle/reason; no bodies, headers or credentials.
+`python -B -m agent.metrics --since EPOCH --until EPOCH` reads counters without
+opening private configuration. Minute-bucket boundaries must be reported when
+comparing a real 30-minute window. Budget reduction in idle is about 62%.
+
+The existing Dashboard actually listens on local Tailscale 100.92.17.9:8765,
+not 127.0.0.1. The agent is fixed to that existing local address, ports 8765 and
+8766 (8766 health only). It does not change production bindings. All home
+requests explicitly use GET with no body or bearer token. Environment proxies
+are disabled and redirects are refused for both cloud and home transports.
+Cloud may receive POST uploads/heartbeats; this does not permit POST to home.
+
+Rate buckets trust Serve identity only from loopback, with HTTPS forwarding
+and a single valid Tailnet X-Forwarded-For. They prefer Tailscale-User-Login;
+tagged nodes use the forwarded IP. Remote/malformed/multi-hop headers fall back
+to peer identity, so forging headers on a direct request cannot rotate buckets.
+The bucket key is a SHA256 identity digest, not a raw login/IP. This is rate
+isolation only, never a replacement for application authentication.
+Upstream rationale: https://tailscale.com/docs/features/tailscale-serve#identity-headers
+and Tailscale 1.104.1 ipn/ipnlocal/serve.go lines 1014-1050 (Serve overwrites
+X-Forwarded-For and removes/replaces identity headers).
+
+User authorization now permits deploying only the read-only agent independently,
+without merging any PR. Ship a source/manifest whitelist from this PR to
+E:\Backup\ops-agent; never copy production config/data. Python must be the
+existing %LOCALAPPDATA%\TikHubOPS\venv_cuda\Scripts\python.exe. Install or upgrade
+no packages there. Missing dependencies require stopping and notifying the user.
+
+USER ONLY, in a local PowerShell window (not the server terminal):
+
+```powershell
+Set-Location -LiteralPath 'E:\Backup\ops-agent'
+& "$env:LOCALAPPDATA\TikHubOPS\venv_cuda\Scripts\python.exe" -B -m agent.configure
+```
+
+Enter the SAME privately retained cloud agent token at the hidden prompt.
+Configuration is owner-restricted under LOCALAPPDATA\OpsAgent. The assistant
+never reads/displays/records its content. This does not start the agent.
+
+After this and green tests, install/start the one owned task:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File E:\Backup\ops-agent\deploy\agent-task.ps1 -Action Install -StartNow
+```
+
+The installer first creates an ACL-restricted timestamped backup of the previous
+owned task (if present), a completed-backup marker and self-contained rollback.
+It refuses a task-name collision owned by another program. Exactly one task,
+OpsConsoleReadonlyAgent, runs after this user's logon, hidden, limited interactive
+privileges, no stored Windows password, IgnoreNew plus agent file lock, restart
+on nonzero exit after one minute, no execution time limit. The hidden wrapper
+waits for the exact child Python and propagates its exit code. The launcher
+emits only a generic failure message, never exception/config contents. It does
+not start/stop Dashboard, workbench or other production processes.
+
+One-command uninstall/rollback (use the exact path printed by installation):
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File E:\Backup\ops-agent-task-backups\TIMESTAMP\rollback.ps1
+```
+
+Rollback stops/unregisters only this owned task and restores its prior definition
+if one existed, retaining private config/data/files. It does not delete logs or
+kill processes by generic name. Definition/syntax tests do not count as a real
+logon/crash/rollback test; record real acceptance separately.
+
+Before starting the agent, sample the unchanged Dashboard process for ten
+minutes. After startup observe thirty minutes, explicitly record each mode's
+actual duration (including the 120s idle grace), GET counts/failures, source-age
+and pipeline/log health. Keep raw CPU totals, normalized machine CPU, working
+set/private bytes and process creation identity; a restart invalidates the
+comparison. No measured load or complete-batch result may be inferred from unit
+tests. Private browser login and token entry are user operations, never read
+session/config secrets to simulate their acceptance.
+
+For an already active cloud release use deploy/m1a-upgrade.sh ARCHIVE SHA COMMIT.
+It snapshots the live DB using SQLite backup, current release/unit, Serve and
+firewall before changes, writes one-command rollback, builds a separate venv,
+atomically switches only current and restarts only ops-console. Additive schema
+rollback retains current user/session data; snapshot restore is not automatic.
+No new public port, firewall or Serve changes. Default APT/pip source repair
+belongs to M1b and must not be claimed complete here.

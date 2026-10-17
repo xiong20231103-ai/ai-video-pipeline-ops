@@ -22,6 +22,7 @@ class Store:
             CREATE TABLE IF NOT EXISTS fetches(key TEXT PRIMARY KEY,id TEXT UNIQUE NOT NULL,state TEXT NOT NULL,created REAL NOT NULL,expires REAL NOT NULL,lease_until REAL NOT NULL DEFAULT 0);
             CREATE TABLE IF NOT EXISTS heartbeats(agent_id TEXT PRIMARY KEY,received REAL NOT NULL,engine_state TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS rate_limits(bucket TEXT PRIMARY KEY,window REAL NOT NULL,count INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS page_activity(id INTEGER PRIMARY KEY CHECK(id=1),last_seen REAL NOT NULL);
             ''')
     @contextmanager
     def db(self,write=False):
@@ -124,6 +125,15 @@ class Store:
             return [{'id':row['id'],'target':row['key'][4:],'expiresAt':row['expires']}]
     def heartbeat(self,engine_state):
         with self.db(True) as db: db.execute('INSERT OR REPLACE INTO heartbeats VALUES(?,?,?)',('home',self.clock(),engine_state))
+    def page_view(self):
+        now=self.clock()
+        with self.db(True) as db:
+            db.execute('INSERT INTO page_activity VALUES(1,?) ON CONFLICT(id) DO UPDATE SET last_seen=excluded.last_seen WHERE last_seen<? OR last_seen>?',(now,now-1,now))
+    def viewer_state(self):
+        with self.db() as db: row=db.execute('SELECT last_seen FROM page_activity WHERE id=1').fetchone()
+        age=self.clock()-row['last_seen'] if row else None
+        remaining=120-age if age is not None and 0<=age<120 else 0
+        return {'viewerActive':remaining>0,'viewerLeaseSeconds':remaining}
     def health(self):
         with self.db() as db: row=db.execute('SELECT * FROM heartbeats WHERE agent_id=?',('home',)).fetchone()
         age=self.clock()-row['received'] if row else None

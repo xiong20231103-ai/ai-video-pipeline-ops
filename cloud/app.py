@@ -1,5 +1,6 @@
 """M1a authenticated read-only cache. No home write-command route exists."""
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -31,6 +32,21 @@ def verify(encoded,value):
     try: return HASHER.verify(encoded,value)
     except (VerificationError,InvalidHashError,TypeError): return False
 
+def rate_identity(request):
+    """Trust Serve headers only behind the loopback-only backend, never remote peers."""
+    host=request.client.host if request.client else 'local'
+    if host in {'127.0.0.1','::1'}:
+        forwarded=request.headers.get('x-forwarded-for','')
+        try:
+            address=ipaddress.ip_address(forwarded)
+            tailnet=address in ipaddress.ip_network('100.64.0.0/10') or address in ipaddress.ip_network('fd7a:115c:a1e0::/48')
+        except ValueError: tailnet=False
+        if tailnet and request.headers.get('x-forwarded-proto')=='https':
+            login=request.headers.get('tailscale-user-login','')
+            identity='user:'+login if 0<len(login)<=256 and not any(ord(c)<32 for c in login) else 'ip:'+str(address)
+            return hashlib.sha256(identity.encode()).hexdigest()
+    return hashlib.sha256(('peer:'+host).encode()).hexdigest()
+
 def create_app(config=None,store=None,static_root=None):
     if config is None:
         path=Path(os.environ.get('OPS_CONSOLE_CONFIG','/etc/ops-console/config.json'))
@@ -55,13 +71,16 @@ def create_app(config=None,store=None,static_root=None):
         digest=hashlib.sha256(token[7:].encode()).hexdigest() if token.startswith('Bearer ') else ''
         if not secrets.compare_digest(digest,config['agent_token_sha256']): raise HTTPException(401,'agent_auth_required')
     def rate(request,kind,maximum):
-        if store.limited(kind+':'+str(request.client.host if request.client else 'local'),maximum): raise HTTPException(429,'rate_limited')
+        if store.limited(kind+':'+rate_identity(request),maximum): raise HTTPException(429,'rate_limited')
     @application.middleware('http')
     async def security(request,call_next):
         if request.method=='POST' and request.headers.get('content-length','').isdigit() and int(request.headers['content-length'])>MAX_BODY:
             return JSONResponse({'detail':'request_too_large'},status_code=413)
         if request.url.path.startswith('/static/') and not store.session(request.cookies.get(COOKIE,'')):
             return JSONResponse({'detail':'login_required'},status_code=401)
+        # Login screen, anonymous submitter health and agent traffic never keep a viewer alive.
+        if request.method=='GET' and (request.url.path=='/' or request.url.path=='/console/status' or request.url.path.startswith('/api/')) and request.headers.get('x-ops-page-visible','true')=='true' and store.session(request.cookies.get(COOKIE,'')):
+            store.page_view()
         result=await call_next(request)
         result.headers.update({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'no-referrer',
                                'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'"})
@@ -135,9 +154,9 @@ def create_app(config=None,store=None,static_root=None):
     async def heartbeat(request:Request):
         agent(request); data=await bounded_json(request); state=data.get('engineState','unknown')
         if state not in {'healthy','unavailable','busy','unknown'}: raise HTTPException(400,'invalid_engine_state')
-        store.heartbeat(state); return {'received':True}
+        store.heartbeat(state); return {'received':True,**store.viewer_state()}
     @application.get('/agent/fetch-requests')
-    def fetch_requests(request:Request): agent(request); return {'items':store.claim_reads()}
+    def fetch_requests(request:Request): agent(request); return {'items':store.claim_reads(),**store.viewer_state()}
     @application.post('/agent/push')
     async def push(request:Request):
         agent(request); data=await bounded_json(request)

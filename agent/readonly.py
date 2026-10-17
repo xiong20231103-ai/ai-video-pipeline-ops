@@ -1,6 +1,6 @@
 """M1a read-only bridge. No command execution, process control or cleanup exists."""
 from contextlib import contextmanager
-from datetime import datetime,timedelta
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -11,6 +11,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from contracts.cache import cache_key
+from agent.polling import PollSchedule
+
+HOME_HOST='100.92.17.9'
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,request,*args,**kwargs):
+        return None
 
 class Ledger:
     def __init__(self,path):
@@ -20,6 +27,7 @@ class Ledger:
             CREATE TABLE IF NOT EXISTS versions(target TEXT PRIMARY KEY,version INTEGER NOT NULL);
             CREATE TABLE IF NOT EXISTS outbox(target TEXT PRIMARY KEY,payload TEXT NOT NULL,wall REAL NOT NULL,monotonic REAL NOT NULL);
             CREATE TABLE IF NOT EXISTS sources(target TEXT PRIMARY KEY,body TEXT NOT NULL,etag TEXT NOT NULL,scanned TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS request_stats(minute INTEGER NOT NULL,mode TEXT NOT NULL,target TEXT NOT NULL,port INTEGER NOT NULL,reason TEXT NOT NULL,count INTEGER NOT NULL,failures INTEGER NOT NULL,seconds REAL NOT NULL,PRIMARY KEY(minute,mode,target,port,reason));
             ''')
     @contextmanager
     def db(self):
@@ -56,6 +64,11 @@ class Ledger:
         with self.db() as db:
             row=db.execute('SELECT payload FROM outbox WHERE target=?',(target,)).fetchone()
             if row and json.loads(row['payload'])['version']==version: db.execute('DELETE FROM outbox WHERE target=?',(target,))
+    def note_request(self,target,port,mode,reason,elapsed,failed):
+        minute=int(time.time()//60)
+        with self.db() as db:
+            db.execute('INSERT INTO request_stats VALUES(?,?,?,?,?,1,?,?) ON CONFLICT(minute,mode,target,port,reason) DO UPDATE SET count=count+1,failures=failures+excluded.failures,seconds=seconds+excluded.seconds',(minute,mode,target,port,reason,int(failed),elapsed))
+            db.execute('DELETE FROM request_stats WHERE minute<?',(minute-2880,))
 
 class SingleInstance:
     def __init__(self,path): self.path=Path(path); self.file=None
@@ -85,29 +98,39 @@ class ReadOnlyAgent:
         self.origin=origin.rstrip('/'); self.token=token
         self.state_dir=Path(state_dir); self.ledger=Ledger(self.state_dir/'agent.db')
         self.stop=threading.Event(); self.home_lock=threading.Lock(); self.engine_state='unknown'; self.worker_failed=False
+        self.schedule=PollSchedule()
+        # No environment proxy and no redirected bearer token or off-host home GET.
+        self.transport=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
     def cloud(self,path,data=None):
         headers={'Authorization':'Bearer '+self.token}
         if data is not None: headers['Content-Type']='application/json'
         request=urllib.request.Request(self.origin+path,data=json.dumps(data).encode() if data is not None else None,headers=headers)
-        with urllib.request.urlopen(request,timeout=10) as response: return json.load(response)
-    def home(self,target,port=8765,conditional=True):
-        cache_key('GET',target)
+        with self.transport.open(request,timeout=10) as response: return json.load(response)
+    def home(self,target,port=8765,conditional=True,reason='periodic'):
+        target=cache_key('GET',target)[4:]
+        if port not in {8765,8766} or port==8766 and target!='/api/health': raise ValueError('Home port is outside the explicit read contract')
         old=self.ledger.source(target); headers={}
         if conditional and old and old['etag']: headers['If-None-Match']=old['etag']
-        request=urllib.request.Request('http://127.0.0.1:'+str(port)+target,headers=headers)
+        request=urllib.request.Request('http://'+HOME_HOST+':'+str(port)+target,headers=headers,method='GET')
+        started=time.monotonic(); mode='active' if self.schedule.active() else 'idle'; failed=True
         try:
-            with urllib.request.urlopen(request,timeout=15) as response:
+            with self.transport.open(request,timeout=15) as response:
                 raw=response.read(8*1024*1024+1)
                 if len(raw)>8*1024*1024: raise ValueError('Source response exceeded limit')
-                return response.status,json.loads(raw),response.headers.get('ETag','')
+                body=json.loads(raw); failed=False
+                return response.status,body,response.headers.get('ETag','')
         except urllib.error.HTTPError as exc:
-            if exc.code==304 and old: return 304,json.loads(old['body']),old['etag']
+            if exc.code==304 and old: failed=False; return 304,json.loads(old['body']),old['etag']
             raise
-    def collect(self,target,conditional=True):
+        finally:
+            self.ledger.note_request(target,port,mode,reason,time.monotonic()-started,failed)
+    def collect(self,target,conditional=True,reason='periodic'):
+        target=cache_key('GET',target)[4:]
         with self.home_lock:
-            status,body,etag=self.home(target,conditional=conditional)
+            if conditional and self.schedule.recent(target): return
+            status,body,etag=self.home(target,conditional=conditional,reason=reason)
             if target=='/api/health':
-                _,receiver,_=self.home(target,8766,False)
+                _,receiver,_=self.home(target,8766,False,reason)
                 if not isinstance(body,dict) or not isinstance(receiver,dict): raise ValueError('Invalid health contracts')
                 body={**body,**receiver,'collectorRunning':body.get('collectorRunning',False),'dashboardUpdatedAt':body.get('updatedAt','')}
                 status=200
@@ -120,9 +143,10 @@ class ReadOnlyAgent:
                     if scan_age<0: scan_age=None
                 except (ValueError,TypeError,OverflowError): pass
             self.ledger.enqueue(target,status,body,etag,{'engineState':self.engine_state,'scanAgeSeconds':scan_age})
+            self.schedule.completed(target)
     def heartbeat_loop(self):
         while not self.stop.is_set():
-            try: self.cloud('/agent/heartbeat',{'engineState':self.engine_state})
+            try: self.schedule.update_viewer(self.cloud('/agent/heartbeat',{'engineState':self.engine_state}))
             except (OSError,ValueError): pass
             self.stop.wait(5)
     def upload_loop(self):
@@ -137,7 +161,7 @@ class ReadOnlyAgent:
             except urllib.error.HTTPError as exc:
                 if exc.code==400 and payload['status']==304:
                     # A restored cloud DB may lack the cached base. Re-read, never invent it.
-                    try: self.collect(payload['target'],conditional=False)
+                    try: self.collect(payload['target'],conditional=False,reason='cache-recovery')
                     except (OSError,ValueError): pass
                 self.stop.wait(delay); delay=min(60,delay*2)
             except (OSError,ValueError):
@@ -146,30 +170,18 @@ class ReadOnlyAgent:
         delay=2
         while not self.stop.is_set():
             try:
-                requests=self.cloud('/agent/fetch-requests').get('items',[])
-                for item in requests: self.collect(item['target'])
+                result=self.cloud('/agent/fetch-requests'); self.schedule.update_viewer(result)
+                for item in result.get('items',[]): self.collect(item['target'],reason='on-demand')
                 delay=2
             except (OSError,ValueError,KeyError): delay=min(60,delay*2)
             self.stop.wait(delay)
     def collection_loop(self):
-        periods={'/api/dashboard/summary':5,'/api/health':30,'/api/dashboard':60,'/api/task-boxes/current':60,'/api/controls/tasks':60,'/api/controls/templates':60,'/api/control-commands/current':60,'/api/controls/continue-current/status':60,'/api/safety':60,'/api/project-gaps':60,'/api/subtitle-verification/current':60}
-        schedule={target:0.0 for target in periods}; date_marker=''
         while not self.stop.is_set():
-            now=datetime.now().astimezone()
-            if date_marker!=now.date().isoformat():
-                for target in list(periods):
-                    if '?date=' in target: periods.pop(target); schedule.pop(target,None)
-                for offset in range(14):
-                    date=now-timedelta(days=offset); label=str(date.month)+'.'+str(date.day)
-                    for prefix in ['/api/pipeline','/api/task-boxes/history','/api/dashboard']:
-                        target=prefix+'?date='+label; periods[target]=600; schedule[target]=time.monotonic()+offset*3
-                date_marker=now.date().isoformat()
-            due=[target for target in periods if schedule[target]<=time.monotonic()]
-            if not due: self.stop.wait(0.5); continue
-            target=min(due,key=lambda key:schedule[key])
+            target=self.schedule.next(datetime.now().astimezone().date())
+            if target is None: self.stop.wait(0.5); continue
             try: self.collect(target)
             except (OSError,ValueError): self.engine_state='unavailable'
-            schedule[target]=time.monotonic()+periods[target]
+            self.schedule.completed(target)
     def run(self):
         with SingleInstance(self.state_dir/'agent.lock'):
             def supervise(method):

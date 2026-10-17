@@ -26,6 +26,8 @@
     if (url.origin !== location.origin || !url.pathname.startsWith('/api/')) return original(input, init);
     const method = (init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
     if (method !== 'GET') throw new Error('当前里程碑只读，写命令尚未启用');
+    init={...init,headers:new Headers(init.headers || (input instanceof Request ? input.headers : undefined))};
+    init.headers.set('X-Ops-Page-Visible',String(document.visibilityState==='visible'));
     const key = url.pathname + url.search;
     // Coalesce browser retries too; the cloud independently coalesces all devices.
     if (inflight.has(key)) return (await inflight.get(key)).clone();
@@ -77,7 +79,7 @@
     disableWrites(); new MutationObserver(disableWrites).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
     async function pollHealth() {
       try {
-        const response=await original('/console/status');
+        const response=await original('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}});
         if(response.status===401){location.assign('/login');return;}
         if(!response.ok)throw new Error();
         const health=await response.json();
