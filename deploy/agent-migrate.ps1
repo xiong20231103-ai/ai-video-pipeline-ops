@@ -24,7 +24,7 @@ $ownerSid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 function Get-VerifiedLegacyOwners {
     $raw=& $python -B $legacy
     if ($LASTEXITCODE -ne 0) { throw 'Cannot identify legacy lock holders; no process terminated.' }
-    $owners=@($raw | ConvertFrom-Json)
+    $owners=ConvertFrom-Json -InputObject ($raw -join [Environment]::NewLine)
     foreach ($holder in $owners) {
         $process=Get-CimInstance Win32_Process -Filter ('ProcessId='+$holder.pid)
         if (-not $process -or $process.CommandLine -notmatch $launcherPattern -or $process.ExecutablePath -notin $allowedExecutables) { throw 'Unexpected lock holder; no process terminated.' }
