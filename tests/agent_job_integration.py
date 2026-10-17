@@ -101,14 +101,22 @@ def case(kind):
             code=wrapper.wait(timeout=8)
             wait_for(lambda:all(not alive(pid) for pid in pids),timeout=5)
             from deploy.agent_source_update import exclusive_agent_lock
-            with exclusive_agent_lock(state):pass
+            process_exit_seconds=time.monotonic()-started
+            def lock_released():
+                try:
+                    with exclusive_agent_lock(state):pass
+                    return True
+                except PermissionError:return False
+            # Job teardown is asynchronous: an exit code can precede kernel
+            # lock/handle cleanup. Wait boundedly, just like the real updater.
+            wait_for(lock_released,timeout=5)
             if kind=='cooperative-stop':
                 assert code==0;assert read(state/'agent-runtime.json')['stopRequestId']=='abc123'
                 assert time.monotonic()-started<5
             elif kind=='worker-crash':assert code!=0
             print(json.dumps({'case':kind,'kind':'real-windows-processes-with-synthetic-services',
                 'wrapperPid':wrapper.pid,'managedPids':pids,'wrapperExitCode':code,
-                'elapsedSeconds':time.monotonic()-started,'lockFree':True,'allDescendantsExited':True,
+                'elapsedSeconds':time.monotonic()-started,'processExitSeconds':process_exit_seconds,'lockFree':True,'allDescendantsExited':True,
                 'homeHTTPRequests':0,'actualScheduledTaskTest':False}),flush=True)
         finally:
             if wrapper.poll() is None:wrapper.terminate();wrapper.wait(timeout=5)
