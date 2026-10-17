@@ -304,3 +304,18 @@ polls; real browser login/data were user-confirmed. That window is incomplete
 and predates this correction. Do not claim a complete 30-minute result or
 post-fix production acceptance from the 132 isolated tests. Re-run a full
 continuous active/idle window, preserving interruptions explicitly.
+
+
+For an already configured running home agent, do not run configure again or
+overwrite private credentials. Use deploy/agent-source-update.ps1 from an
+Administrator PowerShell, passing the reviewed 11-file package and exact
+commit. It verifies current/new hashes, backs up source and task XML and writes
+a self-contained one-command rollback before pausing the one owned task.
+It disables/stops only OpsConsoleReadonlyAgent, waits for the existing byte
+lock to be free, atomically replaces only the source whitelist, verifies hashes,
+then re-enables/starts that task. A busy lock fails without killing any process
+by name. Failed file replacement restores the prior source; rollback can also
+recover a partially written whitelist. Neither operation reads private config,
+installs packages, changes task ownership, or touches production programs.
+The latest isolated suite has 135 passing tests including these code-update
+checks. Windows actual elevated execution remains a separate user operation.
