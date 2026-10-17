@@ -1,5 +1,7 @@
 # M1a: Tailnet login, response cache and read-only home agent
 
+Canonical private entry: https://ops.tail830b6f.ts.net (node name `ops`).
+
 Depends on R0 PR #11 and #12. Cloud deployment may use this reviewed branch
 without merging home production code. No home process is started by deployment.
 
@@ -228,3 +230,49 @@ atomically switches only current and restarts only ops-console. Additive schema
 rollback retains current user/session data; snapshot restore is not automatic.
 No new public port, firewall or Serve changes. Default APT/pip source repair
 belongs to M1b and must not be claimed complete here.
+
+
+## Node rename before private agent configuration (2026-10-17)
+
+The canonical origin is https://ops.tail830b6f.ts.net. Agent configure and cloud
+setup defaults, activation probes and regression tests use this name. Registered
+users/password hashes and existing database sessions are retained. Browser
+cookies are host-scoped and are not copied from the old hostname: log in again
+on ops with the same account/password. Old-origin POSTs remain rejected.
+
+Before rename snapshot the private config, SQLite DB, node hostname preference,
+release, owned Serve handler, UFW and IPv4/IPv6 rules under a root-only backup.
+Set only `tailscale set --hostname=ops`; if effective Self.DNSName does not become
+ops.tail830b6f.ts.net, stop for the user's admin-console override. Never choose a
+different name or silently proceed with an old DNSName.
+
+Tailscale 1.104.1 retains the old Serve Web domain key after changing the node
+name. Migrate only this project's old/new domain keys, preserving the loopback
+proxy and every unrelated handler/TCP/service object. Use the daemon local
+serve-config API with its ETag/If-Match to reject concurrent overwrites. Do not
+use serve reset or service-wide set-config. Serve obtains its new TLS certificate
+automatically when the new HTTPS name is accessed; validate normally, without -k.
+
+Change only origin in the owner-only cloud configuration, retaining the other
+fields and permissions; restart only ops-console. Verify new /login=200,
+anonymous API=401, certificate SAN/expiry/normal trust, unchanged firewall/Serve
+scope and retained registered-user count. Actual user login is performed
+privately by the user; fixture login replay does not count as real credentials.
+
+Rename rollback:
+
+```bash
+sudo /root/ops-console-backup-rename-ops-20261017/rollback.sh
+```
+
+It restores the prior hostname preference, waits for the prior effective DNS,
+migrates back only the owned Serve key and origin, retains current credentials
+and user/session data, then restarts only cloud ops-console. It does not revert
+unrelated Serve/firewall state or delete backups. Code rollback is independent
+because deployed config supplies the runtime origin; preserve this distinction
+when using the existing code-release rollback script.
+
+The independent home source whitelist must be backed up and updated to this PR
+commit with every file hash verified before notifying the user to run configure.
+If a private home configuration already exists, stop rather than reading or
+overwriting it. No agent task runs until user-only token entry and acceptance.

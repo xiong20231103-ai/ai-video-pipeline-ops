@@ -28,8 +28,8 @@ tailscale serve --bg --https=443 http://127.0.0.1:8000
 systemctl disable --now ops-m0-forward.service
 rm -- /etc/systemd/system/ops-m0-forward.service
 systemctl daemon-reload
-test "$(curl --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' https://izbp187vys3zuj6vk9xw9lz.tail830b6f.ts.net/)" = 303
-test "$(curl --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' https://izbp187vys3zuj6vk9xw9lz.tail830b6f.ts.net/api/dashboard)" = 401
+test "$(curl --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' https://ops.tail830b6f.ts.net/)" = 303
+test "$(curl --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' https://ops.tail830b6f.ts.net/api/dashboard)" = 401
 tailscale serve status --json
 tailscale funnel status
 systemctl status ops-console.service --no-pager --full

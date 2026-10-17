@@ -8,6 +8,8 @@ from pathlib import Path
 from cloud.app import HASHER
 from cloud.store import Store
 
+DEFAULT_ORIGIN='https://ops.tail830b6f.ts.net'
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('command',choices=['configure','reset-password','delete-account'])
@@ -19,7 +21,7 @@ def main():
         token=getpass('Home agent token (32-256 printable ASCII characters, hidden): ')
         if not 12<=len(invite)<=256 or not 32<=len(token)<=256 or not all(33<=ord(char)<=126 for char in token):
             raise SystemExit('Invalid length/format; nothing written')
-        config={'origin':os.environ.get('OPS_CONSOLE_ORIGIN','https://izbp187vys3zuj6vk9xw9lz.tail830b6f.ts.net'),
+        config={'origin':os.environ.get('OPS_CONSOLE_ORIGIN',DEFAULT_ORIGIN),
                 'state_dir':'/var/lib/ops-console','max_accounts':2,'invite_hash':HASHER.hash(invite),
                 'agent_token_sha256':hashlib.sha256(token.encode()).hexdigest()}
         config_path.parent.mkdir(parents=True,exist_ok=True)
