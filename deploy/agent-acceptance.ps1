@@ -23,6 +23,7 @@ function Write-Evidence([string]$Stage) {
       instanceId=$runtime.instanceId;pid=$runtime.pid;version=$runtime.version;runtimePhase=$runtime.phase;agentAlive=(Test-AgentAlive $runtime);
       supervisorPid=$job.wrapperPid;jobPhase=$job.phase;jobExitCode=$job.exitCode;retryAfterSeconds=$job.retryAfterSeconds} | ConvertTo-Json -Compress
 }
+function Test-RepeatStart([Int64]$Scheduled,[Int64]$Observed) { return ($Scheduled -gt 0 -and $Observed -gt 0 -and [Math]::Abs(($Observed-$Scheduled)/10000000.0) -le 15) }
 function Assert-OwnedTask {
     $task=Get-ScheduledTask -TaskName $taskName -TaskPath '\'
     $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "'+$agentRoot+'\deploy\agent-run.ps1" -AgentRoot "'+$agentRoot+'" -PythonExecutable "'+$python+'"'
@@ -96,6 +97,7 @@ if ($Action -in @('RecoveryAll','CrashRestart')) {
 if ($Action -in @('RecoveryAll','SupervisorRestart')) {
     $before=Assert-Running;$job=Read-Job
     Assert-ExactProcess $job.wrapperPid $job.wrapperCreationFileTime 'supervisor'
+    $scheduledRepeat=(Get-ScheduledTaskInfo -TaskName $taskName -TaskPath '\').NextRunTime.ToUniversalTime().ToFileTimeUtc()
     Write-Evidence 'supervisor-crash-before';$watch=[Diagnostics.Stopwatch]::StartNew()
     & $python -B $control --supervisor $job.wrapperPid $job.wrapperCreationFileTime
     if ($LASTEXITCODE) { throw 'Pinned supervisor termination refused.' }
@@ -110,6 +112,10 @@ if ($Action -in @('RecoveryAll','SupervisorRestart')) {
     # No manual start. The same task's real five-minute trigger must recover it.
     Wait-Recovery $before $job.wrapperPid 'supervisor-crash' $watch 330
     $seconds=$watch.Elapsed.TotalSeconds
+    $actualStart=(Get-ScheduledTaskInfo -TaskName $taskName -TaskPath '\').LastRunTime.ToUniversalTime().ToFileTimeUtc()
+    $repeatMatch=Test-RepeatStart $scheduledRepeat $actualStart
+    @{stage='supervisor-repeat-timing-proof';scheduledRepeatFileTime=$scheduledRepeat;actualTaskStartFileTime=$actualStart;matchesScheduledRepeat=$repeatMatch;offsetSeconds=($actualStart-$scheduledRepeat)/10000000.0} | ConvertTo-Json -Compress
+    if (-not $repeatMatch) { throw 'Recovery occurred but its time did not match the repeat trigger; repeat-trigger recovery not proven.' }
     @{acceptance='actual-supervisor-repeat-trigger-recovery';result=($(if ($seconds -le 300) {'passed'} else {'exceeded-300-seconds'}));actualRecoverySeconds=$seconds;repeatSeconds=300;oldSupervisor=$job.wrapperPid;newSupervisor=(Read-Job).wrapperPid;oldInstance=$before.instanceId;newInstance=$script:Recovered.instanceId;manualStart=$false} | ConvertTo-Json -Compress
     if ($seconds -gt 300) { throw 'Actual recovery exceeded the requested five-minute acceptance window.' }
 }
@@ -129,6 +135,7 @@ Start-ScheduledTask -TaskName OpsConsoleReadonlyAgent -TaskPath '\'
     $rollback | Set-Content -LiteralPath (Join-Path $backup 'rollback.ps1') -Encoding utf8
     Write-Output ('Maintenance backup: '+$backup)
     Write-Output ('Maintenance rollback: powershell.exe -NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $backup 'rollback.ps1')+'"')
+    $scheduledRepeat=(Get-ScheduledTaskInfo -TaskName $taskName -TaskPath '\').NextRunTime.ToUniversalTime().ToFileTimeUtc()
     $maintenanceStart=[DateTime]::UtcNow.ToFileTimeUtc()
     $watch=[Diagnostics.Stopwatch]::StartNew();Write-Evidence 'maintenance-before'
     & $python -B $helper request-stop --backup $backup
@@ -141,11 +148,11 @@ Start-ScheduledTask -TaskName OpsConsoleReadonlyAgent -TaskPath '\'
         $runtime=Read-Agent;$job=Read-Job
         if ($runtime.instanceId -ne $before.instanceId) { throw 'A Python instance started under maintenance; markers retained.' }
         $info=Get-ScheduledTaskInfo -TaskName $taskName -TaskPath '\'
-        if ($job.phase -eq 'maintenance-blocked' -and $job.launcherPid -eq 0 -and $job.wrapperCreationFileTime -gt $maintenanceStart -and -not (Test-AgentAlive $runtime) -and $info.LastRunTime.ToUniversalTime().ToFileTimeUtc() -gt $maintenanceStart -and $info.LastTaskResult -eq 0 -and (Get-ScheduledTask -TaskName $taskName -TaskPath '\').State -ne 'Running') { $blocked=$true;break }
+        if ($job.phase -eq 'maintenance-blocked' -and $job.launcherPid -eq 0 -and $job.wrapperCreationFileTime -gt $maintenanceStart -and -not (Test-AgentAlive $runtime) -and $info.LastRunTime.ToUniversalTime().ToFileTimeUtc() -gt $maintenanceStart -and $info.LastTaskResult -eq 0 -and (Test-RepeatStart $scheduledRepeat $info.LastRunTime.ToUniversalTime().ToFileTimeUtc()) -and (Get-ScheduledTask -TaskName $taskName -TaskPath '\').State -ne 'Running') { $blocked=$true;break }
         Start-Sleep -Milliseconds 500
     }
     if (-not $blocked) { throw 'No real repeat-trigger maintenance block observed; markers and cleanup rollback retained.' }
-    @{acceptance='actual-repeat-trigger-maintenance-block';result='passed';observedSeconds=$watch.Elapsed.TotalSeconds;blockedSupervisor=$job.wrapperPid;pythonStarted=$false;instanceUnchanged=$true;maintenanceKeptUntilObserved=$true} | ConvertTo-Json -Compress
+    @{acceptance='actual-repeat-trigger-maintenance-block';result='passed';observedSeconds=$watch.Elapsed.TotalSeconds;blockedSupervisor=$job.wrapperPid;pythonStarted=$false;instanceUnchanged=$true;maintenanceKeptUntilObserved=$true;scheduledRepeatFileTime=$scheduledRepeat;actualTaskStartFileTime=$info.LastRunTime.ToUniversalTime().ToFileTimeUtc()} | ConvertTo-Json -Compress
     & $python -B $helper finish --backup $backup
     if ($LASTEXITCODE) { throw 'Maintenance ownership changed; no start requested.' }
     Write-Output 'Explicit manual start after completed maintenance test; not automatic recovery.'

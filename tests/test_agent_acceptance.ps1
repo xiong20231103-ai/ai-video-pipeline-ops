@@ -2,7 +2,7 @@ $ErrorActionPreference='Stop'
 $tokens=$null;$errors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot '..\deploy\agent-acceptance.ps1'),[ref]$tokens,[ref]$errors)
 if ($errors.Count) { throw 'Acceptance parser error.' }
-foreach ($name in @('Assert-OwnedTask','Assert-ExactProcess')) {
+foreach ($name in @('Assert-OwnedTask','Assert-ExactProcess','Test-RepeatStart')) {
     $node=$ast.Find({param($item) $item -is [Management.Automation.Language.FunctionDefinitionAst] -and $item.Name -eq $name},$true)
     . ([ScriptBlock]::Create($node.Extent.Text))
 }
@@ -28,3 +28,6 @@ $script:fixtureTask.Triggers[1].Repetition.Duration='PT1H';Assert-Refused { $nul
 $script:fixtureTask.Triggers[1].Repetition.Duration=''
 $script:fixtureTask.Actions[0].Arguments+=' --unapproved-flag';Assert-Refused { $null=Assert-OwnedTask }
 Write-Output 'PASS: exact supervisor accepted; other argv/creation/owner/task action and finite repetition rejected. No actual task/process control.'
+
+if (-not (Test-RepeatStart 1000000000 1030000000) -or (Test-RepeatStart 1000000000 1600000000) -or (Test-RepeatStart 0 1000000000)) { throw 'Repeat timing proof accepted unrelated/invalid start.' }
+Write-Output 'PASS: repeat timing proof accepts scheduled start, rejects unrelated/invalid starts.'
