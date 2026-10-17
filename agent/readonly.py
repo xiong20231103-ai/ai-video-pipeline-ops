@@ -10,7 +10,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from contracts.cache import cache_key
+from contracts.cache import cache_key,endpoint
 from agent.polling import PollSchedule
 
 HOME_HOST='100.92.17.9'
@@ -100,6 +100,9 @@ class ReadOnlyAgent:
         self.stop=threading.Event(); self.home_lock=threading.Lock(); self.engine_state='unknown'; self.worker_failed=False
         self.schedule=PollSchedule()
         self.authenticated=threading.Event()
+        # The old summary ETag omits scan clocks and its 304 has no scan header.
+        # Periodically read the existing response body, without adding a GET.
+        self.full_read_at={}
         # No environment proxy and no redirected bearer token or off-host home GET.
         self.transport=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
     def cloud(self,path,data=None):
@@ -111,19 +114,27 @@ class ReadOnlyAgent:
         target=cache_key('GET',target)[4:]
         if port not in {8765,8766} or port==8766 and target!='/api/health': raise ValueError('Home port is outside the explicit read contract')
         old=self.ledger.source(target); headers={}
-        if conditional and old and old['etag']: headers['If-None-Match']=old['etag']
+        identity=(port,target)
+        last_full=self.full_read_at.get(identity)
+        if conditional and old and old['etag'] and last_full is not None and 0<=time.monotonic()-last_full<60:
+            headers['If-None-Match']=old['etag']
         request=urllib.request.Request('http://'+HOME_HOST+':'+str(port)+target,headers=headers,method='GET')
+        timeout=endpoint('GET',urllib.parse.urlsplit(target).path)['timeoutSeconds']
+        previous_engine=self.engine_state
+        if timeout>=60: self.engine_state='busy'
         started=time.monotonic(); mode='active' if self.schedule.active() else 'idle'; failed=True
         try:
-            with self.transport.open(request,timeout=15) as response:
+            with self.transport.open(request,timeout=timeout) as response:
                 raw=response.read(8*1024*1024+1)
                 if len(raw)>8*1024*1024: raise ValueError('Source response exceeded limit')
                 body=json.loads(raw); failed=False
+                if response.status==200: self.full_read_at[identity]=time.monotonic()
                 return response.status,body,response.headers.get('ETag','')
         except urllib.error.HTTPError as exc:
             if exc.code==304 and old: failed=False; return 304,json.loads(old['body']),old['etag']
             raise
         finally:
+            if timeout>=60 and self.engine_state=='busy': self.engine_state=previous_engine
             self.ledger.note_request(target,port,mode,reason,time.monotonic()-started,failed)
     def collect(self,target,conditional=True,reason='periodic'):
         target=cache_key('GET',target)[4:]

@@ -276,3 +276,31 @@ The independent home source whitelist must be backed up and updated to this PR
 commit with every file hash verified before notifying the user to run configure.
 If a private home configuration already exists, stop rather than reading or
 overwriting it. No agent task runs until user-only token entry and acceptance.
+
+
+## Freshness and slow-read acceptance follow-up (2026-10-17)
+
+The old summary uses a semantic ETag which omits scan-clock fields; its 304
+contains no current scan timestamp. Every existing polling slot now performs
+an unconditional body read if no full response has been obtained in the last
+60 monotonic seconds. This adds no GETs and does not invent a scan timestamp
+from a 304. Restart also forces an initial full response.
+
+Home GET timeout comes from the explicit endpoint matrix, not a global 15s.
+Safety allows 90s for eight serial control-plane calls and local inventory;
+CapCut/audio inventories allow 90s, production inventory 120s, subtitle 30s.
+Slow reads report busy while the separate heartbeat remains live, then restore
+the prior engine state. Timeouts remain recorded as failures. No new home POST,
+redirect, arbitrary path or port is allowed.
+
+Freshness rows refer to the particular data versions the browser has read.
+Previously visited keys remain in the list after date/batch selection; the
+page explains this and labels capture age as that version's last fetch. It
+does not assign a new cache version's time to an older displayed body.
+
+The first real observation recorded about 23m44s before its observer sessions
+were lost: active 377 GETs/1 safety timeout, idle 73 GETs/0 failures/0 history
+polls; real browser login/data were user-confirmed. That window is incomplete
+and predates this correction. Do not claim a complete 30-minute result or
+post-fix production acceptance from the 132 isolated tests. Re-run a full
+continuous active/idle window, preserving interruptions explicitly.

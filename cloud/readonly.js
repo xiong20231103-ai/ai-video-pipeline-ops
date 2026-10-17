@@ -48,7 +48,8 @@
     sourcePanel = document.createElement('details'); sourcePanel.open = true;
     sourcePanel.style.cssText = 'margin:12px;padding:12px;background:#fff5cf;color:#513f00;border-radius:8px';
     const summary = document.createElement('summary'); summary.textContent = '云端只读预览 · 家里代理部署前等待取数 · 写命令尚未启用';
-    sourcePanel.append(summary, document.createElement('ul')); document.body.prepend(sourcePanel);
+    const explanation=document.createElement('p'); explanation.textContent='列表记录本页读到的各份数据；切换日期后旧条目会保留，请以当前所选看板为准。';
+    sourcePanel.append(summary, explanation, document.createElement('ul')); document.body.prepend(sourcePanel);
     for (const id of writeIds) {
       const button = document.getElementById(id); if (button) { button.disabled = true; button.title = '当前云端为只读里程碑'; }
     }
@@ -102,11 +103,11 @@
       for (const [key,sample] of samples) {
         const age=Math.floor(sample.age+(performance.now()-sample.received)/1000); const row=document.createElement('li');
         const parsed=new URL(key,location.origin);
-        const names={'/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/history':'历史任务箱','/api/controls/tasks':'任务队列','/api/controls/templates':'任务模板','/api/safety':'安全面板','/api/project-gaps':'项目缺口','/api/pipeline':'历史流水线','/api/controls/continue-current/status':'恢复状态','/api/control-commands/current':'命令状态','/api/subtitle-verification/current':'字幕核验'};
+        const names={'/api/health':'递交健康','/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/history':'历史任务箱','/api/controls/tasks':'任务队列','/api/controls/templates':'任务模板','/api/safety':'安全面板','/api/project-gaps':'项目缺口','/api/pipeline':'历史流水线','/api/controls/continue-current/status':'恢复状态','/api/control-commands/current':'命令状态','/api/subtitle-verification/current':'字幕核验'};
         const name=(names[parsed.pathname]||'页面数据')+(parsed.searchParams.get('date')?' '+parsed.searchParams.get('date'):'');
         const stamp=new Date(sample.scan);
         const effective=sample.sourceAge===null?null:sample.sourceAge+age;
-        row.textContent=name+'：'+(Number.isNaN(stamp.getTime())||effective===null?'源扫描时间未知，最近取数 '+age+' 秒前':'数据截至 '+stamp.toLocaleTimeString('zh-CN',{hour12:false})+'（'+Math.floor(effective)+' 秒前）；最近取数 '+age+' 秒前');
+        row.textContent=name+'：'+(Number.isNaN(stamp.getTime())||effective===null?'源扫描时间未知，该版本最近取数 '+age+' 秒前':'数据截至 '+stamp.toLocaleTimeString('zh-CN',{hour12:false})+'（'+Math.floor(effective)+' 秒前）；该版本最近取数 '+age+' 秒前');
         row.style.color=age>120||(effective!==null&&effective>120)?'#b42318':age>30||effective===null||effective>30?'#8a5c00':'#38533a'; list.append(row);
       }
     },1000);

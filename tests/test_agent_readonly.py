@@ -132,3 +132,46 @@ class ReadOnlyAgentTests(unittest.TestCase):
                 instance.collect('/api/dashboard?date=10.16',reason='on-demand')
                 self.assertEqual(1,home.call_count); self.assertEqual('on-demand',home.call_args.kwargs['reason'])
                 self.assertIsNotNone(instance.ledger.source('/api/dashboard?date=10.16'))
+
+    def test_scan_clock_refreshes_on_existing_poll_without_extra_home_get(self):
+        with TemporaryDirectory() as folder:
+            instance=ReadOnlyAgent('https://fixture.ts.net','inert-fixture-value',folder)
+            now=[100.0]; requests=[]
+            instance.schedule.clock=lambda:now[0]
+            def source(request,**kwargs):
+                requests.append(request)
+                if request.get_header('If-none-match'):
+                    raise urllib.error.HTTPError(request.full_url,304,'unchanged',{},None)
+                response=io.BytesIO(json.dumps({'updatedAt':'scan-'+str(int(now[0]))}).encode())
+                response.status=200; response.headers={'ETag':'same-semantic-state'}
+                return response
+            with patch('agent.readonly.time.monotonic',side_effect=lambda:now[0]),patch.object(instance.transport,'open',side_effect=source):
+                instance.collect('/api/dashboard/summary')
+                self.assertEqual('scan-100',instance.ledger.source('/api/dashboard/summary')['scanned'])
+                now[0]=110
+                instance.collect('/api/dashboard/summary')
+                self.assertIsNotNone(requests[-1].get_header('If-none-match'))
+                self.assertEqual('scan-100',instance.ledger.source('/api/dashboard/summary')['scanned'])
+                now[0]=161
+                instance.collect('/api/dashboard/summary')
+                self.assertIsNone(requests[-1].get_header('If-none-match'))
+                self.assertEqual('scan-161',instance.ledger.source('/api/dashboard/summary')['scanned'])
+            self.assertEqual(3,len(requests))
+            self.assertTrue(all(request.get_method()=='GET' and request.data is None for request in requests))
+
+    def test_safety_uses_contract_timeout_and_failed_poll_is_not_a_home_post(self):
+        with TemporaryDirectory() as folder:
+            instance=ReadOnlyAgent('https://fixture.ts.net','inert-fixture-value',folder)
+            instance.engine_state='healthy'
+            def timeout_source(*args,**kwargs):
+                self.assertEqual('busy',instance.engine_state)
+                raise TimeoutError('synthetic timeout')
+            with patch.object(instance.transport,'open',side_effect=timeout_source) as opener:
+                with self.assertRaises(TimeoutError): instance.home('/api/safety')
+                self.assertEqual(90,opener.call_args.kwargs['timeout'])
+                self.assertEqual('GET',opener.call_args.args[0].get_method())
+                self.assertIsNone(opener.call_args.args[0].data)
+            self.assertEqual('healthy',instance.engine_state)
+            with instance.ledger.db() as db:
+                row=db.execute('SELECT count,failures FROM request_stats').fetchone()
+            self.assertEqual((1,1),tuple(row))
