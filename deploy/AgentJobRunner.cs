@@ -43,14 +43,52 @@ public static class OpsAgentJob {
     [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr CreateFile(string name,uint access,uint share,ref SecurityAttributes attributes,uint disposition,uint flags,IntPtr template);
 
     static void Require(bool result) { if (!result) throw new Win32Exception(Marshal.GetLastWin32Error()); }
-    static void Status(string directory,uint child,string phase,uint code) {
+    static void Status(string directory,uint child,string phase,uint code,int retrySeconds=0) {
         string target=Path.Combine(directory,"task-job.json");
         string temporary=target+"."+Guid.NewGuid().ToString("N")+".tmp";
-        string json="{\"schema\":1,\"wrapperPid\":"+System.Diagnostics.Process.GetCurrentProcess().Id+
+        string json="{\"schema\":2,\"wrapperPid\":"+System.Diagnostics.Process.GetCurrentProcess().Id+
+            ",\"wrapperCreationFileTime\":"+System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime().ToFileTimeUtc()+
             ",\"launcherPid\":"+child+",\"phase\":\""+phase+"\",\"exitCode\":"+code+
+            ",\"retryAfterSeconds\":"+retrySeconds+",\"retryAt\":\""+(retrySeconds>0?DateTime.UtcNow.AddSeconds(retrySeconds).ToString("o"):"")+"\""+
             ",\"observedAt\":\""+DateTime.UtcNow.ToString("o")+"\"}";
         File.WriteAllText(temporary,json,new UTF8Encoding(false));
         if (File.Exists(target)) File.Replace(temporary,target,null); else File.Move(temporary,target);
+    }
+    static bool StopRequested(string state) {
+        return File.Exists(Path.Combine(state,"maintenance.json")) || File.Exists(Path.Combine(state,"stop-request.json"));
+    }
+    public static int Supervise(string python,string root,string state,int retryMilliseconds) {
+        if (retryMilliseconds<1) throw new ArgumentOutOfRangeException("retryMilliseconds");
+        Directory.CreateDirectory(state);
+        // The mutex prevents direct invocations from creating competing supervisors.
+        byte[] hash;
+        using (var sha=System.Security.Cryptography.SHA256.Create()) {
+            hash=sha.ComputeHash(Encoding.UTF8.GetBytes(Path.GetFullPath(state).ToLowerInvariant()));
+        }
+        string name="Local\\OpsAgentSupervisor-"+BitConverter.ToString(hash).Replace("-","");
+        using (var mutex=new System.Threading.Mutex(false,name)) {
+            bool owned=false;
+            try {
+                try { owned=mutex.WaitOne(0); } catch (System.Threading.AbandonedMutexException) { owned=true; }
+                if (!owned) return 0; // Never overwrite the live supervisor's status.
+                while (true) {
+                    if (StopRequested(state)) { Status(state,0,"maintenance-blocked",0);return 0; }
+                    int code;
+                    try { code=Run(python,root,state); }
+                    catch { code=1;Status(state,0,"launch-failed",1); }
+                    if (StopRequested(state) || code==0) { Status(state,0,"stopped",(uint)code);return 0; }
+                    // Run has closed its Job, so no descendant survives into backoff.
+                    Status(state,0,"restart-wait",unchecked((uint)code),(retryMilliseconds+999)/1000);
+                    var delay=System.Diagnostics.Stopwatch.StartNew();
+                    while (delay.ElapsedMilliseconds<retryMilliseconds) {
+                        if (StopRequested(state)) { Status(state,0,"stopped",unchecked((uint)code));return 0; }
+                        long remaining=retryMilliseconds-delay.ElapsedMilliseconds;
+                        if (remaining<=0) break;
+                        System.Threading.Thread.Sleep((int)Math.Min(250,remaining));
+                    }
+                }
+            } finally { if (owned) mutex.ReleaseMutex(); }
+        }
     }
     public static int Run(string python,string root,string state) {
         if (python.Contains("\"") || root.Contains("\"")) throw new ArgumentException("Invalid path");

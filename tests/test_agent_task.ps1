@@ -2,8 +2,12 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '..\deploy\agent-task.ps1')
 $taskDefinition = New-AgentTaskDefinition -Root 'E:\Backup\ops-agent' -Python 'C:\fixture\python.exe'
 function Assert-TaskValue([bool]$Condition,[string]$Message) { if (-not $Condition) { throw $Message } }
-Assert-TaskValue ($taskDefinition.Triggers.Count -eq 1) 'Exactly one logon trigger required.'
+Assert-TaskValue ($taskDefinition.Triggers.Count -eq 2) 'One logon and one repeat trigger in the same task required.'
 Assert-TaskValue ($taskDefinition.Triggers[0].CimClass.CimClassName -eq 'MSFT_TaskLogonTrigger') 'Must start after user logon.'
+Assert-TaskValue ($taskDefinition.Triggers[1].CimClass.CimClassName -eq 'MSFT_TaskTimeTrigger') 'Time trigger required for supervisor fallback.'
+Assert-TaskValue ($taskDefinition.Triggers[1].Repetition.Interval -eq 'PT5M') 'Fallback must repeat every five minutes.'
+Assert-TaskValue ([string]::IsNullOrEmpty($taskDefinition.Triggers[1].Repetition.Duration)) 'Fallback must repeat indefinitely.'
+Assert-TaskValue ([string]::IsNullOrEmpty($taskDefinition.Triggers[1].EndBoundary)) 'Fallback must have no end boundary.'
 Assert-TaskValue ($taskDefinition.Actions.Count -eq 1) 'Exactly one owned action required.'
 Assert-TaskValue ($taskDefinition.Actions[0].Arguments -like '*-WindowStyle Hidden*agent-run.ps1*') 'Hidden wrapper required.'
 Assert-TaskValue ($taskDefinition.Settings.MultipleInstances -eq 2) 'IgnoreNew single instance required.'

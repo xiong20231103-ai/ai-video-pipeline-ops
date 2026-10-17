@@ -33,8 +33,11 @@ jobs:
         run: |
           ./tests/test_agent_task.ps1
           ./tests/test_agent_migration.ps1
+          ./tests/test_agent_acceptance.ps1
       - name: Real Windows job lifecycle with synthetic services and no home HTTP
         shell: powershell
         run: |
           $env:OPS_AGENT_TEST_PYTHON=(Get-Command python).Source
           python -B tests/agent_job_integration.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -B tests/agent_supervisor_integration.py

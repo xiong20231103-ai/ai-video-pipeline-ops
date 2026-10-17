@@ -18,9 +18,11 @@ function New-AgentTaskDefinition {
     $taskArguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $taskRunner + '" -AgentRoot "' + $Root + '" -PythonExecutable "' + $Python + '"'
     $taskAction = New-ScheduledTaskAction -Execute (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -Argument $taskArguments -WorkingDirectory $Root
     $taskTrigger = New-ScheduledTaskTrigger -AtLogOn -User $taskUser
+    # One task: immediate logon plus an indefinite five-minute interactive-session watchdog.
+    $taskWatchdog = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddMinutes(5)) -RepetitionInterval (New-TimeSpan -Minutes 5)
     $taskPrincipal = New-ScheduledTaskPrincipal -UserId $taskUser -LogonType Interactive -RunLevel Limited
     $taskSettings = New-ScheduledTaskSettingsSet -Hidden -MultipleInstances IgnoreNew -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-    return New-ScheduledTask -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Description $script:AgentTaskDescription
+    return New-ScheduledTask -Action $taskAction -Trigger @($taskTrigger,$taskWatchdog) -Principal $taskPrincipal -Settings $taskSettings -Description $script:AgentTaskDescription
 }
 
 function Get-AgentTaskSecurityDescriptor {

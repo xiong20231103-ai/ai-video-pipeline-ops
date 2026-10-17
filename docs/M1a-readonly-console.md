@@ -360,3 +360,49 @@ Windows behavior references: [Job Objects](https://learn.microsoft.com/en-us/win
 [AssignProcessToJobObject](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-assignprocesstojobobject),
 [task security](https://learn.microsoft.com/en-us/windows/win32/taskschd/security-contexts-for-running-tasks),
 [restart interval](https://learn.microsoft.com/en-us/windows/win32/taskschd/tasksettings-restartinterval).
+
+
+## Approved supervisor and five-minute fallback (2026-10-18)
+
+Installed native PT1M application-exit recovery failed: 437.506 seconds without
+a new instance. The user approved an explicit in-task supervisor and a second
+trigger on the same task. Python failure closes the old Job, records
+restart-wait/exit code/retry time, waits 60 monotonic seconds in interruptible
+250ms slices, then starts a fresh Job. Normal exit or either maintenance/stop
+file ends supervision. A per-state named mutex prevents competing supervisors.
+Task Running describes the supervisor; actual agent liveness requires matching
+PID/creation time and running Job/runtime metadata, not a stale runtime phase.
+
+The original logon trigger remains. A second time trigger begins five minutes
+after registration, repeats PT5M without Duration or EndBoundary indefinitely,
+and uses the existing Interactive principal. Thus it runs during logged-in
+sessions, including the current session for immediate acceptance, without
+requiring a preliminary logoff. Logon starts immediately via the original
+trigger. IgnoreNew skips timer firings while the supervisor runs. Ordinary code
+updates do not re-register the task or reset this anchor. Waiting for the next
+timer is bounded by five minutes; process startup adds its actual measured cost.
+
+The wrapper checks maintenance/stop files before compilation or Python and
+records maintenance-blocked with launcherPid=0 before exiting. The Python
+launcher retains its own pre-import gate, and supervision checks again before
+each attempt and during backoff. Neither gate reads private credentials.
+
+Updating the existing task definition needs one user-admin operation; the tool
+has read/execute, not task-write rights. Use the pinned package's migration tool
+to back up source/XML/SDDL and publish a rollback before replacing only this
+task. Existing credentials are retained. The new acceptance tool RecoveryAll
+tests real Python failure/recovery, exact supervisor termination/Job exit and
+actual timer recovery, then holds owned maintenance through another real timer
+firing and proves no Python started. It writes raw samples and actual seconds,
+uses monotonic deadlines, and never manually starts during either crash test.
+Maintenance cleanup manually starts the agent and labels that explicitly.
+Unknown process/task identity refuses termination; maintenance-test failure
+retains owned markers and a printed cleanup rollback.
+
+The CI supervisor fixture uses 500ms backoff only in a temporary C# harness to
+test restart transitions quickly. A separate production-wrapper fixture verifies
+the fixed 60s setting and interrupts it with stop; each stop/maintenance gate is
+tested separately, as are duplicate supervisors and whole-tree termination.
+These have synthetic services and zero home HTTP. Installed 60s/5min checks,
+ordinary unelevated update, user logoff/logon and full 30-minute observation
+remain separate real acceptance. Never infer them from fixture success.

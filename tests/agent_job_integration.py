@@ -77,8 +77,12 @@ def case(kind):
         (fixture/'agent/launcher.py').write_text(fixture_launcher)
         shutil.copyfile(ROOT/'deploy/AgentJobRunner.cs',fixture/'deploy/AgentJobRunner.cs')
         environment=dict(os.environ,OPS_AGENT_JOB_FIXTURE_STATE=str(state),PYTHONPATH=str(ROOT))
-        command=['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'deploy/agent-run.ps1'),
-            '-AgentRoot',str(fixture),'-PythonExecutable',str(PYTHON),'-StateDirectory',str(state)]
+        # This suite tests one Job's exit propagation; the separate supervisor
+        # suite exercises the production wrapper's new restart loop.
+        harness=base/'run-one-job.ps1'
+        quote=lambda value: "'"+str(value).replace("'","''")+"'"
+        harness.write_text('Add-Type -Path '+quote(fixture/'deploy/AgentJobRunner.cs')+'\nexit [OpsAgentJob]::Run('+','.join(map(quote,(PYTHON,fixture,state)))+')\n')
+        command=['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(harness)]
         wrapper=subprocess.Popen(command,env=environment,cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,creationflags=subprocess.CREATE_NO_WINDOW)
         try:
             runtime=wait_for(lambda: (row if row and row.get('phase')=='running' else None) if (row:=read(state/'agent-runtime.json')) else None)

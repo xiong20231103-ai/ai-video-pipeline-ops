@@ -43,6 +43,10 @@ def terminate_holder(path,pid,created):
     # This second live resource check and a pinned kernel handle prevent PID reuse.
     if not any(item['pid']==pid and item['processCreationFileTime']==created for item in holders(path)):
         raise ValueError('Process is no longer the identified agent-lock holder')
+    terminate_pinned_process(pid,created)
+
+def terminate_pinned_process(pid,created):
+    # Never called before an exact file-holder or task-job identity check.
     kernel=ctypes.WinDLL('kernel32',use_last_error=True)
     kernel.OpenProcess.argtypes=[w.DWORD,w.BOOL,w.DWORD];kernel.OpenProcess.restype=w.HANDLE
     kernel.GetProcessTimes.argtypes=[w.HANDLE,*([ctypes.POINTER(w.FILETIME)]*4)]
@@ -59,10 +63,18 @@ def terminate_holder(path,pid,created):
         if kernel.WaitForSingleObject(handle,5000)!=0:raise OSError('Exact legacy exit not confirmed')
     finally:kernel.CloseHandle(handle)
 
+def terminate_supervisor(state,pid,created):
+    metadata=json.loads((Path(state)/'task-job.json').read_text(encoding='utf-8-sig'))
+    if metadata.get('wrapperPid')!=pid or metadata.get('wrapperCreationFileTime')!=created:
+        raise ValueError('Supervisor identity changed')
+    terminate_pinned_process(pid,created)
+
 if __name__=='__main__':
     lock=Path(os.environ['LOCALAPPDATA'])/'OpsAgent/agent.lock'
     try:
         if len(sys.argv)==1:print(json.dumps(holders(lock)))
+        elif len(sys.argv)==4 and sys.argv[1]=='--supervisor':
+            terminate_supervisor(lock.parent,int(sys.argv[2]),int(sys.argv[3]));print('{"identifiedSupervisorExited":true}')
         elif len(sys.argv)==3:
             terminate_holder(lock,int(sys.argv[1]),int(sys.argv[2]));print('{"identifiedLegacyAgentExited":true}')
         else:raise ValueError('Invalid diagnostic arguments')
