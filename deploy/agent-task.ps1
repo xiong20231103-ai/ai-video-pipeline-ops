@@ -14,7 +14,7 @@ function New-AgentTaskDefinition {
     param([string]$Root,[string]$Python)
     if ($Root.Contains('"') -or $Python.Contains('"')) { throw 'Invalid path quoting.' }
     $taskUser = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    $taskRunner = Join-Path $Root 'deploy\agent-run.ps1'
+    $taskRunner = [IO.Path]::Combine($Root,'deploy\agent-run.ps1')
     $taskArguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $taskRunner + '" -AgentRoot "' + $Root + '" -PythonExecutable "' + $Python + '"'
     $taskAction = New-ScheduledTaskAction -Execute (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -Argument $taskArguments -WorkingDirectory $Root
     $taskTrigger = New-ScheduledTaskTrigger -AtLogOn -User $taskUser
@@ -45,7 +45,7 @@ function Invoke-AgentTask {
     if ($Operation -ne 'Install') { throw 'Unsupported operation.' }
     $taskRoot = (Resolve-Path -LiteralPath $Root).Path
     if ($taskRoot.TrimEnd('\') -ne 'E:\Backup\ops-agent') { throw 'Installation is restricted to the independent agent directory.' }
-    foreach ($taskFile in @($Python,(Join-Path $taskRoot 'agent\readonly.py'),(Join-Path $taskRoot 'deploy\agent-run.ps1'),(Join-Path $env:LOCALAPPDATA 'OpsAgent\config.json'))) {
+    foreach ($taskFile in @($Python,([IO.Path]::Combine($taskRoot,'agent\readonly.py')),([IO.Path]::Combine($taskRoot,'deploy\agent-run.ps1')),(Join-Path $env:LOCALAPPDATA 'OpsAgent\config.json'))) {
         if (-not (Test-Path -LiteralPath $taskFile -PathType Leaf)) { throw 'Runtime or private configuration missing; no task changed.' }
     }
     $taskExisting = Get-ScheduledTask -TaskName $script:AgentTaskName -TaskPath $script:AgentTaskPath -ErrorAction SilentlyContinue
