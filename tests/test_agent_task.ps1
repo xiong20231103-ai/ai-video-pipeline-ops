@@ -37,6 +37,8 @@ function Test-Path {
     Microsoft.PowerShell.Management\Test-Path -LiteralPath $LiteralPath
 }
 function Get-ScheduledTask { [CmdletBinding()]param($TaskName,$TaskPath) return $script:FixtureTask }
+function Get-AgentTaskSecurityDescriptor { return 'O:SYG:SYD:(A;;FA;;;SY)' }
+function Set-AgentTaskSecurityDescriptor { param([string]$Descriptor) $script:FixtureSddl=$Descriptor }
 function Export-ScheduledTask { param($TaskName,$TaskPath) return $script:FixtureXml }
 function Register-ScheduledTask {
     param($TaskName,$TaskPath,$InputObject,$Xml,[switch]$Force)
@@ -51,6 +53,9 @@ $taskScratch = Join-Path ([IO.Path]::GetTempPath()) ('ops-agent-task-test-' + [G
 $taskFirstBackup=Join-Path $taskScratch 'first'
 Invoke-AgentTask -Operation Install -Root 'E:\Backup\ops-agent' -Python 'C:\fixture\python.exe' -Backup $taskFirstBackup -Start $false
 Assert-TaskValue ($script:RegisterCalls -eq 1) 'Install should register only once.'
+$taskFixtureSecurity=New-Object Security.AccessControl.RawSecurityDescriptor($script:FixtureSddl)
+$taskFixtureSid=[Security.Principal.WindowsIdentity]::GetCurrent().User
+Assert-TaskValue ([bool]($taskFixtureSecurity.DiscretionaryAcl | Where-Object { $_.SecurityIdentifier -eq $taskFixtureSid -and ($_.AccessMask -band 32) })) 'Exact user must receive task execute access.'
 Assert-TaskValue (Test-Path -LiteralPath (Join-Path $taskFirstBackup 'rollback.ps1')) 'Rollback must exist before registration.'
 Assert-TaskValue ((Get-FileHash -LiteralPath (Join-Path $taskFirstBackup 'agent-task.ps1')).Hash -eq (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot '..\deploy\agent-task.ps1')).Hash) 'Backup must contain the installer itself.'
 Invoke-AgentTask -Operation Rollback -Backup $taskFirstBackup

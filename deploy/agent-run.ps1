@@ -1,14 +1,16 @@
 param(
     [Parameter(Mandatory=$true)][string]$AgentRoot,
-    [Parameter(Mandatory=$true)][string]$PythonExecutable
+    [Parameter(Mandatory=$true)][string]$PythonExecutable,
+    [string]$StateDirectory
 )
 $ErrorActionPreference = 'Stop'
 try {
-    $taskRuntime = Join-Path $env:LOCALAPPDATA 'OpsAgent'
-    $taskPython = Start-Process -FilePath $PythonExecutable -ArgumentList @('-B','-m','agent.launcher') -WorkingDirectory $AgentRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $taskRuntime 'task.stdout.log') -RedirectStandardError (Join-Path $taskRuntime 'task.stderr.log') -Wait -PassThru
-    exit $taskPython.ExitCode
+    if (-not $StateDirectory) { $StateDirectory=Join-Path $env:LOCALAPPDATA 'OpsAgent' }
+    Add-Type -Path (Join-Path $AgentRoot 'deploy\AgentJobRunner.cs') -ErrorAction Stop
+    $agentExitCode=[OpsAgentJob]::Run($PythonExecutable,$AgentRoot,$StateDirectory)
+    exit $agentExitCode
 } catch {
-    # Do not print exceptions, environment variables, configuration or command arguments.
-    Write-Error 'Read-only agent could not start; credentials were not logged.'
+    # No exception, environment, command line or credential-bearing body is logged.
+    Write-Error 'Read-only agent job failed; no credentials were logged.'
     exit 1
 }

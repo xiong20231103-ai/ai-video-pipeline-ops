@@ -23,6 +23,23 @@ function New-AgentTaskDefinition {
     return New-ScheduledTask -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Description $script:AgentTaskDescription
 }
 
+function Get-AgentTaskSecurityDescriptor {
+    $taskService=New-Object -ComObject 'Schedule.Service';$taskService.Connect()
+    return $taskService.GetFolder('\').GetTask($script:AgentTaskName).GetSecurityDescriptor(7)
+}
+function Set-AgentTaskSecurityDescriptor {
+    param([string]$Descriptor)
+    $taskService=New-Object -ComObject 'Schedule.Service';$taskService.Connect()
+    $taskService.GetFolder('\').GetTask($script:AgentTaskName).SetSecurityDescriptor($Descriptor,16)
+}
+function Set-AgentTaskUserExecuteAccess {
+    $taskSecurity=New-Object Security.AccessControl.RawSecurityDescriptor((Get-AgentTaskSecurityDescriptor))
+    $taskSid=[Security.Principal.WindowsIdentity]::GetCurrent().User
+    $taskAce=New-Object Security.AccessControl.CommonAce([Security.AccessControl.AceFlags]::None,[Security.AccessControl.AceQualifier]::AccessAllowed,0x1200a9,$taskSid,$false,$null)
+    $taskSecurity.DiscretionaryAcl.InsertAce(0,$taskAce)
+    Set-AgentTaskSecurityDescriptor -Descriptor $taskSecurity.GetSddlForm([Security.AccessControl.AccessControlSections]::All)
+}
+
 function Invoke-AgentTask {
     param([string]$Operation,[string]$Root,[string]$Python,[string]$Backup,[bool]$Start)
     if ($Operation -eq 'Plan') { return New-AgentTaskDefinition -Root $Root -Python $Python }
@@ -38,6 +55,8 @@ function Invoke-AgentTask {
         $taskOldXml = Join-Path $taskBackup 'previous-task.xml'
         if (Test-Path -LiteralPath $taskOldXml) {
             Register-ScheduledTask -TaskName $script:AgentTaskName -TaskPath $script:AgentTaskPath -Xml ([IO.File]::ReadAllText($taskOldXml)) -Force | Out-Null
+            $taskOldSddl=Join-Path $taskBackup 'previous-task-sddl.txt'
+            if (Test-Path -LiteralPath $taskOldSddl) { Set-AgentTaskSecurityDescriptor -Descriptor ([IO.File]::ReadAllText($taskOldSddl)) }
         }
         Write-Output 'Agent task rolled back. Agent files/config retained; no other task or production program touched.'
         return
@@ -45,7 +64,7 @@ function Invoke-AgentTask {
     if ($Operation -ne 'Install') { throw 'Unsupported operation.' }
     $taskRoot = (Resolve-Path -LiteralPath $Root).Path
     if ($taskRoot.TrimEnd('\') -ne 'E:\Backup\ops-agent') { throw 'Installation is restricted to the independent agent directory.' }
-    foreach ($taskFile in @($Python,([IO.Path]::Combine($taskRoot,'agent\readonly.py')),([IO.Path]::Combine($taskRoot,'deploy\agent-run.ps1')),(Join-Path $env:LOCALAPPDATA 'OpsAgent\config.json'))) {
+    foreach ($taskFile in @($Python,([IO.Path]::Combine($taskRoot,'agent\readonly.py')),([IO.Path]::Combine($taskRoot,'agent\lifecycle.py')),([IO.Path]::Combine($taskRoot,'deploy\AgentJobRunner.cs')),([IO.Path]::Combine($taskRoot,'deploy\agent-run.ps1')),(Join-Path $env:LOCALAPPDATA 'OpsAgent\config.json'))) {
         if (-not (Test-Path -LiteralPath $taskFile -PathType Leaf)) { throw 'Runtime or private configuration missing; no task changed.' }
     }
     $taskExisting = Get-ScheduledTask -TaskName $script:AgentTaskName -TaskPath $script:AgentTaskPath -ErrorAction SilentlyContinue
@@ -64,6 +83,7 @@ function Invoke-AgentTask {
     Set-Acl -LiteralPath $taskBackup -AclObject $taskAcl
     if ($taskExisting) {
         Export-ScheduledTask -TaskName $script:AgentTaskName -TaskPath $script:AgentTaskPath | Set-Content -LiteralPath (Join-Path $taskBackup 'previous-task.xml') -Encoding Unicode
+        Get-AgentTaskSecurityDescriptor | Set-Content -LiteralPath (Join-Path $taskBackup 'previous-task-sddl.txt') -Encoding utf8
     }
     Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $taskBackup 'agent-task.ps1')
     $taskRollback = '& (Join-Path $PSScriptRoot ''agent-task.ps1'') -Action Rollback -BackupPath $PSScriptRoot'
@@ -72,6 +92,7 @@ function Invoke-AgentTask {
     # All backup artifacts and one-command rollback exist before registration.
     $taskDefinition = New-AgentTaskDefinition -Root $taskRoot -Python $Python
     Register-ScheduledTask -TaskName $script:AgentTaskName -TaskPath $script:AgentTaskPath -InputObject $taskDefinition -Force | Out-Null
+    Set-AgentTaskUserExecuteAccess
     Write-Output "Backup: $taskBackup"
     Write-Output ('Rollback: powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $taskBackup 'rollback.ps1') + '"')
     if ($Start) { Start-ScheduledTask -TaskName $script:AgentTaskName -TaskPath $script:AgentTaskPath }

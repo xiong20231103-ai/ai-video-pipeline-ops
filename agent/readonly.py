@@ -12,6 +12,7 @@ import urllib.parse
 import urllib.request
 from contracts.cache import cache_key,endpoint
 from agent.polling import PollSchedule
+from agent.lifecycle import Lifecycle
 
 HOME_HOST='100.92.17.9'
 
@@ -99,6 +100,7 @@ class ReadOnlyAgent:
         self.state_dir=Path(state_dir); self.ledger=Ledger(self.state_dir/'agent.db')
         self.stop=threading.Event(); self.home_lock=threading.Lock(); self.engine_state='unknown'; self.worker_failed=False
         self.schedule=PollSchedule()
+        self.lifecycle=Lifecycle(self.state_dir)
         self.authenticated=threading.Event()
         # The old summary ETag omits scan clocks and its 304 has no scan header.
         # Periodically read the existing response body, without adding a GET.
@@ -106,11 +108,13 @@ class ReadOnlyAgent:
         # No environment proxy and no redirected bearer token or off-host home GET.
         self.transport=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
     def cloud(self,path,data=None):
+        if self.stop.is_set(): raise OSError('Agent stopping')
         headers={'Authorization':'Bearer '+self.token}
         if data is not None: headers['Content-Type']='application/json'
         request=urllib.request.Request(self.origin+path,data=json.dumps(data).encode() if data is not None else None,headers=headers)
         with self.transport.open(request,timeout=10) as response: return json.load(response)
     def home(self,target,port=8765,conditional=True,reason='periodic'):
+        if self.stop.is_set(): raise OSError('Agent stopping')
         target=cache_key('GET',target)[4:]
         if port not in {8765,8766} or port==8766 and target!='/api/health': raise ValueError('Home port is outside the explicit read contract')
         old=self.ledger.source(target); headers={}
@@ -139,6 +143,7 @@ class ReadOnlyAgent:
     def collect(self,target,conditional=True,reason='periodic'):
         target=cache_key('GET',target)[4:]
         with self.home_lock:
+            if self.stop.is_set(): return
             if conditional and self.schedule.recent(target): return
             status,body,etag=self.home(target,conditional=conditional,reason=reason)
             if target=='/api/health':
@@ -205,20 +210,41 @@ class ReadOnlyAgent:
             self.schedule.completed(target)
     def run(self):
         with SingleInstance(self.state_dir/'agent.lock'):
+            requested=self.lifecycle.stop_request()
+            if requested:
+                self.lifecycle.publish('stopped',requested)
+                return
+            self.lifecycle.publish('starting')
             def supervise(method):
                 try: method()
                 except Exception:
                     self.worker_failed=True; self.engine_state='unavailable'; self.stop.set()
             threads=[threading.Thread(target=supervise,args=(method,),daemon=True) for method in [self.heartbeat_loop,self.collection_loop,self.upload_loop,self.demand_loop]]
             for thread in threads: thread.start()
+            requested=None;published=0
             try:
-                while not self.stop.wait(1): pass
+                while not self.stop.wait(0.25):
+                    requested=self.lifecycle.stop_request()
+                    if requested: self.stop.set();break
+                    if time.monotonic()-published>=5:
+                        self.lifecycle.publish('running');published=time.monotonic()
             except KeyboardInterrupt: self.stop.set()
-            for thread in threads: thread.join(timeout=20)
+            # M1a workers are GET-only daemons. Bound total drain time, not 20s
+            # per worker; process exit closes outstanding read sockets. Future
+            # write execution must add its own drain/unknown-result contract.
+            deadline=time.monotonic()+2
+            for thread in threads: thread.join(timeout=max(0,deadline-time.monotonic()))
+            self.lifecycle.publish('failed' if self.worker_failed else 'stopped',requested,sum(thread.is_alive() for thread in threads))
             if self.worker_failed: raise RuntimeError('Agent worker failed; no home command was retried')
 
 def main():
     state=Path(os.environ.get('LOCALAPPDATA',str(Path.home()))) / 'OpsAgent'
+    lifecycle=Lifecycle(state)
+    if lifecycle.stop_request():
+        try:
+            with SingleInstance(state/'agent.lock'): lifecycle.publish('stopped',lifecycle.stop_request())
+        except RuntimeError: pass  # Another live instance owns its status/lock.
+        return
     config=json.loads((state/'config.json').read_text(encoding='utf-8'))
     ReadOnlyAgent(config['cloud_origin'],config['agent_token'],state).run()
 

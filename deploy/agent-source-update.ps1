@@ -5,53 +5,72 @@ param(
     [string]$BackupPath
 )
 $ErrorActionPreference='Stop'
-$principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Run in Administrator PowerShell; Windows task ACL requires elevation.' }
 $taskName='OpsConsoleReadonlyAgent'
 $agentRoot='E:\Backup\ops-agent'
 $python=Join-Path $env:LOCALAPPDATA 'TikHubOPS\venv_cuda\Scripts\python.exe'
+$state=Join-Path $env:LOCALAPPDATA 'OpsAgent'
 $helper=Join-Path $PSScriptRoot 'agent_source_update.py'
+if ($Action -eq 'Rollback') { $helper=Join-Path $BackupPath 'agent_source_update.py' }
 $task=Get-ScheduledTask -TaskName $taskName -TaskPath '\'
 if ($task.Description -ne 'OPS Console read-only agent; owned task; no production program control.') { throw 'Task ownership mismatch.' }
 if ($task.Actions.Count -ne 1 -or $task.Actions[0].WorkingDirectory.TrimEnd('\') -ne $agentRoot) { throw 'Task action mismatch.' }
-if (-not (Test-Path -LiteralPath $python -PathType Leaf)) { throw 'Existing Python missing; no packages installed.' }
+if (-not (Test-Path -LiteralPath $python -PathType Leaf)) { throw 'Existing Python missing; nothing installed.' }
+# Explicit execute access for this exact user is installed once by agent-task.ps1.
+# Routine updates never modify task ACL/settings or stop/disable the task.
+$service=New-Object -ComObject 'Schedule.Service';$service.Connect()
+$registered=$service.GetFolder('\').GetTask($taskName)
+$descriptor=New-Object Security.AccessControl.RawSecurityDescriptor($registered.GetSecurityDescriptor(7))
+$sid=[Security.Principal.WindowsIdentity]::GetCurrent().User
+$canExecute=$false
+foreach ($ace in $descriptor.DiscretionaryAcl) {
+    if ($ace.SecurityIdentifier -eq $sid -and $ace.AceQualifier -eq 'AccessAllowed' -and ($ace.AccessMask -band 32)) { $canExecute=$true }
+    if ($ace.SecurityIdentifier -eq $sid -and $ace.AceQualifier -eq 'AccessDenied' -and ($ace.AccessMask -band 32)) { throw 'Task execution denied for current user.' }
+}
+if (-not $canExecute) { throw 'One-time task migration required to grant this user read/execute access; no update started.' }
+$inspection=& $python -B $helper inspect --target $agentRoot
+if ($LASTEXITCODE -ne 0) { throw 'Installed source validation failed.' }
+if (-not ($inspection | ConvertFrom-Json).supportsGracefulStop) { throw 'Legacy agent requires one-time migration while its lock is free; no process was killed.' }
+$previousInstance=$null
+$runtimePath=Join-Path $state 'agent-runtime.json'
+if (Test-Path -LiteralPath $runtimePath) { $previousInstance=(Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json).instanceId }
 if ($Action -eq 'Update') {
-    if (-not $ExpectedCommit -or $ExpectedCommit -notmatch '^[a-f0-9]{40}$') { throw 'Expected commit required.' }
-    $BackupPath=Join-Path 'E:\Backup\ops-agent-deploy-backups' ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ')+'-source-update')
+    if ($ExpectedCommit -notmatch '^[a-f0-9]{40}$') { throw 'Expected commit required.' }
+    $BackupPath=Join-Path 'E:\Backup\ops-agent-deploy-backups' ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ')+'-graceful-update')
     & $python -B $helper prepare --source $SourcePackage --target $agentRoot --backup $BackupPath --commit $ExpectedCommit
-    if ($LASTEXITCODE -ne 0) { throw 'Code preparation failed; task unchanged.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Code preparation failed; no stop requested.' }
     Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $BackupPath 'agent-source-update.ps1')
     Export-ScheduledTask -TaskName $taskName -TaskPath '\' | Set-Content -LiteralPath (Join-Path $BackupPath 'task-before.xml') -Encoding Unicode
     "& (Join-Path `$PSScriptRoot 'agent-source-update.ps1') -Action Rollback -BackupPath `$PSScriptRoot" | Set-Content -LiteralPath (Join-Path $BackupPath 'rollback.ps1') -Encoding utf8
     Write-Output "Backup: $BackupPath"
     Write-Output ('Rollback: powershell.exe -NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $BackupPath 'rollback.ps1')+'"')
+}
+& $python -B $helper request-stop --target $agentRoot --backup $BackupPath
+if ($LASTEXITCODE -ne 0) { throw 'Stop request refused; source unchanged.' }
+& $python -B $helper wait --target $agentRoot --backup $BackupPath
+if ($LASTEXITCODE -ne 0) { throw 'Graceful stop not confirmed; source unchanged, maintenance retained. No process was killed.' }
+for ($attempt=0;$attempt -lt 100;$attempt++) {
+    if ((Get-ScheduledTask -TaskName $taskName -TaskPath '\').State -ne 'Running') { break }
+    Start-Sleep -Milliseconds 100
+}
+if ((Get-ScheduledTask -TaskName $taskName -TaskPath '\').State -eq 'Running') { throw 'Task wrapper did not exit; source unchanged.' }
+if ($Action -eq 'Update') {
+    & $python -B $helper apply --source $SourcePackage --target $agentRoot --backup $BackupPath --commit $ExpectedCommit
 } else {
-    if (-not (Test-Path -LiteralPath (Join-Path $BackupPath 'operation.json'))) { throw 'Completed source backup required.' }
-    $helper=Join-Path $BackupPath 'agent_source_update.py'
+    & $python -B $helper restore --target $agentRoot --backup $BackupPath
 }
-# Backups and a complete rollback exist before the only task is paused.
-$paused=$false
-try {
-    Disable-ScheduledTask -TaskName $taskName -TaskPath '\' | Out-Null
-    $paused=$true
-    Stop-ScheduledTask -TaskName $taskName -TaskPath '\'
-    $lockFree=$false
-    for ($attempt=0;$attempt -lt 20;$attempt++) {
-        & $python -B $helper probe
-        if ($LASTEXITCODE -eq 0) { $lockFree=$true;break }
-        Start-Sleep -Seconds 1
+if ($LASTEXITCODE -ne 0) { throw 'Source replacement failed; maintenance retained for recovery.' }
+& $python -B $helper finish --target $agentRoot --backup $BackupPath
+if ($LASTEXITCODE -ne 0) { throw 'Maintenance identity changed; no task started.' }
+$expectedVersion=if ($Action -eq 'Update') { $ExpectedCommit } else { (Get-Content -LiteralPath (Join-Path $BackupPath 'operation.json') -Raw | ConvertFrom-Json).before }
+Start-ScheduledTask -TaskName $taskName -TaskPath ''
+$started=$false
+for ($attempt=0;$attempt -lt 150;$attempt++) {
+    if (Test-Path -LiteralPath $runtimePath) {
+        $runtime=Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json
+        if ($runtime.instanceId -ne $previousInstance -and $runtime.phase -eq 'running' -and $runtime.version -eq $expectedVersion -and (Get-ScheduledTask -TaskName $taskName -TaskPath '\').State -eq 'Running') { $started=$true;break }
     }
-    if (-not $lockFree) { throw 'Agent lock still held; no code replacement performed. No process was killed by name.' }
-    if ($Action -eq 'Update') {
-        & $python -B $helper apply --source $SourcePackage --target $agentRoot --backup $BackupPath --commit $ExpectedCommit
-    } else {
-        & $python -B $helper restore --target $agentRoot --backup $BackupPath
-    }
-    if ($LASTEXITCODE -ne 0) { throw 'Source operation failed; inspect private backup, do not reconfigure credentials.' }
-} finally {
-    if ($paused) {
-        Enable-ScheduledTask -TaskName $taskName -TaskPath '\' | Out-Null
-        Start-ScheduledTask -TaskName $taskName -TaskPath '\'
-    }
+    Start-Sleep -Milliseconds 100
 }
-Write-Output 'Verified code operation complete; only the owned read-only agent task was restarted.'
+if (-not $started) { throw 'Task start requested but a new agent instance was not confirmed; inspect lifecycle status, do not re-enter credentials.' }
+Write-Output ('New agent PID: '+$runtime.pid+'; version: '+$runtime.version+'; phase: '+$runtime.phase)
+Write-Output 'Verified cooperative stop -> free lock -> source update -> new agent start. No administrator elevation or task stop was used.'

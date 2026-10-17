@@ -306,16 +306,57 @@ post-fix production acceptance from the 132 isolated tests. Re-run a full
 continuous active/idle window, preserving interruptions explicitly.
 
 
-For an already configured running home agent, do not run configure again or
-overwrite private credentials. Use deploy/agent-source-update.ps1 from an
-Administrator PowerShell, passing the reviewed 11-file package and exact
-commit. It verifies current/new hashes, backs up source and task XML and writes
-a self-contained one-command rollback before pausing the one owned task.
-It disables/stops only OpsConsoleReadonlyAgent, waits for the existing byte
-lock to be free, atomically replaces only the source whitelist, verifies hashes,
-then re-enables/starts that task. A busy lock fails without killing any process
-by name. Failed file replacement restores the prior source; rollback can also
-recover a partially written whitelist. Neither operation reads private config,
-installs packages, changes task ownership, or touches production programs.
-The latest isolated suite has 135 passing tests including these code-update
-checks. Windows actual elevated execution remains a separate user operation.
+## Cooperative lifecycle and task migration (2026-10-18)
+
+The previous task wrapper could leave the venv launcher and actual Python
+orphaned after task stop. Routine source updates now create owned
+`%LOCALAPPDATA%\OpsAgent\maintenance.json` and `stop-request.json`, wait for
+the byte lock and task wrapper to exit, replace only the 13 source files, clear
+only that request's files, and explicitly start/verify a new running instance
+of the expected commit. They do not read private credentials, stop/disable
+tasks, kill processes, install packages or require Administrator PowerShell.
+An interrupted operation retains maintenance and its one-command rollback.
+
+The PowerShell task remains hidden but owns a Windows Job Object with
+KILL_ON_JOB_CLOSE. Existing venv Python is created suspended, assigned to the
+job before resume, and its exit code propagates to the task. Closing the wrapper
+also closes the whole managed tree. Restart delay is PT1M; acceptance records
+actual recovery seconds including startup. The task grants only the current
+exact user read/execute so ordinary updates can start it; other task rights
+are preserved. File lock and IgnoreNew both prevent duplicate agents.
+
+Cooperative shutdown bounds all read-worker joins to two seconds total; daemon
+GET workers may be cut off at process exit. This is an M1a read-only contract,
+not a safe-drain contract for future writes. M2 must specify result ambiguity
+and reconciliation before enabling any command execution.
+
+The installed legacy source cannot read a stop file, and the old task ACL
+cannot be changed by the unelevated tool. One-time `deploy/agent-migrate.ps1`
+therefore requires the user's Administrator PowerShell. It backs up source,
+task XML, SDDL and enabled state first, writes a rollback, disables only the
+owned retrying task, and replaces it. For a legacy locked process it queries
+Restart Manager for this exact lock, checks every holder's full launcher argv,
+allowed interpreter, current user SID and creation time, then pins a handle and
+rechecks PID/creation before terminating only that old read-only agent. Unknown
+holders fail closed. This legacy exception is not used in ordinary updates.
+
+Run `deploy/agent-source-update.ps1` with the pinned source package and commit
+for subsequent non-admin updates. The printed rollback restores source through
+the same stop protocol. The migration's separate rollback restores old task
+XML/SDDL and source, so it also restores the legacy limitations.
+
+Tests distinguish isolated unit fixtures, real Windows process/lock/job tests
+with synthetic services (zero home HTTP), and installed-task acceptance.
+`deploy/agent-acceptance.ps1 -Action CrashRestart` validates exact installed
+agent identity and records raw task states/instance IDs until automatic restart;
+it never manually restarts the crashed agent. Crash acceptance needs admin
+access to the hardened installed worker. `LogonBefore` / `LogonAfter` preserve
+before/after evidence; the user must confirm actual logoff/logon at pipeline
+idle. The script never logs off Windows. A new runtime instance alone is not
+proof of a logoff/logon test. After these checks, re-run the full 30-minute
+active/idle observation; the earlier 23m44s window remains incomplete.
+
+Windows behavior references: [Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects),
+[AssignProcessToJobObject](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-assignprocesstojobobject),
+[task security](https://learn.microsoft.com/en-us/windows/win32/taskschd/security-contexts-for-running-tasks),
+[restart interval](https://learn.microsoft.com/en-us/windows/win32/taskschd/tasksettings-restartinterval).
