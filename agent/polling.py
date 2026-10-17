@@ -40,4 +40,5 @@ class PollSchedule:
                 if target not in self.first: self.first[target]=now+max(0,(priority-11)//3)*3 if '?date=' in target else now
                 due=self.last[target]+period if target in self.last else self.first[target]
                 if due<=now: candidates.append((due,priority,target))
-            return min(candidates)[2] if candidates else None
+            # Current summary/health outrank a cold 42-key history backlog.
+            return min(candidates,key=lambda item:item[1])[2] if candidates else None

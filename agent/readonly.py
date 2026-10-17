@@ -99,6 +99,7 @@ class ReadOnlyAgent:
         self.state_dir=Path(state_dir); self.ledger=Ledger(self.state_dir/'agent.db')
         self.stop=threading.Event(); self.home_lock=threading.Lock(); self.engine_state='unknown'; self.worker_failed=False
         self.schedule=PollSchedule()
+        self.authenticated=threading.Event()
         # No environment proxy and no redirected bearer token or off-host home GET.
         self.transport=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
     def cloud(self,path,data=None):
@@ -146,7 +147,11 @@ class ReadOnlyAgent:
             self.schedule.completed(target)
     def heartbeat_loop(self):
         while not self.stop.is_set():
-            try: self.schedule.update_viewer(self.cloud('/agent/heartbeat',{'engineState':self.engine_state}))
+            try:
+                self.schedule.update_viewer(self.cloud('/agent/heartbeat',{'engineState':self.engine_state}))
+                self.authenticated.set()
+            except urllib.error.HTTPError as exc:
+                if exc.code in {401,403}: self.authenticated.clear()
             except (OSError,ValueError): pass
             self.stop.wait(5)
     def upload_loop(self):
@@ -171,12 +176,17 @@ class ReadOnlyAgent:
         while not self.stop.is_set():
             try:
                 result=self.cloud('/agent/fetch-requests'); self.schedule.update_viewer(result)
+                self.authenticated.set()
                 for item in result.get('items',[]): self.collect(item['target'],reason='on-demand')
                 delay=2
+            except urllib.error.HTTPError as exc:
+                if exc.code in {401,403}: self.authenticated.clear()
+                delay=min(60,delay*2)
             except (OSError,ValueError,KeyError): delay=min(60,delay*2)
             self.stop.wait(delay)
     def collection_loop(self):
         while not self.stop.is_set():
+            if not self.authenticated.is_set(): self.stop.wait(1); continue
             target=self.schedule.next(datetime.now().astimezone().date())
             if target is None: self.stop.wait(0.5); continue
             try: self.collect(target)

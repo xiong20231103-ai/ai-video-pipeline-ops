@@ -88,6 +88,22 @@ class ReadOnlyAgentTests(unittest.TestCase):
         self.assertIn('/api/dashboard?date=1.2',active)
         self.assertNotIn('/api/dashboard?date=12.19',active)
 
+    def test_cold_history_backlog_cannot_starve_current_summary(self):
+        now=[0.0]; schedule=PollSchedule(clock=lambda:now[0]); day=date(2026,10,17)
+        schedule.update_viewer({'viewerActive':True,'viewerLeaseSeconds':120})
+        for target in periods(False,day): schedule.completed(target)
+        self.assertIn('?date=',schedule.next(day))
+        now[0]=5
+        self.assertEqual('/api/dashboard/summary',schedule.next(day))
+
+    def test_no_home_polling_before_first_authenticated_cloud_connection(self):
+        with TemporaryDirectory() as folder:
+            instance=ReadOnlyAgent('https://fixture.ts.net','inert-fixture-value',folder)
+            def finish_wait(*args): instance.stop.set(); return True
+            with patch.object(instance.stop,'wait',side_effect=finish_wait),patch.object(instance,'collect') as collect:
+                instance.collection_loop()
+                collect.assert_not_called()
+
     def test_home_get_is_explicit_fixed_address_no_body_and_metrics_capture_failures(self):
         with TemporaryDirectory() as folder:
             instance=ReadOnlyAgent('https://fixture.ts.net','inert-fixture-value',folder)
