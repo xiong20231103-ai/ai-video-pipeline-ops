@@ -164,7 +164,7 @@ def create_app(config=None,store=None,static_root=None):
     def fetch_requests(request:Request,wait:int=0):
         agent(request)
         if not 0<=wait<=25: raise HTTPException(400,'invalid_wait')
-        return {'items':store.wait_reads(wait),**store.viewer_state(),'prefetchTargets':store.prefetch_targets()}
+        return {'items':store.wait_reads(wait),**store.viewer_state(),'prefetchTargets':store.prefetch_targets(),'pausedTargets':store.paused_targets()}
     @application.post('/agent/push')
     async def push(request:Request):
         agent(request); data=await bounded_json(request)
@@ -175,30 +175,24 @@ def create_app(config=None,store=None,static_root=None):
     def cached(request,target):
         try: key=cache_key('GET',target)
         except (ValueError,UnicodeError): raise HTTPException(404,'cache_route_not_available') from None
-        archived=store.archive(key)
-        row=archived or store.response(key)
-        params=parse_qs(urlsplit(target).query)
-        if not row and urlsplit(target).path=='/api/dashboard' and params.get('batchId'):
-            alternative=store.response(cache_key('GET','/api/dashboard?'+urlencode({'batchId':params['batchId'][0]})))
-            if alternative:
-                body=json.loads(alternative['body'])
-                if body.get('selectedBatchId')==params['batchId'][0] and (not params.get('date') or body.get('selectedDate')==params['date'][0]):row=alternative
+        row=store.box_response(key)
         if not row:
             try: request_id=store.enqueue_read(key)
             except ValueError: raise HTTPException(503,'fetch_queue_full') from None
             return JSONResponse({'cloudPending':True,'requestId':request_id,'state':'fetching'},status_code=202,headers={'Retry-After':'0.5'})
         age=store.clock()-row['last_success']
         if age<0: age=1000000000  # Future persisted clocks are not freshness proof.
-        if age>60 and not archived:
+        frozen=store.frozen(row) if urlsplit(target).path=='/api/dashboard' and urlsplit(target).query else False
+        visible=request.headers.get('x-ops-page-visible','true')=='true' and store.viewer_state()['viewerActive']
+        if visible and age>(86400 if frozen else 60):
             try: store.enqueue_read(key)
             except ValueError: pass
         tag='W/"'+hashlib.sha256(row['body'].encode()).hexdigest()+'"'
         headers={'ETag':tag,'X-Cache-Version':str(row['version']),'X-Cache-Age-Seconds':str(int(age)),
                  'X-Source-Scanned-At':row['source_scanned_at'],'X-Source-Health':row['source_health'].encode('ascii','backslashreplace').decode(),
                  'X-Last-Success-At':str(row['last_success']),'X-Last-Changed-At':str(row['last_changed'])}
-        if archived:
-            headers['X-Archived-Box']='completed-uploaded'
-            headers['X-Live-Cache-Age-Seconds']=str(max(0,int(store.clock()-archived['liveSuccess'])))
+        headers['X-Cache-Frozen']='true' if frozen else 'false'
+        headers['X-Cache-Refresh-Pending']='true' if visible and age>(86400 if frozen else 60) else 'false'
         if request.headers.get('if-none-match')==tag: return Response(status_code=304,headers=headers)
         return Response(row['body'],status_code=row['status'],media_type='application/json',headers=headers)
     @application.get('/api/health')

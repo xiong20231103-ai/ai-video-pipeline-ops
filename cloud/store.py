@@ -27,7 +27,9 @@ class Store:
             CREATE TABLE IF NOT EXISTS rate_limits(bucket TEXT PRIMARY KEY,window REAL NOT NULL,count INTEGER NOT NULL);
             CREATE TABLE IF NOT EXISTS page_activity(id INTEGER PRIMARY KEY CHECK(id=1),last_seen REAL NOT NULL);
             CREATE TABLE IF NOT EXISTS agent_storage(id INTEGER PRIMARY KEY CHECK(id=1),received REAL NOT NULL,body TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS completed_boxes(batch_id TEXT PRIMARY KEY,key TEXT NOT NULL,receipt_hash TEXT NOT NULL,stored REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS box_content(batch_id TEXT PRIMARY KEY,content_hash TEXT NOT NULL,changed REAL NOT NULL,observed REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS date_upload_proof(date TEXT PRIMARY KEY,expected INTEGER NOT NULL,verified REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS response_boxes(key TEXT PRIMARY KEY,batch_id TEXT NOT NULL);
             ''')
     @contextmanager
     def db(self,write=False):
@@ -111,7 +113,7 @@ class Store:
             db.execute('INSERT OR REPLACE INTO responses VALUES(?,?,?,?,?,?,?,?,?,?,?)',(key,version,status,body,content_hash,obtained,changed,source_scan,json.dumps(source_health),source_etag,now))
             db.execute('DELETE FROM fetches WHERE key=?',(key,))
             if status==200:
-                self._remember_completed(db,key,json.loads(body),now)
+                self._remember_box(db,key,json.loads(body),obtained)
         return 'stored'
     def enqueue_read(self,key,maximum=128,ttl=180):
         now=self.clock()
@@ -133,72 +135,127 @@ class Store:
             db.execute("UPDATE fetches SET state='leased',lease_until=? WHERE key=?",(now+120,row['key']))
             return [{'id':row['id'],'target':row['key'][4:],'expiresAt':row['expires']}]
     @staticmethod
-    def completed_box(body,batch_id):
-        if not isinstance(body,dict) or body.get('selectedBatchId')!=batch_id: return None
-        boxes=body.get('taskBoxes')
-        if not isinstance(boxes,dict): return None
-        box=boxes.get('selected')
-        if not isinstance(box,dict) or box.get('batchId')!=batch_id: return None
-        receipt=box.get('completionReceipt')
-        if not isinstance(receipt,dict): return None
-        count=box.get('projectCount'); total=box.get('totalVideos')
-        if (type(count) is not int or count<=0 or box.get('completedProjects')!=count
-            or type(total) is not int or total<=0 or box.get('completedVideos')!=total
-            or box.get('state')!='completed' or receipt.get('status')!='completed_verified'
-            or receipt.get('uploadStatus') not in {'cloud_verified','uploaded_pending_verification'}
-            or not isinstance(receipt.get('receiptHash'),str) or len(receipt['receiptHash'])!=64 or any(c not in '0123456789abcdef' for c in receipt['receiptHash'])): return None
-        return receipt
-    def _remember_completed(self,db,key,body,now):
-        parts=urlsplit(key[4:]); batch_id=parse_qs(parts.query).get('batchId',[''])[0]
-        if parts.path!='/api/dashboard' or not batch_id: return
-        receipt=self.completed_box(body,batch_id)
-        if receipt:
-            db.execute('INSERT OR REPLACE INTO completed_boxes VALUES(?,?,?,?)',(batch_id,key,receipt['receiptHash'],now))
-        else: db.execute('DELETE FROM completed_boxes WHERE batch_id=?',(batch_id,))
-    def archive(self,key):
-        parts=urlsplit(key[4:]); params=parse_qs(parts.query); batch_id=params.get('batchId',[''])[0]
-        if parts.path!='/api/dashboard' or not batch_id: return None
+    def box_complete(box):
+        if not isinstance(box,dict): return False
+        count=box.get('projectCount'); total=box.get('totalVideos'); items=box.get('items')
+        return (type(count) is int and count>0 and type(total) is int and total>0
+                and box.get('completedProjects')==count and box.get('completedVideos')==total
+                and box.get('state')=='completed' and isinstance(items,list) and len(items)==count
+                and all(isinstance(item,dict) and item.get('status')=='completed' for item in items))
+    @staticmethod
+    def box_projection(body,box):
+        # Exact display-content fields only. Never erase timestamps globally,
+        # nor include live services/heartbeats/events/other task boxes in a box's
+        # three-day stability clock. Missing detailed identity refuses freezing.
+        fields=('batchId','runGroupId','batchKind','selectedProjects','productionDate','projectCount','completedProjects','totalVideos','completedVideos','state','currentSequence')
+        project_fields=('taskId','canonicalTaskId','manifestId','attemptId','project','material','expected','downloadCompleted','finalCompleted','status','pipelineStatus','currentStep','currentPhase','gapActive','languagePlan','error')
+        task_fields=('task_id','remote_pipeline_task_id','date_label','project','material','language','number','state','error','video_name','audio_name','output_name','manifest_id','attempt_id')
+        items=box.get('items') or []; owners={item.get('canonicalTaskId') or item.get('taskId') for item in items if isinstance(item,dict)}
+        projects=[]
+        for item in items:
+            if not isinstance(item,dict): continue
+            project={field:item.get(field) for field in project_fields}
+            capcut=item.get('capcut') or {}
+            if isinstance(capcut,dict): project['capcut']={field:capcut.get(field) for field in ('state','total','valid','completed','failed','waiting','running')}
+            projects.append(project)
+        tasks=(body.get('tasks') or {}).get('items') or []
+        selected_tasks=[{field:task.get(field) for field in task_fields} for task in tasks
+                        if isinstance(task,dict) and task.get('remote_pipeline_task_id') in owners]
+        return {'box':{field:box.get(field) for field in fields},'projects':projects,'tasks':selected_tasks}
+    @staticmethod
+    def expected_for_date(body,date):
+        boxes=(body.get('taskBoxes') or {}).get('items')
+        if not isinstance(boxes,list): return None
+        selected=[box for box in boxes if isinstance(box,dict) and box.get('productionDate')==date]
+        if not selected: return None
+        seen=set(); owners=set(); expected=0
+        for box in selected:
+            batch=box.get('batchId'); items=box.get('items'); count=box.get('projectCount'); total=box.get('totalVideos')
+            if not isinstance(batch,str) or not batch or batch in seen or type(count) is not int or count<=0 or not isinstance(items,list) or len(items)!=count or type(total) is not int or total<=0:return None
+            seen.add(batch); subtotal=0
+            for item in items:
+                if not isinstance(item,dict):return None
+                identity=item.get('canonicalTaskId') or item.get('taskId'); number=item.get('expected')
+                if not isinstance(identity,str) or not identity or identity in owners or type(number) is not int or number<=0:return None
+                owners.add(identity);subtotal+=number
+            if subtotal!=total:return None
+            expected+=total
+        return expected
+    def _remember_box(self,db,key,body,obtained):
+        parts=urlsplit(key[4:])
+        if parts.path!='/api/dashboard' or not isinstance(body,dict):return
+        boxes=body.get('taskBoxes'); box=boxes.get('selected') if isinstance(boxes,dict) else None
+        batch=body.get('selectedBatchId'); date=body.get('selectedDate')
+        if not isinstance(box,dict) or not isinstance(batch,str) or not batch or box.get('batchId')!=batch or box.get('productionDate')!=date:return
+        digest=semantic_hash(self.box_projection(body,box),ignored_pointers=())
+        old=db.execute('SELECT * FROM box_content WHERE batch_id=?',(batch,)).fetchone()
+        if old and old['observed']>obtained:return
+        changed=old['changed'] if old and old['content_hash']==digest else obtained
+        db.execute('INSERT OR REPLACE INTO box_content VALUES(?,?,?,?)',(batch,digest,changed,obtained))
+        db.execute('INSERT OR REPLACE INTO response_boxes VALUES(?,?)',(key,batch))
+        expected=self.expected_for_date(body,date)
+        pipeline=body.get('pipeline'); stages=pipeline.get('items') if isinstance(pipeline,dict) else None
+        upload=next((stage for stage in stages if isinstance(stage,dict) and stage.get('key')=='upload'),None) if isinstance(stages,list) else None
+        valid=(expected is not None and isinstance(date,str) and date and isinstance(pipeline,dict) and pipeline.get('date')==date and upload is not None
+               and upload.get('historyDate')==date and type(upload.get('total')) is int and type(upload.get('completed')) is int
+               and upload['total']==expected and upload['completed']==expected and type(upload.get('failed')) is int and upload['failed']==0)
+        if valid: db.execute('INSERT OR REPLACE INTO date_upload_proof VALUES(?,?,?)',(date,expected,obtained))
+        elif isinstance(date,str): db.execute('DELETE FROM date_upload_proof WHERE date=?',(date,))
+    def frozen(self,row):
+        if not row:return False
+        body=json.loads(row['body'])
+        if not isinstance(body,dict):return False
+        boxes=body.get('taskBoxes'); box=boxes.get('selected') if isinstance(boxes,dict) else None
+        if not self.box_complete(box) or box.get('productionDate')!=body.get('selectedDate'):return False
+        date=body.get('selectedDate'); expected=self.expected_for_date(body,date)
+        if expected is None:return False
         with self.db() as db:
-            record=db.execute('SELECT key FROM completed_boxes WHERE batch_id=?',(batch_id,)).fetchone()
-        if not record: return None
-        snapshot=self.response(record['key'])
-        if not snapshot: return None
-        historical=json.loads(snapshot['body'])
-        if not self.completed_box(historical,batch_id): return None
-        # A completed box is immutable; the same response's live controls,
-        # events and engine status are not. Overlay only selected-box display.
+            content=db.execute('SELECT * FROM box_content WHERE batch_id=?',(box['batchId'],)).fetchone()
+            proof=db.execute('SELECT * FROM date_upload_proof WHERE date=?',(date,)).fetchone()
+        if not content or not proof or proof['expected']!=expected:return False
+        # First observation is not evidence of three prior days. Require a
+        # fresh observation after three unchanged days, not just an offline gap.
+        if self.clock()<content['observed'] or content['observed']-content['changed']<3*86400:return False
+        if semantic_hash(self.box_projection(body,box),ignored_pointers=())!=content['content_hash']:return False
+        # A new box on the same date invalidates an older aggregate proof.
         live=self.response(cache_key('GET','/api/dashboard'))
         if live:
-            merged=json.loads(live['body'])
-            for field in ('selectedDate','selectedBatchId','overview','pipeline','tasks'):
-                if field in historical: merged[field]=historical[field]
-            merged.setdefault('taskBoxes',{})['selected']=historical['taskBoxes']['selected']
-        else:
-            # No live base (e.g. restored archive): do not invent live fields.
-            return None
-        if params.get('date') and params['date'][0]!=historical.get('selectedDate'): return None
-        return {**snapshot,'body':json.dumps(merged,ensure_ascii=False,separators=(',',':')),'liveSuccess':live['last_success']}
+            current=json.loads(live['body'])
+            if isinstance(current,dict):
+                live_expected=self.expected_for_date(current,date)
+                if live_expected!=expected:return False
+        return True
+    def box_response(self,key):
+        parts=urlsplit(key[4:]); params=parse_qs(parts.query)
+        exact=self.response(key)
+        if exact:return exact
+        batch=params.get('batchId',[''])[0]
+        if parts.path!='/api/dashboard' or not batch:return None
+        for candidate in (cache_key('GET','/api/dashboard?'+urlencode({'batchId':batch})),cache_key('GET','/api/dashboard')):
+            row=self.response(candidate)
+            if row:
+                body=json.loads(row['body'])
+                if body.get('selectedBatchId')==batch and (not params.get('date') or body.get('selectedDate')==params['date'][0]):return row
+        return None
     def prefetch_targets(self):
-        if not self.viewer_state()['viewerActive']: return []
+        if not self.viewer_state()['viewerActive']:return []
         row=self.response(cache_key('GET','/api/dashboard'))
-        if not row: return []
+        if not row:return []
         boxes=(json.loads(row['body']).get('taskBoxes') or {}).get('items') or []
-        targets=[]; seen=set()
-        with self.db() as db:
-            permanent={r['batch_id'] for r in db.execute('SELECT c.batch_id FROM completed_boxes c JOIN responses r ON r.key=c.key')}
-            successes={r['key']:r['last_success'] for r in db.execute('SELECT key,last_success FROM responses')}
-        # Home contract already sorts by task_box_sort_key descending.
+        targets=[];seen=set()
         for box in boxes:
-            if not isinstance(box,dict): continue
+            if not isinstance(box,dict):continue
             batch=box.get('batchId')
-            if not isinstance(batch,str) or not batch or batch in seen: continue
-            seen.add(batch)
-            target='/api/dashboard?'+urlencode({'batchId':batch}); key=cache_key('GET',target)
-            if batch not in permanent:
-                last=successes.get(key)
-                if last is None or self.clock()-last>=60: targets.append(target)
-            if len(seen)>=10: break
+            if not isinstance(batch,str) or not batch or batch in seen:continue
+            seen.add(batch);target='/api/dashboard?'+urlencode({'batchId':batch});cached=self.box_response(cache_key('GET',target))
+            if not self.frozen(cached) and (not cached or self.clock()-cached['last_success']>=60):targets.append(target)
+            if len(seen)>=10:break
         return targets
+    def paused_targets(self):
+        # Dedicated historical/date box fetches stop while frozen. The base
+        # full dashboard still refreshes live global state, never frozen.
+        with self.db() as db:keys=[r['key'] for r in db.execute('SELECT key FROM response_boxes') if '?' in r['key']]
+        return [key[4:] for key in keys if self.frozen(self.response(key))]
     def wait_reads(self,seconds=25,disconnected=None):
         deadline=time.monotonic()+min(25,max(0,seconds))
         # Short fallback also works across uvicorn workers/restarts; condition

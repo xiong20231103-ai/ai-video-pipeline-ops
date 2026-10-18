@@ -166,7 +166,7 @@ class ReadOnlyAgent:
         self.schedule=PollSchedule()
         self.lifecycle=Lifecycle(self.state_dir)
         self.authenticated=threading.Event()
-        self.demands=queue.PriorityQueue(maxsize=128); self.pending_demands=set(); self.prefetch_targets=[]; self.slow_demands=[]; self.force_reads=set()
+        self.demands=queue.PriorityQueue(maxsize=128); self.pending_demands=set(); self.prefetch_targets=[]; self.slow_demands=[]; self.force_reads=set(); self.paused_targets=set()
         # The old summary ETag omits scan clocks and its 304 has no scan header.
         # Periodically read the existing response body, without adding a GET.
         self.full_read_at={}
@@ -276,6 +276,7 @@ class ReadOnlyAgent:
                 self.authenticated.set()
                 with self.target_lock:
                     self.prefetch_targets=list(result.get('prefetchTargets',[]))[:10]
+                    self.paused_targets={cache_key('GET',target)[4:] for target in result.get('pausedTargets',[])}
                 for item in result.get('items',[]): self.queue_demand(item['target'])
                 delay=0 if result.get('items') or time.monotonic()-began>=0.25 else 0.25
             except urllib.error.HTTPError as exc:
@@ -323,6 +324,8 @@ class ReadOnlyAgent:
                 prefetched=None if slow else self.prefetch()
                 if prefetched: target=prefetched; reason='prefetch'
             if target is None: self.stop.wait(0.2); continue
+            if reason=='periodic' and target in self.paused_targets:
+                self.schedule.completed(target); continue
             try: self.collect(target,conditional=target not in self.force_reads,reason=reason)
             except (OSError,ValueError): self.engine_state='unavailable'
             finally:

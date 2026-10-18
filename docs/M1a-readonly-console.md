@@ -424,10 +424,10 @@ After CI succeeds, the pinned administrator handoff first backs up source/task X
 
 After actual logoff/logon, the agent restarted automatically but workers repeatedly exited. The new ten-minute Dashboard baseline completed, while the subsequent active/idle observation was aborted and is not accepted. Root cause is not yet known: previous error reporting retained no worker/type/frame evidence. This change adds only a bounded latest-failure record (worker, exception class, basename/function/line, instance/version/time) and matching failed-runtime metadata. It never formats exceptions, messages, locals, source lines, tokens or response bodies. Diagnostic write failure still stops the worker and releases the lock; no unsafe traceback is emitted. A later successful restart does not erase last-worker-failure.json. Retry timing, polling, GET-only permissions and task definitions do not change.
 
-The latest diagnostics still need Claude deployment to the independent agent directory under the current home-deployment instruction. Do not merge this PR or claim the 30-minute acceptance passed; use the next real failure record to fix the demonstrated cause, then rerun the full observation. No actual credentials, runtime artifacts or production state are committed.
+Claude deployed the diagnostic version ebf4def; a real upload/SQLite failure was subsequently captured, as documented below. The new repair still needs Claude deployment to the independent agent directory. Do not merge this PR or claim the 30-minute acceptance passed; use the next real failure record to fix the demonstrated cause, then rerun the full observation. No actual credentials, runtime artifacts or production state are committed.
 
 
-## PR #13: SQLite failure, foreground reads and cloud-only archives (2026-10-18)
+## PR #13: SQLite failure, foreground reads and cloud-only caches (2026-10-18)
 
 Status: implementation and isolated tests, NOT production acceptance. The actual
 safe diagnostic from ebf4def identifies upload -> Ledger.next -> Ledger.db line
@@ -471,31 +471,41 @@ old-server immediate empty responses have a 250 ms compatibility delay. Browser
 202 retry is 500 ms. A healthy network is required for the <=1-second delivery
 acceptance target; this is not a network-independent guarantee.
 
-Cloud archives require exact selected batch identity, positive complete project
-and video counts, a 64-hex completion receipt with completed_verified, and an
-explicit uploaded/cloud_verified upload status. Completed box display fields
-are reused without TTL; controls, health, events and other global fields come
-from the latest cloud full-dashboard response. The archived selected box does
-not freeze an active project's gaps. Date/batch aliases must match identity and
-date. Browser indicates an uploaded completed cloud archive separately.
+User-confirmed revision: no immutable/permanent archive and NO dependency on
+completionReceipt. No Dashboard contract/source change for box freezing.
 
-Known design decision awaiting user: immutable completion receipts may remain
-upload_pending after uploads finish (app.py persist_task_box_receipt, 607+,
-returns an existing receipt before recomputing upload evidence). Date-wide
-upload totals cannot prove the selected box. Until authorized otherwise, such
-boxes keep normal refresh. A proposed additional read-only box upload-evidence
-GET requires an explicit Dashboard-contract change and Claude deployment; it is
-not silently included or enabled here.
+All task boxes use stale-while-revalidate: return an existing cloud response
+immediately, visibly aged. If a visible viewer opens a response older than 60
+seconds, enqueue one background read. A cloud-only browser watcher refreshes
+the rendered same box when its version/ETag changes; leaving the box cancels
+that watcher. The top H4 reception clock is adapted only in cloud/readonly.js
+to display actual cache/source age, including when frozen; every per-source
+sample retains its age and stale colors. No green archive-age exemption.
 
-Only while a visible authenticated viewer lease is active, the cloud plans the
-latest 10 boxes from the existing descending box order. The agent holds only
-their target strings, not prefetched response copies. Cloud already archived
-boxes are skipped; other fresh results have a 60-second interval. Prefetch runs
-on the periodic channel and yields to pending foreground work. Idle has none.
-Previous theoretical active/idle budgets remain 1752/666 home GET/hour before
-startup and user-demand reads. Prefetch adds at most 10 cold reads and at most
-600 steady-state GET/hour if all ten boxes remain mutable; already archived
-boxes add zero. Actual load must be measured, not inferred from these bounds.
+Conservative freeze requires ALL: selected projects explicitly complete; a
+reliable date-wide upload total and completed count equal the date's expected
+video total with zero failures; and three observed days since the box display
+content last changed. Expected totals require complete project identities and
+per-project expected counts for every box on that date; missing, conflicting,
+test/extra upload counts, partial historical rows or changed date membership
+refuse freezing. Full chronological source observations, not an offline gap or
+an old source timestamp, start/advance the three-day stability window. Exact
+box/project/task identity and result fields define that content hash; scan
+clocks, live processes and unrelated boxes do not reset it. These facts and
+upload proofs live only in the cloud SQLite database.
+
+A frozen box is never prefetched or refreshed by dedicated periodic box/date
+reads. Only a visible user's open with cache older than 24 hours enqueues a
+single refresh. The base full dashboard still refreshes shared current state.
+A newly changed project/date count or missing evidence removes freezing.
+The agent stores only paused/prefetch target strings, not results.
+
+Visible authenticated viewers prefetch the latest 10 boxes in the existing
+descending order, skipping frozen/fresh boxes. Other boxes keep a 60-second
+minimum interval. Idle has none. Previous theoretical active/idle budgets are
+1752/666 home GET/hour before startup and user demand; prefetch adds at most ten
+cold reads and at most 600 steady-state GET/hour if all ten remain mutable.
+Frozen dedicated reads reduce that bound. Actual deltas must be measured.
 
 Acceptance after Claude's home deployment: cached and uncached box switch
 latencies five times each, long-poll delivery latency, active/idle 30-minute

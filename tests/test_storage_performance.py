@@ -166,38 +166,79 @@ class PriorityTests(unittest.TestCase):
 class CloudPerformanceTests(cloud_tests.CloudTests):
     # Re-use authentication helpers, while avoiding duplicated inherited tests
     # in discovery by assigning them below after class construction.
-    def complete(self,batch='fixture'):
-        box={'batchId':batch,'state':'completed','projectCount':1,'completedProjects':1,'totalVideos':2,'completedVideos':2,
-             'completionReceipt':{'status':'completed_verified','uploadStatus':'uploaded_pending_verification','receiptHash':'a'*64}}
-        return {'selectedBatchId':batch,'selectedDate':'10.16','pipeline':{'items':['archived']},'taskBoxes':{'selected':box},'controls':{'old':True}}
-    def test_archive_hits_forever_and_overlays_current_controls_not_stale_ones(self):
-        self.register();self.login()
-        self.store.push(self.item(body={'controls':{'current':True},'taskBoxes':{'items':[]}}))
-        self.store.push({**self.item(),'target':'/api/dashboard?batchId=fixture','body':self.complete()})
-        self.now[0]+=86400*60
-        self.login()
+    def complete(self,batch='fixture',receipt=None):
+        box={'batchId':batch,'productionDate':'10.16','state':'completed','projectCount':1,'completedProjects':1,'totalVideos':2,'completedVideos':2,
+             'items':[{'canonicalTaskId':batch+'-project','expected':2,'status':'completed'}]}
+        if receipt is not None:box['completionReceipt']=receipt
+        return {'selectedBatchId':batch,'selectedDate':'10.16','pipeline':{'date':'10.16','items':[{'key':'upload','historyDate':'10.16','total':2,'completed':2,'failed':0}]},
+                'taskBoxes':{'selected':box,'items':[box]},'tasks':{'items':[]}}
+    def push_box(self,version=1,body=None,batch='fixture'):
+        target='/api/dashboard?batchId='+batch
+        self.store.push({**self.item(version),'target':target,'body':body or self.complete(batch)})
+        return self.store.response(cache_key('GET',target))
+    def mature(self):
+        self.push_box();self.now[0]+=3*86400+1
+        return self.push_box(2)
+    def test_stale_box_returns_immediately_and_deduplicates_background_refresh(self):
+        self.register();self.login();self.push_box()
+        self.now[0]+=61
         for _ in range(5):
-            response=self.client.get('/api/dashboard?date=10.16&batchId=fixture')
-            self.assertEqual(200,response.status_code);self.assertEqual('completed-uploaded',response.headers['x-archived-box'])
-            self.assertEqual({'current':True},response.json()['controls'])
-            self.assertEqual(['archived'],response.json()['pipeline']['items'])
-        self.assertEqual([],self.store.claim_reads())
-        self.assertEqual(202,self.client.get('/api/dashboard?date=10.15&batchId=fixture').status_code)
-    def test_incomplete_upload_or_missing_identity_cannot_become_permanent(self):
-        for field,value in [('uploadStatus','upload_pending'),('receiptHash','')]:
-            body=self.complete();body['taskBoxes']['selected']['completionReceipt'][field]=value
-            self.assertIsNone(self.store.completed_box(body,'fixture'))
-        body=self.complete();body['taskBoxes']['selected']['completedVideos']=1
-        self.assertIsNone(self.store.completed_box(body,'fixture'))
-        self.assertIsNone(self.store.completed_box(self.complete(),'other'))
+            started=time.monotonic();response=self.client.get('/api/dashboard?date=10.16&batchId=fixture')
+            self.assertLess(time.monotonic()-started,1)
+            self.assertEqual(200,response.status_code);self.assertGreaterEqual(int(response.headers['x-cache-age-seconds']),61)
+            self.assertEqual('true',response.headers['x-cache-refresh-pending'])
+        self.assertEqual(1,len(self.store.claim_reads()));self.assertEqual([],self.store.claim_reads())
+        self.push_box(2);response=self.client.get('/api/dashboard?date=10.16&batchId=fixture')
+        self.assertEqual('false',response.headers['x-cache-refresh-pending'])
+    def test_hidden_page_never_queues_stale_box_background_refresh(self):
+        self.register();self.login();self.push_box();self.now[0]+=61
+        response=self.client.get('/api/dashboard?batchId=fixture',headers={'X-Ops-Page-Visible':'false'})
+        self.assertEqual(200,response.status_code);self.assertEqual([],self.store.claim_reads())
+    def test_freeze_needs_three_observed_days_and_never_depends_on_receipt(self):
+        first=self.push_box();self.assertFalse(self.store.frozen(first))
+        self.now[0]+=3*86400+1
+        self.assertFalse(self.store.frozen(first)) # offline time alone is not observation
+        body=self.complete(receipt={'uploadStatus':'upload_pending'})
+        row=self.push_box(2,body);self.assertTrue(self.store.frozen(row))
+        body['taskBoxes']['selected']['items'][0]['status']='running'
+        row=self.push_box(3,body);self.assertFalse(self.store.frozen(row))
+    def test_freeze_denies_missing_date_counts_failures_or_incomplete_project_identity(self):
+        self.mature()
+        for field,value in [('total',3),('completed',1),('failed',1),('historyDate','10.15')]:
+            body=self.complete();body['pipeline']['items'][0][field]=value
+            row=self.push_box(10+len(field),body)
+            self.assertFalse(self.store.frozen(row))
+        body=self.complete();body['taskBoxes']['selected']['projectCount']=2
+        self.assertFalse(self.store.frozen(self.push_box(100,body)))
+    def test_frozen_box_skips_prefetch_and_only_open_after_24h_queues(self):
+        self.register();self.login();row=self.mature()
+        self.store.push(self.item(body={'taskBoxes':{'items':[self.complete()['taskBoxes']['selected']]}}))
+        self.assertTrue(self.store.frozen(row));self.assertEqual([],self.store.prefetch_targets())
+        response=self.client.get('/api/dashboard?batchId=fixture')
+        self.assertEqual('true',response.headers['x-cache-frozen']);self.assertEqual([],self.store.claim_reads())
+        self.now[0]+=86401
+        self.store.page_view();self.assertEqual([],self.store.prefetch_targets())
+        self.assertEqual([],self.store.claim_reads()) # time alone does not request
+        response=self.client.get('/api/dashboard?batchId=fixture')
+        self.assertEqual(200,response.status_code);self.assertGreater(int(response.headers['x-cache-age-seconds']),86400)
+        self.assertEqual(1,len(self.store.claim_reads()))
+    def test_content_clock_ignores_scan_clocks_but_resets_on_meaningful_project_change(self):
+        self.push_box();self.now[0]+=3*86400+1
+        body=self.complete();body['updatedAt']='new-scan';body['taskBoxes']['selected']['items'][0]['updatedAt']='new-scan'
+        self.assertTrue(self.store.frozen(self.push_box(2,body)))
+        body['taskBoxes']['selected']['items'][0]['material']='changed-material'
+        self.assertFalse(self.store.frozen(self.push_box(3,body)))
     def test_prefetch_latest_ten_cloud_only_and_only_when_visible(self):
         boxes=[{'batchId':str(n)} for n in range(15)]
         self.store.push(self.item(body={'taskBoxes':{'items':boxes}}))
         self.assertEqual([],self.store.prefetch_targets());self.store.page_view()
         targets=self.store.prefetch_targets();self.assertEqual(10,len(targets));self.assertTrue(targets[-1].endswith('=9'))
-        self.store.push({**self.item(),'target':targets[0],'body':self.complete('0')})
-        self.assertNotIn(targets[0],self.store.prefetch_targets())
         self.now[0]+=121;self.assertEqual([],self.store.prefetch_targets())
+    def test_new_box_on_same_date_invalidates_old_aggregate_proof(self):
+        row=self.mature();self.assertTrue(self.store.frozen(row))
+        body=self.complete();other=self.complete('other')['taskBoxes']['selected'];body['taskBoxes']['items'].append(other)
+        self.store.push(self.item(body=body))
+        self.assertFalse(self.store.frozen(row))
     def test_long_poll_wakes_in_under_one_second_and_never_holds_db_writer(self):
         results=[]
         thread=threading.Thread(target=lambda:results.extend(self.store.wait_reads(2)))

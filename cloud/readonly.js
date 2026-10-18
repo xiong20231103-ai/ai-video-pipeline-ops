@@ -3,7 +3,8 @@
   const original = window.fetch.bind(window);
   const samples = new Map();
   const inflight = new Map();
-  let sourcePanel;
+  let sourcePanel, dashboardSample;
+  const refreshWatchers = new Map();
   const writeIds=['continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupButton','confirmAudioCleanupButton','previewProductionCleanupButton','confirmProductionCleanupButton'];
   document.addEventListener('submit', event => {
     if (!event.target.closest('[data-cloud-account]')) { event.preventDefault(); event.stopImmediatePropagation(); }
@@ -18,8 +19,30 @@
     const age = response.headers.get('X-Cache-Age-Seconds');
     if (age !== null) {
       let health={};try{health=JSON.parse(response.headers.get('X-Source-Health')||'{}');}catch{}
-      samples.set(url, {archive: response.headers.get('X-Archived-Box')==='completed-uploaded', age: Number(age), received: performance.now(), scan: response.headers.get('X-Source-Scanned-At') || '源扫描时间未知', sourceAge:typeof health.scanAgeSeconds==='number'?health.scanAgeSeconds:null});
+      samples.set(url, {age: Number(age), received: performance.now(), scan: response.headers.get('X-Source-Scanned-At') || '源扫描时间未知', sourceAge:typeof health.scanAgeSeconds==='number'?health.scanAgeSeconds:null});
+      const path=new URL(url,location.origin).pathname;
+      if(path==='/api/dashboard'||path==='/api/dashboard/summary')dashboardSample=samples.get(url);
     }
+  }
+  function watchRefresh(key, response) {
+    if (response.headers.get('X-Cache-Refresh-Pending')!=='true'||refreshWatchers.has(key)) return;
+    const url=new URL(key,location.origin);const batch=url.searchParams.get('batchId');
+    if(url.pathname!=='/api/dashboard'||!batch)return;
+    const previous=response.headers.get('X-Cache-Version');const previousTag=response.headers.get('ETag');
+    const watch=(async()=>{
+      for(let attempt=0;attempt<60;attempt++){
+        await wait(1000);
+        if(document.visibilityState!=='visible')return;
+        if(typeof state==='undefined'||state.batchId!==batch)return;
+        const newer=await original(key,{headers:{'X-Ops-Page-Visible':'true'}});
+        if(newer.status===401){location.assign('/login');return;}
+        if(newer.status===200&&(newer.headers.get('X-Cache-Version')!==previous||newer.headers.get('ETag')!==previousTag)){
+          if(!state.refreshBusy&&typeof refresh==='function'){state.fullDashboardLoaded=false;await refresh();}
+          return;
+        }
+      }
+    })().catch(()=>{}).finally(()=>refreshWatchers.delete(key));
+    refreshWatchers.set(key,watch);
   }
   window.fetch = async (input, init = {}) => {
     const url = new URL(input instanceof Request ? input.url : input, location.href);
@@ -35,7 +58,7 @@
       for (let attempt = 0; attempt < 120; attempt++) {
         const response = await original(input, init);
         if (response.status === 401) { location.assign('/login'); throw new Error('请重新登录'); }
-        if (response.status !== 202) { observe(key, response); return response; }
+        if (response.status !== 202) { observe(key, response); watchRefresh(key,response); return response; }
         // A pending envelope is never delivered to the old business renderer.
         await wait(500, init.signal || (input instanceof Request ? input.signal : undefined));
       }
@@ -45,6 +68,26 @@
     try { return (await work).clone(); } finally { inflight.delete(key); }
   };
   document.addEventListener('DOMContentLoaded', () => {
+    // The home H4 timer measures browser reception. Cloud reception is not a
+    // fresh home scan: derive displayed age from cloud cache/source ages.
+    const paintCloudAge=()=>{
+      if(!dashboardSample||typeof state==='undefined')return;
+      const sample=dashboardSample;const since=(performance.now()-sample.received)/1000;
+      const age=sample.age+since;const known=sample.sourceAge!==null&&Number.isFinite(sample.sourceAge)&&sample.sourceAge>=0;
+      const effective=known?sample.sourceAge+age:null;
+      state.freshnessReceivedAt=known?new Date(Date.now()-effective*1000):null;
+      state.freshnessReceivedTick=performance.now()-(effective??age)*1000;
+      state.freshnessStartedAt=state.freshnessReceivedTick;
+      updateDataFreshness();
+      const node=document.getElementById('dataFreshness');node.title='云端缓存：年龄包含家里扫描至取数的间隔及云端缓存时间，收到缓存不代表实时';
+      if(!known){
+        document.getElementById('lastUpdated').textContent='源扫描时间未知';
+        document.getElementById('freshnessAge').textContent='（该版本最近取数 '+Math.floor(age)+' 秒前）';
+        node.classList.add('warning');document.getElementById('freshnessWarning').hidden=false;
+      }
+    };
+    recordDashboardReception=paintCloudAge;
+    paintCloudAge();setInterval(paintCloudAge,1000);
     sourcePanel = document.createElement('details'); sourcePanel.open = true;
     sourcePanel.style.cssText = 'margin:12px;padding:12px;background:#fff5cf;color:#513f00;border-radius:8px';
     const summary = document.createElement('summary'); summary.textContent = '云端只读预览 · 家里代理部署前等待取数 · 写命令尚未启用';
@@ -107,8 +150,8 @@
         const name=(names[parsed.pathname]||'页面数据')+(parsed.searchParams.get('date')?' '+parsed.searchParams.get('date'):'');
         const stamp=new Date(sample.scan);
         const effective=sample.sourceAge===null?null:sample.sourceAge+age;
-        row.textContent=name+(sample.archive?'（已完成且已上传，云端存档）':'')+'：'+(Number.isNaN(stamp.getTime())||effective===null?'源扫描时间未知，该版本最近取数 '+age+' 秒前':'数据截至 '+stamp.toLocaleTimeString('zh-CN',{hour12:false})+'（'+Math.floor(effective)+' 秒前）；该版本最近取数 '+age+' 秒前');
-        row.style.color=sample.archive?'#38533a':age>120||(effective!==null&&effective>120)?'#b42318':age>30||effective===null||effective>30?'#8a5c00':'#38533a'; list.append(row);
+        row.textContent=name+'：'+(Number.isNaN(stamp.getTime())||effective===null?'源扫描时间未知，该版本最近取数 '+age+' 秒前':'数据截至 '+stamp.toLocaleTimeString('zh-CN',{hour12:false})+'（'+Math.floor(effective)+' 秒前）；该版本最近取数 '+age+' 秒前');
+        row.style.color=age>120||(effective!==null&&effective>120)?'#b42318':age>30||effective===null||effective>30?'#8a5c00':'#38533a'; list.append(row);
       }
     },1000);
   });
