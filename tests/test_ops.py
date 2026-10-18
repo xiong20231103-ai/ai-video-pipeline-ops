@@ -240,14 +240,9 @@ class OpsTests(unittest.TestCase):
             second = self._make_capcut_draft(root, "second-id", "second", "remote-inbox-20260726")
             self._write_capcut_index(root, [("first-id", "first"), ("second-id", "second")])
             preview = app.preview_capcut_draft_cleanup(["first-id"], root=root)
-            recycle_target = root / ".recycled-first"
-
-            def fake_recycle(path: Path) -> None:
-                path.rename(recycle_target)
-
             with (
                 patch("app._capcut_draft_processes", return_value=[]),
-                patch("app._recycle_directory", side_effect=fake_recycle),
+                patch("pending_delete.area_root", return_value=root / ".pending"),
                 patch("app.CAPCUT_DRAFT_CLEANUP_BACKUP_DIR", root / ".backups"),
                 patch("app.CAPCUT_DRAFT_CLEANUP_STATUS_PATH", root / ".status.json"),
                 patch("app.save_control_action"),
@@ -259,6 +254,8 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(1, result["removedCount"])
             self.assertFalse(first.exists())
             self.assertTrue(second.exists())
+            self.assertIn("待删区", result["message"])
+            self.assertEqual(1, len(list((root / ".pending").glob("*/*/first"))))
             self.assertEqual(["second-id"], [item["draft_id"] for item in index["all_draft_store"]])
             with self.assertRaises(app.HTTPException):
                 app.preview_capcut_draft_cleanup(["first-id"], root=root)
@@ -342,16 +339,11 @@ class OpsTests(unittest.TestCase):
                     "active": False, "_path": str(audio),
                 }]
             }
-            recycled = root / "recycled.completed.mp3"
-
-            def fake_recycle(path: Path) -> None:
-                path.rename(recycled)
-
             with (
                 patch("app._audio_reference_inventory", return_value=references),
                 patch("app._registered_audio_roots", return_value=[root]),
                 patch("app._audio_producer_processes", return_value=[]),
-                patch("app._recycle_directory", side_effect=fake_recycle),
+                patch("pending_delete.area_root", return_value=root / ".pending"),
                 patch("app.AUDIO_CLEANUP_STATUS_PATH", root / "status.json"),
                 patch("app.AUDIO_CLEANUP_BACKUP_DIR", root / "records"),
                 patch("app.save_control_action"),
@@ -507,14 +499,9 @@ class OpsTests(unittest.TestCase):
                 "snapshotToken": app._production_snapshot([item]),
                 "items": [item],
             }
-            recycled = root / "recycled.mp4"
-
-            def fake_recycle(path: Path) -> None:
-                path.rename(recycled)
-
             with (
                 patch("app._production_file_inventory", return_value=inventory),
-                patch("app._recycle_directory", side_effect=fake_recycle),
+                patch("pending_delete.area_root", return_value=root / ".pending"),
                 patch("app.PRODUCTION_FILE_CLEANUP_STATUS_PATH", root / "status.json"),
                 patch("app.PRODUCTION_FILE_CLEANUP_BACKUP_DIR", root / "records"),
                 patch("app.PRODUCTION_FILE_CLEANUP_INDEX_PATH", root / "index.json"),
@@ -530,9 +517,10 @@ class OpsTests(unittest.TestCase):
 
             self.assertEqual(1, result["removedCount"])
             self.assertFalse(target.exists())
-            self.assertTrue(recycled.exists())
-            self.assertTrue(recycled.exists())
-            self.assertEqual("recycled", result["removed"][0]["state"])
+            moved = list((root / ".pending").glob(f"*/*/{target.name}"))
+            self.assertEqual(1, len(moved))
+            self.assertEqual("pending_delete", result["removed"][0]["state"])
+            self.assertIn("待删区", result["message"])
 
     def test_metadata_scan_ignores_handoff_backup_files(self):
         with tempfile.TemporaryDirectory() as folder:
