@@ -1,0 +1,387 @@
+[
+  {
+    "id": "R4-01",
+    "rule": "只能通过允许的本地/Tailnet 入口操作；迁移后由云端登录和代理认证承担新边界，家里不接受任意 URL",
+    "source": "A:2790–2806、2840–2862"
+  },
+  {
+    "id": "R4-02",
+    "rule": "接收器 schema≥3 且 reconciliationState=healthy 才有控制资格；不可用时保留可信展示，但禁用控制",
+    "source": "A:3684–3733、6339–6347、6380–6386"
+  },
+  {
+    "id": "R4-03",
+    "rule": "当前任务首先服从工作台 current context；无明确 context 不把最新历史任务提升为控制对象；旧 context 指向终态时只允许唯一非终态箱的窄回退",
+    "source": "A:5067–5124"
+  },
+  {
+    "id": "R4-04",
+    "rule": "目标签名包括 batch/task/date/manifest/attempt/runGroup/batchKind/selectedProjects；选中项目集合规范化、去重排序",
+    "source": "A:316–340"
+  },
+  {
+    "id": "R4-05",
+    "rule": "旧命令缺 manifest/attempt 时保留兼容比较；批次/任务/日期及范围身份变化要区分，不能归为同一恢复",
+    "source": "A:343–365"
+  },
+  {
+    "id": "R4-06",
+    "rule": "归档副本保留原命令及原因、时间；过期邮箱兼容旧消费者；区分 helper 存在和当前入口实际调用",
+    "source": "A:368–398；当前路由 A:6339–6377、6401–6412"
+  },
+  {
+    "id": "R4-07",
+    "rule": "相同 clientRequestId 返回原命令；同目标、未过期在途命令合流；重试不能生成新生产尝试",
+    "source": "A:459–472"
+  },
+  {
+    "id": "R4-08",
+    "rule": "与当前目标相同、未结束且近 300 秒的旧 requested/accepted/running/recovering 邮箱可导入队列，保持本地 ID",
+    "source": "A:473–494"
+  },
+  {
+    "id": "R4-09",
+    "rule": "新命令先落盘，再请求工作台；提交失败保留命令，不冒称执行成功",
+    "source": "A:495–530"
+  },
+  {
+    "id": "R4-10",
+    "rule": "提交借助工作台 RecoveryControl.enqueue_request，不直接覆盖生产邮箱；模块缺失/控制锁失败时返回错误",
+    "source": "A:426–456；RC:470–484"
+  },
+  {
+    "id": "R4-11",
+    "rule": "工作台由接收器单实例启动路径管理，等待就绪最长 28 秒；启动失败保留结构化 code/log/error，不覆盖已由工作台推进的状态",
+    "source": "A:244–313"
+  },
+  {
+    "id": "R4-12",
+    "rule": "邮箱只有 ID 匹配才合并；requested→receiver_acknowledged、accepted→workbench_acknowledged、running/recovering→executing、failed→blocked、cancelled→expired",
+    "source": "A:2126–2161"
+  },
+  {
+    "id": "R4-13",
+    "rule": "persisted/receiver_acknowledged 超过 90 秒未领取过期；相应未执行态超过 300 秒过期；不能把执行中统一按 TTL 终止",
+    "source": "A:39–40、2162–2179"
+  },
+  {
+    "id": "R4-14",
+    "rule": "执行中的第1/2步过期需匹配任务、resumeInterrupted、相关状态更新时间晚于命令；旧阶段状态不能误杀新阶段恢复",
+    "source": "A:2217–2254"
+  },
+  {
+    "id": "R4-15",
+    "rule": "第1/2步显式运行失败，或状态超过90秒且明确中断，才能解锁；新鲜子会话不能因工作台/云端猜测被解锁；失效要写回匹配邮箱，避免下一轮复活",
+    "source": "A:2179–2214、2256–2265"
+  },
+  {
+    "id": "R4-16",
+    "rule": "兼容 accepted 无心跳超120秒；带 finishedAt 的 requested/running 不继续显示在途",
+    "source": "A:2268–2286"
+  },
+  {
+    "id": "R4-17",
+    "rule": "Fish 终态失败要匹配 canonicalTaskIds/failedItems 中任务，并判断终态时间不早于本命令；解除旧继续锁，不覆盖成功音频",
+    "source": "A:2290–2325"
+  },
+  {
+    "id": "R4-18",
+    "rule": "CapCut running/recovering 只在 blocked_capcut/capcut_pending/capcut_failed 且无运行计数、无 capcut_running 阶段时判断失效；活跃客户端/心跳优先；超120秒或明确安全停点",
+    "source": "A:401–423、2326–2329"
+  },
+  {
+    "id": "R4-19",
+    "rule": "安全草稿重开判据保留 waiting/waiting_capcut/waiting_client/stopped +已知指纹/明确文本；兼容旧 Failed 精确文案，不把普通失败都当安全重开",
+    "source": "A:90–114"
+  },
+  {
+    "id": "R4-20",
+    "rule": "已结束 blocked/failed/cancelled 命令在任务进入可恢复下游阶段后作为历史，不永久锁住按钮",
+    "source": "A:2330–2341"
+  },
+  {
+    "id": "R4-21",
+    "rule": "公开状态保留 boundManifest/Attempt/Status、clientPid、operationGeneration、boundOperationState、bridge、启动结果、终态观察时间等字段",
+    "source": "A:2342–2399"
+  },
+  {
+    "id": "R4-22",
+    "rule": "项目更新时间晚于命令完成时标记历史/陈旧；不同当前目标的旧命令在展示中归档，不拿旧命令标签冒充新任务",
+    "source": "A:2400–2406、5432–5444"
+  },
+  {
+    "id": "R4-23",
+    "rule": "跨午夜的当前配音/拼接只用当前 canonical task 的实时事实，不借用同日其他项目累计数",
+    "source": "A:5445–5458"
+  },
+  {
+    "id": "R4-24",
+    "rule": "缺权威目标/未对账则 allowed=false；blocked 配音对已经在途的继续命令只更新提示，不覆盖其执行生命周期",
+    "source": "A:5476–5512"
+  },
+  {
+    "id": "R4-25",
+    "rule": "其他 blocked 阶段也不能覆写新命令；实际存活 CapCut 且绑定操作未进入可重试终态时才持续锁定",
+    "source": "A:5513–5554"
+  },
+  {
+    "id": "R4-26",
+    "rule": "boundOperationState 为 failed/stopped/completed_with_errors/expired/recoverable_failed 或安全停点时可按资格重试；其余接收核对期保持锁定",
+    "source": "A:5533–5560"
+  },
+  {
+    "id": "R4-27",
+    "rule": "对账步骤 actual/expected 必须按当前任务关联；上传计数与第五步任务关联，不能用全日数",
+    "source": "A:5459–5475、5561–5567"
+  },
+  {
+    "id": "R4-28",
+    "rule": "查询不存在命令返回404；按ID查询对账匹配邮箱；executing 禁止撤回；仅修改匹配且 requested 的邮箱",
+    "source": "A:6422–6447；独立请求取消缺口见必改6"
+  },
+  {
+    "id": "R4-29",
+    "rule": "旧 continue-current 安全停点可将同任务旧邮箱标为 expired；新入口仍只取调用时当前目标，不能声称已经检查请求中的目标",
+    "source": "A:6339–6412；原子目标缺口见必改5"
+  },
+  {
+    "id": "R4-30",
+    "rule": "健康面板只展示明确开放恢复命令与近期错误，不据此重新花费恢复预算或自动生成新继续请求",
+    "source": "A:2453–2519"
+  },
+  {
+    "id": "RC-01",
+    "rule": "恢复身份必须有 runGroup、batch、canonical；仅支持 step12/step3/step5 的规范化身份",
+    "source": "RC:209–227"
+  },
+  {
+    "id": "RC-02",
+    "rule": "step12 需要下载子任务与 URL 合同哈希；step3 单语音需子任务/产品/语言/文本哈希/音色合同，批量语音需完整聚合合同；step5 需输出子任务、源身份哈希及输出身份",
+    "source": "RC:228–304"
+  },
+  {
+    "id": "RC-03",
+    "rule": "OS文件锁和原子写是权威；状态schema/collections/预算/时间/commandId/stableRecoveryKey损坏时失败关闭，不初始化成可执行空白状态",
+    "source": "RC:312–421、461–468"
+  },
+  {
+    "id": "RC-04",
+    "rule": "请求ID只允许规定字符；同ID的 task/runGroup/batch 变化拒绝；重复请求返回已有记录",
+    "source": "RC:470–484"
+  },
+  {
+    "id": "RC-05",
+    "rule": "邮箱占用时不覆盖；同稳定身份已有在途请求记为 observed；同阶段不同子任务等待；身份不明保守阻断；已存在命令ID不另发",
+    "source": "RC:545–690"
+  },
+  {
+    "id": "RC-06",
+    "rule": "只在旧阻断命令确切failed、执行回执failed且进程exited/pid_reused，且是同阶段不同稳定身份时，才允许重排曾observed的独立请求",
+    "source": "RC:568–598"
+  },
+  {
+    "id": "RC-07",
+    "rule": "request alias不能跨稳定身份；同稳定任务已有在途/reconciliation_required时合流；终态旧ID不再产生执行",
+    "source": "RC:729–790"
+  },
+  {
+    "id": "RC-08",
+    "rule": "资源guard忙或不可确认都不执行；其他同阶段/身份不明的预留阻断，明确不同阶段的事实独立恢复按现有规则处理",
+    "source": "RC:791–796、815–828"
+  },
+  {
+    "id": "RC-09",
+    "rule": "自动恢复必须绑定真实验收证据与构建哈希；预算最多2次、同失败事件只花一次、manualPause、至少30秒延时及有效时间全部保留",
+    "source": "RC:66–71、433–459、797–814"
+  },
+  {
+    "id": "RC-10",
+    "rule": "claim与预算先持久化，再写邮箱；邮箱失败不回滚预算也不换ID",
+    "source": "RC:829–860"
+  },
+  {
+    "id": "RC-11",
+    "rule": "accept时终态只观察、reconciliation_required不执行、已接受/执行中只观察；记录消费者进程身份；终态回执单向，迟到running不复活",
+    "source": "RC:862–919"
+  },
+  {
+    "id": "RC-12",
+    "rule": "手动初始交接有匹配邮箱120秒宽限；alive/completed/failed分别处理；重投须允许、资源可确认、未暂停、自动验收有效，且只重投 claimed/dispatched同ID；未知进入对账，不盲重试",
+    "source": "RC:921–993"
+  },
+  {
+    "id": "R5-01",
+    "rule": "API鉴权、JSON对象与ID列表类型校验；三类执行分别要求精确确认字符串；testing/reset另行禁用",
+    "source": "A:6573–6703、6706–6760"
+  },
+  {
+    "id": "R5-02",
+    "rule": "只收服务器生成的对象ID，不接收客户端绝对路径；公共输出去内部 `_path/_root/_mtimeNs` 等字段",
+    "source": "A:904–915、1335–1346、1936–1947"
+  },
+  {
+    "id": "R5-03",
+    "rule": "每类选择去空、去重；草稿≤500且ID≤160字符，音频≤2000且ID≤80，生产文件≤5000且ID≤80；未选400、源不可用503、所选对象消失409",
+    "source": "A:918–935、1349–1362、1950–1963"
+  },
+  {
+    "id": "R5-04",
+    "rule": "预览返回可删/被保护对象、原因、数量/空间、snapshotToken；执行不能仅信预览资格，重新盘点",
+    "source": "A:938–962、1365–1389、1966–2007；三类 execute入口"
+  },
+  {
+    "id": "R5-05",
+    "rule": "三类各自锁保护执行；原子写目录/清单；不将当前线程锁当跨新旧进程锁",
+    "source": "A:572–576、997、1393、2011"
+  },
+  {
+    "id": "R5-06",
+    "rule": "Windows Shell回收，非Windows拒绝，非零返回或aborted视为失败；不得退化为永久删除",
+    "source": "A:965–987"
+  },
+  {
+    "id": "R5-D01",
+    "rule": "草稿根取显式配置或本用户CapCut默认目录；不扫描所有磁盘猜测草稿",
+    "source": "A:564–569、800–806"
+  },
+  {
+    "id": "R5-D02",
+    "rule": "草稿按唯一draft_id关联 root_meta_info；CapCut/批处理客户端存在、缺ID、重复索引ID、最近15分钟更新均保护",
+    "source": "A:715–729、800–861"
+  },
+  {
+    "id": "R5-D03",
+    "rule": "正式/实验/人工未知分类沿用draft_content来源标记；人工/未知草稿需要额外includeUnknown确认",
+    "source": "A:756–775、949、1007–1008；J:1761–1762"
+  },
+  {
+    "id": "R5-D04",
+    "rule": "快照包括索引字节和目录名/mtime；token变化拒绝；执行再次拒绝运行进程或任意受保护选择",
+    "source": "A:778–797、998–1006"
+  },
+  {
+    "id": "R5-D05",
+    "rule": "索引payload类型校验，先备份原始root_meta_info及cleanup-manifest；备份失败不回收",
+    "source": "A:1010–1034"
+  },
+  {
+    "id": "R5-D06",
+    "rule": "索引只精确删除所选draft_id；不因同名/相似路径删除其他记录",
+    "source": "A:1036–1047"
+  },
+  {
+    "id": "R5-D07",
+    "rule": "每个草稿回收前再次检查CapCut进程；路径resolve后必须直接属于草稿根且是目录",
+    "source": "A:1051–1062"
+  },
+  {
+    "id": "R5-D08",
+    "rule": "部分失败时索引只剔除真正成功的草稿；失败记录保留；completed/partial/failed和每项原因落状态与control_actions",
+    "source": "A:1064–1084"
+  },
+  {
+    "id": "R5-A01",
+    "rule": "音频引用按规范路径、任务和来源去重；来源包含STORE任务、正式metadata、Fish handoff和上传登记",
+    "source": "A:1088–1181"
+  },
+  {
+    "id": "R5-A02",
+    "rule": "STORE所有非Completed任务保护，包括等待/失败/恢复；Fish handoff 非空非终态时引用保护；保留当前终态集合",
+    "source": "A:1144–1174"
+  },
+  {
+    "id": "R5-A03",
+    "rule": "根来自audio_roots或登记引用推导的音频目录；规范化、去重，源缺失不伪造空可清理清单",
+    "source": "A:1184–1215、1237–1247"
+  },
+  {
+    "id": "R5-A04",
+    "rule": "只纳入允许音频扩展名的真实文件，按路径去重；有活动引用保护；Fish生产进程存在且文件最近15分钟更新也保护",
+    "source": "A:1095–1106、1253–1283；扩展名常量 A:54"
+  },
+  {
+    "id": "R5-A05",
+    "rule": "token包括根、audioId、大小、mtime_ns、保护布尔与原因；执行先检查任意受保护选择，再检查token",
+    "source": "A:1218–1229、1392–1423"
+  },
+  {
+    "id": "R5-A06",
+    "rule": "音频执行中有受保护项时整体409并落blocked状态；不能擅自改为“删其余可删项”",
+    "source": "A:1394–1411"
+  },
+  {
+    "id": "R5-A07",
+    "rule": "先写带原路径/大小的清理manifest；逐项resolve后必须在已登记根内、类型允许、目标是文件；不存在分支记already_missing",
+    "source": "A:1425–1467"
+  },
+  {
+    "id": "R5-A08",
+    "rule": "回收失败逐项记录；completed/partial/failed结果及removed/failed计数落状态与control_actions",
+    "source": "A:1468–1486"
+  },
+  {
+    "id": "R5-P01",
+    "rule": "生产规范身份优先canonical/remote，补链/merged父任务折叠；必要时从已知路径中的inbox身份解析，不以相似文件名关联",
+    "source": "A:1537–1574"
+  },
+  {
+    "id": "R5-P02",
+    "rule": "项目状态非completed或STORE有非Completed行即活动；包括等待、失败、恢复",
+    "source": "A:1613–1633"
+  },
+  {
+    "id": "R5-P03",
+    "rule": "云核验必须status=uploaded、有cloudVerifiedAt、有fsId、verifiedSize与cloudSize均>0且相等",
+    "source": "A:1597–1610"
+  },
+  {
+    "id": "R5-P04",
+    "rule": "文件resolve后必须为文件且在登记根内、扩展名允许；百度同步根及名称匹配保护永久覆盖其他可删结论",
+    "source": "A:1659–1724"
+  },
+  {
+    "id": "R5-P05",
+    "rule": "第1/2步只从checkpoint的completed项精确outputPath登记；项目身份缺失/活动/未完成、无正式上传清单或任一关联上传未核验均保护共享去字幕文件",
+    "source": "A:1771–1812"
+  },
+  {
+    "id": "R5-P06",
+    "rule": "第4步/剪映临时/正式成片仅从上传登记 sourceVideoPath/temporaryOutputPath/localPath 取精确路径；缺canonical、活动、未核验保护；final_output_root=E盘不授权清整个盘",
+    "source": "A:1814–1852"
+  },
+  {
+    "id": "R5-P07",
+    "rule": "任务专属prepared-sample必须有对应上传登记并继承其保护；未登记旧样品只能显示不可选",
+    "source": "A:1854–1878"
+  },
+  {
+    "id": "R5-P08",
+    "rule": "测试根必须显式配置；隔离进程marker在运行时保护；测试文件永不默认勾选；含测试文件的额外确认保留",
+    "source": "A:1636–1656、1880–1900、1720、1988；J:1957"
+  },
+  {
+    "id": "R5-P09",
+    "rule": "同路径跨类别只保留一个登记对象；排序及分类统计稳定；token包括ID/大小/mtime/保护原因/引用计数",
+    "source": "A:1727–1737、1762–1769、1902–1933"
+  },
+  {
+    "id": "R5-P10",
+    "rule": "执行token失配整体409并落blocked状态；先写带身份/路径/大小的manifest再处理文件",
+    "source": "A:2011–2045"
+  },
+  {
+    "id": "R5-P11",
+    "rule": "生产文件与音频不同：受保护项逐项blocked，允许其他合格项继续；不能把音频整体拒绝语义机械复制过来",
+    "source": "A:2050–2057"
+  },
+  {
+    "id": "R5-P12",
+    "rule": "每项执行再次resolve，校验登记根、扩展名、百度保护目录；不存在记already_missing，非文件失败，其他移回收站",
+    "source": "A:2058–2087"
+  },
+  {
+    "id": "R5-P13",
+    "rule": "清理索引只登记removed对象、cleanupId与时间，保留旧项；completed/partial/blocked/failed按原优先级落结果",
+    "source": "A:2089–2122"
+  }
+]

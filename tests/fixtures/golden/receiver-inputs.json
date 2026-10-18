@@ -1,0 +1,571 @@
+{
+  "running": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "planned": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 0,
+          "failed": 0,
+          "status": "pending_confirmation",
+          "updatedAt": "2026-10-16T23:59:59+08:00"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "completed_with_historical_failure": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 3,
+          "failed": 1,
+          "status": "completed",
+          "updatedAt": "2026-10-16T23:59:59+08:00"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "missing_links": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 2,
+          "failed": 1,
+          "status": "blocked_missing_links",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "error": "MISSING_LINKS"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "voice_login_failure": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "pipelineStatus": "voice_failed",
+          "error": "VOICE_LOGIN_REQUIRED"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "voice_partial": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 1,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "pipelineStatus": "voice_partial"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "generation_failure": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "pipelineStatus": "generation_failed",
+          "error": "FFMPEG_FAILED"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "capcut_safe_checkpoint": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "pipelineStatus": "blocked_capcut",
+          "currentPhase": "waiting_client",
+          "failureFingerprint": "draft_checkpoint_current_lease_files_missing"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "upload_failure": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "pipelineStatus": "upload_failed",
+          "error": "UPLOAD_FAILED"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "denor": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "batchKind": "denor"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "selected_scope": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "runGroupId": "fixture-run-1",
+          "selectedProjects": [
+            "fixture-project"
+          ],
+          "unselectedProjects": [
+            "fixture-deferred"
+          ]
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "legacy_schema": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 1,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": {},
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "bad_local_json": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": "{invalid-json",
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "missing_local_json": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": null,
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "late_manifest_overlay": {
+    "clock": "2026-10-16T23:59:59+08:00",
+    "epoch": 1792166399,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {
+        "fixture-task-1": {
+          "manifestId": "fixture-old-manifest",
+          "attemptId": "fixture-old-attempt",
+          "pipelineStatus": "blocked_capcut"
+        }
+      }
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  },
+  "after_midnight": {
+    "clock": "2026-10-17T00:00:01+08:00",
+    "epoch": 1792166401,
+    "processes": [],
+    "metrics": {
+      "cpu": 0.0,
+      "gpu": 0,
+      "diskFree": 1000000000
+    },
+    "receiver": {
+      "schemaVersion": 3,
+      "reconciliationState": "healthy",
+      "reconciledAt": "2026-10-16T23:59:59+08:00",
+      "updatedAt": "2026-10-16T23:59:59+08:00",
+      "projects": [
+        {
+          "taskId": "fixture-task-1",
+          "batchId": "fixture-batch-1",
+          "date": "10.16",
+          "project": "fixture-project",
+          "expectedCount": 3,
+          "completed": 1,
+          "failed": 0,
+          "status": "running",
+          "updatedAt": "2026-10-16T23:59:59+08:00"
+        }
+      ],
+      "archivedProjects": []
+    },
+    "localStatus": {
+      "items": {}
+    },
+    "directoryEntries": [],
+    "database": "new-empty-sqlite"
+  }
+}
