@@ -62,6 +62,16 @@ PRODUCTION_VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
 SAFETY_CACHE_TTL_SECONDS = 20.0
 SAFETY_CACHE_LOCK = threading.Lock()
 SAFETY_CACHE: dict[str, Any] = {"payload": None, "expiresAt": 0.0}
+# Serialises "resolve the current target, compare, enqueue" so two clicks (or a
+# cloud retry racing a local click) cannot both pass the target check.
+CONTROL_COMMAND_LOCK = threading.Lock()
+CONTINUE_EXPECTED_FIELDS = (
+    "batchId", "taskId", "productionDate", "manifestId", "attemptId", "runGroupId", "batchKind",
+)
+CONTINUE_EXPECTED_LABELS = {
+    "batchId": "任务箱", "taskId": "项目", "productionDate": "日期", "manifestId": "清单",
+    "attemptId": "尝试", "runGroupId": "运行组", "batchKind": "任务类型",
+}
 LOCAL_PATH_PATTERN = re.compile(r"(?i)(?<![A-Za-z0-9])[A-Z]:[\\/][^\"\r\n]*")
 SENSITIVE_KEY_PARTS = ("accesstoken", "access_token", "password", "secret", "authorization")
 
@@ -6430,9 +6440,55 @@ async def create_control_command(request: Request):
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="命令请求不是有效JSON")
     client_request_id = str(body.get("clientRequestId") or "").strip()
-    target = _current_continue_target()
-    command = enqueue_control_command(target, client_request_id)
+    expected = _expected_continue_target(body)
+    with CONTROL_COMMAND_LOCK:
+        target = _current_continue_target()
+        mismatched = [key for key, value in expected.items() if str(target.get(key) or "") != value]
+        if mismatched:
+            labels = "、".join(CONTINUE_EXPECTED_LABELS[key] for key in mismatched)
+            raise HTTPException(
+                status_code=409,
+                detail=f"安全继续目标已变化（{labels}），请刷新页面确认当前项目后再试",
+            )
+        if client_request_id:
+            previous = next(
+                (item for item in list_control_commands()
+                 if str(item.get("clientRequestId") or "") == client_request_id),
+                None,
+            )
+            if previous and _continue_target_signature(previous) != _continue_target_signature(target):
+                raise HTTPException(
+                    status_code=409,
+                    detail="该请求编号已用于另一个项目的安全继续，请刷新页面后重新点击",
+                )
+        command = enqueue_control_command(target, client_request_id)
     return sanitize_public_value(command)
+
+
+def _expected_continue_target(body: dict[str, Any]) -> dict[str, str]:
+    """Optional target the caller saw when it asked to continue.
+
+    Older callers send only ``clientRequestId`` and keep working.  When a
+    caller does name the project, every named field must still match the live
+    target, otherwise a stale page could continue a different project.
+    """
+    raw = body.get("expectedTarget")
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise HTTPException(status_code=400, detail="expectedTarget 必须是对象")
+    unknown = sorted(set(raw) - set(CONTINUE_EXPECTED_FIELDS))
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"expectedTarget 含未知字段：{', '.join(unknown)}")
+    expected: dict[str, str] = {}
+    for key, value in raw.items():
+        if value is None:
+            continue
+        if not isinstance(value, str):
+            raise HTTPException(status_code=400, detail=f"expectedTarget.{key} 必须是字符串")
+        if value.strip():
+            expected[key] = value.strip()
+    return expected
 
 
 @app.get("/api/control-commands/current")
