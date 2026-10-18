@@ -22,12 +22,23 @@ jobs:
         run: |
           node --check cloud/readonly.js
           node --check cloud/login.js
+          node --check cloud/backups.js
       - name: Check deployment shell syntax without executing it
         shell: bash
         run: |
           bash -n deploy/m1a-stage.sh
           bash -n deploy/m1a-activate.sh
           bash -n deploy/m1a-upgrade.sh
+          bash -n deploy/m1b-repair-sources.sh
+          bash -n deploy/m1b-upgrade.sh
+      - name: Actual encrypted synthetic snapshots and inert restore
+        shell: powershell
+        run: |
+          $env:PYTHONPATH="$PWD\.test-deps"
+          python -B -m unittest discover -s tests -p backup_crypto_integration.py -v
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -B -m unittest discover -s tests -p backup_restore_integration.py -v
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Validate Windows agent task without registering it
         shell: powershell
         run: |

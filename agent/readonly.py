@@ -15,6 +15,7 @@ import urllib.request
 from contracts.cache import cache_key,endpoint,semantic_hash
 from agent.polling import PollSchedule
 from agent.lifecycle import Lifecycle
+from agent.backup_runtime import BackupWorker
 
 HOME_HOST='100.92.17.9'
 
@@ -166,6 +167,7 @@ class ReadOnlyAgent:
         self.schedule=PollSchedule()
         self.lifecycle=Lifecycle(self.state_dir)
         self.authenticated=threading.Event()
+        self.backup=BackupWorker(self)
         self.demands=queue.PriorityQueue(maxsize=128); self.pending_demands=set(); self.prefetch_targets=[]; self.slow_demands=[]; self.force_reads=set(); self.paused_targets=set()
         # The old summary ETag omits scan clocks and its 304 has no scan header.
         # Periodically read the existing response body, without adding a GET.
@@ -243,7 +245,8 @@ class ReadOnlyAgent:
     def heartbeat_loop(self):
         while not self.stop.is_set():
             try:
-                self.schedule.update_viewer(self.cloud('/agent/heartbeat',{'engineState':self.engine_state,'storage':self.ledger.storage()}))
+                reply=self.cloud('/agent/heartbeat',{'engineState':self.engine_state,'storage':self.ledger.storage(),'backupState':self.backup.public_state()})
+                self.schedule.update_viewer(reply);self.backup.notify(reply.get('backupRequest'))
                 self.authenticated.set()
             except urllib.error.HTTPError as exc:
                 if exc.code in {401,403}: self.authenticated.clear()
@@ -351,7 +354,7 @@ class ReadOnlyAgent:
                                 try:self.lifecycle.record_worker_failure(worker,error)
                                 except Exception:pass # Diagnostics failure must never print the original exception.
                     finally:self.engine_state='unavailable';self.stop.set()
-            methods=(('heartbeat',self.heartbeat_loop),('collection',self.collection_loop),('upload',self.upload_loop),('demand',self.demand_loop),('foreground',self.foreground_loop))
+            methods=(('heartbeat',self.heartbeat_loop),('collection',self.collection_loop),('upload',self.upload_loop),('demand',self.demand_loop),('foreground',self.foreground_loop),('backup',self.backup.loop))
             threads=[threading.Thread(target=supervise,args=(worker,method),daemon=True) for worker,method in methods]
             for thread in threads: thread.start()
             requested=None;published=0
