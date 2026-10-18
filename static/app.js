@@ -2015,7 +2015,16 @@ $("continueCurrentButton")?.addEventListener("click", async (event) => {
   button.textContent = "正在发送继续指令…";
   try {
     const clientRequestId = (window.crypto?.randomUUID?.() || `dashboard-${Date.now()}-${Math.random()}`);
-    const result = await postJson("/api/control-commands", { clientRequestId });
+    // Name the project this page showed when the user confirmed, so a stale
+    // page cannot continue a project that has changed since (409 instead).
+    const box = state.lastGoodDashboard?.currentTaskBox || {};
+    const expectedTarget = Object.fromEntries(Object.entries({
+      batchId: box.batchId,
+      taskId: box.current?.taskId,
+      attemptId: box.current?.attemptId,
+    }).filter(([, value]) => typeof value === "string" && value));
+    const payload = Object.keys(expectedTarget).length ? { clientRequestId, expectedTarget } : { clientRequestId };
+    const result = await postJson("/api/control-commands", payload);
     renderContinueResult({
       ...result,
       state: result.state || "persisted",
