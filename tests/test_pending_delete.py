@@ -140,6 +140,10 @@ class PendingDeleteTests(unittest.TestCase):
             os.symlink(target, link)
         except OSError:
             self.skipTest("symlink creation not permitted here")
+        # Remove the link before TemporaryDirectory removes its target. On
+        # Windows runners a dangling reparse path cannot be resolved reliably
+        # by the production-I/O guard during recursive fixture cleanup.
+        self.addCleanup(link.unlink)
         with self.assertRaises(OSError):
             pending_delete.move(link, cleanup_id="c1", source_kind="audio")
 
