@@ -523,3 +523,16 @@ manifest. The old code recreates its body cache on subsequent GET; removed
 response archive bodies are deliberately not restored locally. Cloud uses the
 upgrade backup's rollback.sh with additive schema retained. Exact paths are
 recorded by the actual deployment; unexecuted rollback is not called tested.
+
+
+The routine source updater launches every Python helper via ProcessStartInfo
+with UseShellExecute=false, CreateNoWindow=true and WindowStyle=Hidden. Its CI
+fixture actually launches an inert Python process, verifies GetConsoleWindow=0,
+arguments containing spaces, and nonzero exit propagation. It never registers
+or starts the installed agent/task. No helper launch relies on a hidden parent
+alone to suppress child console windows.
+
+CI performance checks assert that cached reads do not wait for a source result;
+they do not use the per-call Windows TestClient event-loop startup cost as a
+production HTTP latency limit. Actual cached/uncached five-sample HTTP timings
+and <=1-second long-poll delivery remain mandatory deployment acceptance.

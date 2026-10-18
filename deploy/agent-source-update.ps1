@@ -28,7 +28,25 @@ foreach ($ace in $descriptor.DiscretionaryAcl) {
     if ($ace.SecurityIdentifier -eq $sid -and $ace.AceQualifier -eq 'AccessDenied' -and ($ace.AccessMask -band 32)) { throw 'Task execution denied for current user.' }
 }
 if (-not $canExecute) { throw 'One-time task migration required to grant this user read/execute access; no update started.' }
-$inspection=& $python -B $helper inspect --target $agentRoot
+function Invoke-AgentTool {
+    param([Parameter(ValueFromRemainingArguments=$true)][string[]]$Items)
+    $arguments=@('-B',$helper)+$Items
+    foreach($value in $arguments){if($value.Contains('"') -or $value.Contains("`n") -or $value.Contains("`r") -or $value.EndsWith('\')){throw 'Unsafe helper argument.'}}
+    $psi=New-Object Diagnostics.ProcessStartInfo
+    $psi.FileName=$python;$psi.Arguments=($arguments|ForEach-Object{'"'+$_+'"'}) -join ' '
+    $psi.UseShellExecute=$false;$psi.CreateNoWindow=$true;$psi.WindowStyle=[Diagnostics.ProcessWindowStyle]::Hidden
+    $psi.RedirectStandardOutput=$true;$psi.RedirectStandardError=$true
+    $child=New-Object Diagnostics.Process;$child.StartInfo=$psi
+    try{
+        [void]$child.Start();$out=$child.StandardOutput.ReadToEndAsync();$err=$child.StandardError.ReadToEndAsync();$child.WaitForExit()
+        $script:LASTEXITCODE=$child.ExitCode
+        $stdout=$out.GetAwaiter().GetResult();$stderr=$err.GetAwaiter().GetResult()
+    }finally{$child.Dispose()}
+    # The helper emits only bounded sanitized metadata; never invoke a shell.
+    if($stdout){Write-Output $stdout.TrimEnd()}
+    if($stderr){Write-Output 'Agent helper reported an error; private configuration was not read or logged.'}
+}
+$inspection=Invoke-AgentTool inspect --target $agentRoot
 if ($LASTEXITCODE -ne 0) { throw 'Installed source validation failed.' }
 if (-not ($inspection | ConvertFrom-Json).supportsGracefulStop) { throw 'Legacy agent requires one-time migration while its lock is free; no process was killed.' }
 $previousInstance=$null
@@ -37,7 +55,7 @@ if (Test-Path -LiteralPath $runtimePath) { $previousInstance=(Read-SharedJson -P
 if ($Action -eq 'Update') {
     if ($ExpectedCommit -notmatch '^[a-f0-9]{40}$') { throw 'Expected commit required.' }
     $BackupPath=Join-Path 'E:\Backup\ops-agent-deploy-backups' ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ')+'-graceful-update')
-    & $python -B $helper prepare --source $SourcePackage --target $agentRoot --backup $BackupPath --commit $ExpectedCommit
+    Invoke-AgentTool prepare --source $SourcePackage --target $agentRoot --backup $BackupPath --commit $ExpectedCommit
     if ($LASTEXITCODE -ne 0) { throw 'Code preparation failed; no stop requested.' }
     Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $BackupPath 'agent-source-update.ps1')
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'agent-json.ps1') -Destination (Join-Path $BackupPath 'agent-json.ps1')
@@ -46,9 +64,9 @@ if ($Action -eq 'Update') {
     Write-Output "Backup: $BackupPath"
     Write-Output ('Rollback: powershell.exe -NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $BackupPath 'rollback.ps1')+'"')
 }
-& $python -B $helper request-stop --target $agentRoot --backup $BackupPath
+Invoke-AgentTool request-stop --target $agentRoot --backup $BackupPath
 if ($LASTEXITCODE -ne 0) { throw 'Stop request refused; source unchanged.' }
-& $python -B $helper wait --target $agentRoot --backup $BackupPath
+Invoke-AgentTool wait --target $agentRoot --backup $BackupPath
 if ($LASTEXITCODE -ne 0) { throw 'Graceful stop not confirmed; source unchanged, maintenance retained. No process was killed.' }
 for ($attempt=0;$attempt -lt 100;$attempt++) {
     if ((Get-ScheduledTask -TaskName $taskName -TaskPath '\').State -ne 'Running') { break }
@@ -56,12 +74,12 @@ for ($attempt=0;$attempt -lt 100;$attempt++) {
 }
 if ((Get-ScheduledTask -TaskName $taskName -TaskPath '\').State -eq 'Running') { throw 'Task wrapper did not exit; source unchanged.' }
 if ($Action -eq 'Update') {
-    & $python -B $helper apply --source $SourcePackage --target $agentRoot --backup $BackupPath --commit $ExpectedCommit
+    Invoke-AgentTool apply --source $SourcePackage --target $agentRoot --backup $BackupPath --commit $ExpectedCommit
 } else {
-    & $python -B $helper restore --target $agentRoot --backup $BackupPath
+    Invoke-AgentTool restore --target $agentRoot --backup $BackupPath
 }
 if ($LASTEXITCODE -ne 0) { throw 'Source replacement failed; maintenance retained for recovery.' }
-& $python -B $helper finish --target $agentRoot --backup $BackupPath
+Invoke-AgentTool finish --target $agentRoot --backup $BackupPath
 if ($LASTEXITCODE -ne 0) { throw 'Maintenance identity changed; no task started.' }
 $expectedVersion=if ($Action -eq 'Update') { $ExpectedCommit } else { (Read-SharedJson -Path (Join-Path $BackupPath 'operation.json')).before }
 Start-ScheduledTask -TaskName $taskName -TaskPath '\'
