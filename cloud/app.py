@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import secrets
+import threading
+from contextlib import asynccontextmanager
 from urllib.parse import parse_qs,urlsplit,urlencode
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError,InvalidHashError
@@ -13,6 +15,9 @@ from fastapi.responses import HTMLResponse,JSONResponse,RedirectResponse,Respons
 from fastapi.staticfiles import StaticFiles
 from contracts.cache import cache_key
 from cloud.store import Store
+from cloud.backups import BackupVault,BackupError
+from cloud.backup_routes import mount_backups
+from cloud.backup_runtime import CloudBackupWorker
 
 HASHER=PasswordHasher(time_cost=2,memory_cost=19456,parallelism=1)
 COOKIE='ops_console_session'
@@ -56,8 +61,18 @@ def create_app(config=None,store=None,static_root=None):
         raise RuntimeError('Console setup incomplete; use the local setup command without sharing credentials')
     store=store or Store(Path(config.get('state_dir','/var/lib/ops-console'))/'console.db')
     static_root=Path(static_root or Path(__file__).parents[1]/'static')
-    application=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
+    vault=BackupVault(Path(store.path).parent/'backups',clock=store.clock)
+    backup_worker=CloudBackupWorker(vault,store.path,config)
+    @asynccontextmanager
+    async def lifespan(app):
+        thread=threading.Thread(target=backup_worker.run,daemon=True,name='cloud-backup')
+        thread.start()
+        try:yield
+        finally:backup_worker.stop.set();thread.join(timeout=2)
+    application=FastAPI(docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
     application.state.store=store
+    application.state.backups=vault
+    application.state.backup_worker=backup_worker
     def session(request):
         row=store.session(request.cookies.get(COOKIE,''))
         if not row: raise HTTPException(401,'login_required')
@@ -73,6 +88,7 @@ def create_app(config=None,store=None,static_root=None):
         if not secrets.compare_digest(digest,config['agent_token_sha256']): raise HTTPException(401,'agent_auth_required')
     def rate(request,kind,maximum):
         if store.limited(kind+':'+rate_identity(request),maximum): raise HTTPException(429,'rate_limited')
+    mount_backups(application,vault,agent,session,csrf,bounded_json)
     @application.middleware('http')
     async def security(request,call_next):
         if request.method=='POST' and request.headers.get('content-length','').isdigit() and int(request.headers['content-length'])>MAX_BODY:
@@ -101,12 +117,16 @@ def create_app(config=None,store=None,static_root=None):
         if not store.session(request.cookies.get(COOKIE,'')): return RedirectResponse('/login',status_code=303)
         page=(static_root/'index.html').read_text(encoding='utf-8')
         # Insert before app.js executes, while leaving the home static files intact.
-        page=page.replace('<head>','<head><script src="/cloud-readonly.js"></script>',1)
+        page=page.replace('<head>','<head><script src="/cloud-readonly.js"></script><script defer src="/cloud-backups.js"></script>',1)
         return HTMLResponse(page)
     @application.get('/cloud-readonly.js')
     def readonly_script(request:Request):
         session(request)
         return Response((Path(__file__).parent/'readonly.js').read_bytes(),media_type='application/javascript')
+    @application.get('/cloud-backups.js')
+    def backup_script(request:Request):
+        session(request)
+        return Response((Path(__file__).parent/'backups.js').read_bytes(),media_type='application/javascript')
     @application.get('/auth/options')
     def options(): return {'registrationOpen':store.user_count()<int(config.get('max_accounts',2))}
     @application.post('/auth/register')
@@ -159,7 +179,11 @@ def create_app(config=None,store=None,static_root=None):
         if storage is not None:
             allowed={'pendingItems','outboxBytes','outboxLimitBytes','outboxDropped','databaseBytes','walBytes'}
             if not isinstance(storage,dict) or set(storage)-allowed or any(type(v) is not int or not 0<=v<=10**12 for v in storage.values()):raise HTTPException(400,'invalid_storage_metrics')
-        store.heartbeat(state,storage); return {'received':True,**store.viewer_state()}
+        backup_state=data.get('backupState')
+        if backup_state is not None:
+            try:vault.note_agent_state(backup_state)
+            except BackupError as error:raise HTTPException(error.status,error.code) from None
+        store.heartbeat(state,storage); return {'received':True,**store.viewer_state(),'backupRequest':vault.pending_request()}
     @application.get('/agent/fetch-requests')
     def fetch_requests(request:Request,wait:int=0):
         agent(request)

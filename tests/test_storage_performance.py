@@ -118,14 +118,18 @@ class PriorityTests(unittest.TestCase):
             entered=threading.Event();release=threading.Event();calls=[]
             def home(target,**kw):
                 calls.append(target)
-                if target=='/api/safety':entered.set();release.wait(3)
+                if target=='/api/safety':entered.set();release.wait(30)
                 return 200,{},''
             with patch.object(agent,'home',side_effect=home):
                 slow=threading.Thread(target=agent.collect,args=('/api/safety',));slow.start()
                 try:
-                    self.assertTrue(entered.wait(1));started=time.monotonic()
-                    agent.collect('/api/dashboard?batchId=fixture',reason='on-demand')
-                    self.assertLess(time.monotonic()-started,0.5)
+                    self.assertTrue(entered.wait(10));done=threading.Event()
+                    def foreground():
+                        agent.collect('/api/dashboard?batchId=fixture',reason='on-demand');done.set()
+                    foreground_thread=threading.Thread(target=foreground,daemon=True);foreground_thread.start()
+                    self.assertTrue(done.wait(10),'Foreground must finish while slow safety remains blocked')
+                    self.assertTrue(slow.is_alive());self.assertFalse(release.is_set())
+                    foreground_thread.join(1)
                     agent.collect('/api/safety',reason='on-demand')
                     self.assertEqual(1,calls.count('/api/safety'))
                 finally:release.set();slow.join(3)
