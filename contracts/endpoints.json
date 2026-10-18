@@ -117,7 +117,8 @@
     "offline": "cached-key-only",
     "mayWriteSourceState": false,
     "periodSeconds": 60,
-    "timeoutSeconds": 15
+    "timeoutSeconds": 90,
+    "timeoutReason": "Eight sequential control-plane calls allow 8 seconds each, plus local inventory; app.py production_safety."
   },
   {
     "method": "GET",
@@ -287,7 +288,7 @@
     "offline": "cached-key-only",
     "mayWriteSourceState": false,
     "periodSeconds": 60,
-    "timeoutSeconds": 15
+    "timeoutSeconds": 30
   },
   {
     "method": "GET",
@@ -361,7 +362,7 @@
     "offline": "cached-key-only",
     "mayWriteSourceState": false,
     "periodSeconds": 0,
-    "timeoutSeconds": 15
+    "timeoutSeconds": 90
   },
   {
     "method": "POST",
@@ -409,7 +410,7 @@
     "offline": "cached-key-only",
     "mayWriteSourceState": false,
     "periodSeconds": 0,
-    "timeoutSeconds": 15
+    "timeoutSeconds": 90
   },
   {
     "method": "POST",
@@ -457,7 +458,7 @@
     "offline": "cached-key-only",
     "mayWriteSourceState": false,
     "periodSeconds": 0,
-    "timeoutSeconds": 15
+    "timeoutSeconds": 120
   },
   {
     "method": "POST",

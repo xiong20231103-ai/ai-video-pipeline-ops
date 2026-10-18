@@ -15,6 +15,31 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install isolated dependencies
-        run: python -m pip install --target .test-deps -r requirements.txt
+        run: python -m pip install --target .test-deps -r requirements.txt -r cloud/requirements-test.txt
       - name: Run with production I/O blocked
         run: python -B tools/run_isolated_tests.py
+      - name: Check cloud JavaScript syntax
+        run: |
+          node --check cloud/readonly.js
+          node --check cloud/login.js
+      - name: Check deployment shell syntax without executing it
+        shell: bash
+        run: |
+          bash -n deploy/m1a-stage.sh
+          bash -n deploy/m1a-activate.sh
+          bash -n deploy/m1a-upgrade.sh
+      - name: Validate Windows agent task without registering it
+        shell: powershell
+        run: |
+          ./tests/test_agent_task.ps1
+          ./tests/test_agent_migration.ps1
+          ./tests/test_agent_acceptance.ps1
+          ./tests/test_state_files.ps1
+          ./tests/test_hidden_updater.ps1
+      - name: Real Windows job lifecycle with synthetic services and no home HTTP
+        shell: powershell
+        run: |
+          $env:OPS_AGENT_TEST_PYTHON=(Get-Command python).Source
+          python -B tests/agent_job_integration.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -B tests/agent_supervisor_integration.py
