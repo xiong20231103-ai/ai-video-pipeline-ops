@@ -3744,7 +3744,7 @@ class Collector:
         # workbench owns live step-3/4 state.  Merge only task-scoped pipeline
         # fields so Dashboard can surface a Fish failure without altering
         # receiver counts or task-box membership.
-        local_status = self._json(self.project_download_status_file())
+        local_status = self._json(self.project_download_status_file()) or {}
         local_items = local_status.get("items") if isinstance(local_status.get("items"), dict) else {}
         records: list[dict[str, Any]] = []
         for task_id, raw in raw_items.items():

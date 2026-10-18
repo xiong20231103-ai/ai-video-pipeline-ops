@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import shutil
 import time
 import unittest
 from pathlib import Path
@@ -10,6 +11,38 @@ import app
 
 
 class OpsTests(unittest.TestCase):
+    def _install_recovery_transport_fixture(self, root):
+        workbench = root / "workbench"
+        workbench.mkdir(exist_ok=True)
+        shutil.copyfile(Path(__file__).parent / "fixtures" / "recovery_control.py",
+                        workbench / "recovery_control.py")
+        return workbench / "handoff" / "control"
+
+    def test_missing_shared_recovery_module_rejects_before_receiver_start(self):
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.dict(app.CONFIG, {"workbench_dir": folder}), \
+                patch("app.ensure_receiver_workbench_running") as start:
+            with self.assertRaises(app.HTTPException) as error:
+                app.request_workbench_continue({"taskId": "task-missing"})
+            self.assertEqual(503, error.exception.status_code)
+            start.assert_not_called()
+            self.assertFalse((Path(folder) / "handoff").exists())
+
+    def test_shared_request_identity_conflict_preserves_original_request(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            control = self._install_recovery_transport_fixture(root)
+            original = {"commandId": "continue-fixed", "taskId": "task-original", "batchId": "batch-1"}
+            with patch.dict(app.CONFIG, {"workbench_dir": str(root)}), \
+                    patch("app.ensure_receiver_workbench_running", return_value={}):
+                app.request_workbench_continue(original)
+                with self.assertRaises(app.HTTPException) as error:
+                    app.request_workbench_continue({**original, "taskId": "task-other"})
+            self.assertEqual(503, error.exception.status_code)
+            saved = json.loads((control / "recovery-requests" / "continue-fixed.json").read_text(encoding="utf-8"))
+            self.assertEqual("task-original", saved["taskId"])
+            self.assertFalse((control / app.CONTINUE_COMMAND_NAME).exists())
+
     def test_completion_receipt_is_immutable_and_survives_missing_local_rows(self):
         with tempfile.TemporaryDirectory() as folder, patch("app.TASK_BOX_RECEIPT_DIR", Path(folder)):
             box = {
@@ -659,14 +692,14 @@ class OpsTests(unittest.TestCase):
             self.assertEqual([], collector.project_download_statuses)
             self.assertEqual("接收器状态未对账", collector.receiver_error)
 
-    def test_continue_command_persists_exact_target_and_is_idempotent(self):
+    def test_continue_enqueues_exact_target_and_reuses_explicit_request_id(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            (root / "workbench").mkdir()
+            self._install_recovery_transport_fixture(root)
             previous = app.CONFIG.get("workbench_dir")
             app.CONFIG["workbench_dir"] = str(root)
             target = {
-                "batchId": "box-1", "taskId": "task-1", "productionDate": "7.21",
+                "commandId": "continue-stable", "batchId": "box-1", "taskId": "task-1", "productionDate": "7.21",
                 "snapshotUpdatedAt": "2026-07-22T10:00:00+08:00",
             }
             try:
@@ -679,21 +712,23 @@ class OpsTests(unittest.TestCase):
                 ) as ensure_running:
                     first = app.request_workbench_continue(target)
                     second = app.request_workbench_continue(target)
-                saved = json.loads((root / "workbench" / "handoff" / "control" / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8"))
+                saved = json.loads((root / "workbench" / "handoff" / "control" / "recovery-requests" / "continue-stable.json").read_text(encoding="utf-8"))
                 self.assertEqual(first["commandId"], second["commandId"])
                 self.assertTrue(first["workbenchStarted"])
                 self.assertTrue(second["workbenchAlreadyRunning"])
                 self.assertEqual(2, ensure_running.call_count)
-                self.assertTrue(saved["workbenchAlreadyRunning"])
-                self.assertEqual(9876, saved["workbenchPid"])
+                self.assertTrue(second["workbenchAlreadyRunning"])
+                self.assertEqual(9876, second["workbenchPid"])
+                self.assertFalse((root / "workbench" / "handoff" / "control" / app.CONTINUE_COMMAND_NAME).exists())
                 for key, value in target.items():
                     self.assertEqual(value, saved[key])
             finally:
                 app.CONFIG["workbench_dir"] = previous
 
-    def test_stale_accepted_continue_command_is_replaced_for_same_task(self):
+    def test_stale_accepted_mailbox_is_not_overwritten_by_dashboard_request(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
+            self._install_recovery_transport_fixture(root)
             workbench = root / "workbench"
             control = workbench / "handoff" / "control"
             runtime = workbench / "handoff" / "download"
@@ -722,16 +757,18 @@ class OpsTests(unittest.TestCase):
                     return_value={"started": False, "alreadyRunning": True, "pid": 2468},
                 ):
                     result = app.request_workbench_continue(target)
-                saved = json.loads((control / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8"))
+                saved = json.loads((control / "recovery-requests" / (result["commandId"] + ".json")).read_text(encoding="utf-8"))
+                self.assertEqual(old, json.loads((control / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8")))
                 self.assertNotEqual("continue-old", result["commandId"])
                 self.assertEqual("requested", saved["state"])
                 self.assertEqual("task-accepted", saved["taskId"])
             finally:
                 app.CONFIG["workbench_dir"] = previous
 
-    def test_stale_capcut_recovering_command_is_replaced_when_client_is_gone(self):
+    def test_stale_capcut_mailbox_is_not_overwritten_by_dashboard_request(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
+            self._install_recovery_transport_fixture(root)
             workbench = root / "workbench"
             control = workbench / "handoff" / "control"
             runtime = workbench / "handoff" / "download"
@@ -767,7 +804,8 @@ class OpsTests(unittest.TestCase):
                     return_value={"started": False, "alreadyRunning": True, "pid": 2468},
                 ):
                     result = app.request_workbench_continue(target)
-                saved = json.loads((control / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8"))
+                saved = json.loads((control / "recovery-requests" / (result["commandId"] + ".json")).read_text(encoding="utf-8"))
+                self.assertEqual(old, json.loads((control / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8")))
                 self.assertNotEqual("continue-stale-capcut", result["commandId"])
                 self.assertEqual("requested", saved["state"])
                 self.assertEqual("manifest-new", saved["manifestId"])
@@ -775,9 +813,10 @@ class OpsTests(unittest.TestCase):
             finally:
                 app.CONFIG["workbench_dir"] = previous
 
-    def test_continue_retires_a_recent_command_for_a_different_project(self):
+    def test_different_project_request_leaves_workbench_mailbox_untouched(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
+            self._install_recovery_transport_fixture(root)
             workbench = root / "workbench"
             control = workbench / "handoff" / "control"
             runtime = workbench / "handoff" / "download"
@@ -801,13 +840,13 @@ class OpsTests(unittest.TestCase):
             try:
                 with patch("app.ensure_receiver_workbench_running", return_value={"started": False, "alreadyRunning": True, "pid": 2468}):
                     result = app.request_workbench_continue(target)
-                saved = json.loads((control / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8"))
+                saved = json.loads((control / "recovery-requests" / (result["commandId"] + ".json")).read_text(encoding="utf-8"))
+                self.assertEqual(old, json.loads((control / app.CONTINUE_COMMAND_NAME).read_text(encoding="utf-8")))
                 archived = list((control / "history").glob("continue-old-project-*.json"))
                 self.assertNotEqual("continue-old-project", result["commandId"])
                 self.assertEqual("requested", saved["state"])
                 self.assertEqual("task-new", saved["taskId"])
-                self.assertEqual(1, len(archived))
-                self.assertEqual("安全继续目标已变化，旧命令已归档", json.loads(archived[0].read_text(encoding="utf-8"))["archiveReason"])
+                self.assertEqual([], archived)  # Only the workbench may retire/deliver its mailbox.
             finally:
                 app.CONFIG["workbench_dir"] = previous
 
@@ -853,7 +892,7 @@ class OpsTests(unittest.TestCase):
     def test_continue_keeps_command_when_receiver_cannot_launch_workbench(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            (root / "workbench").mkdir()
+            self._install_recovery_transport_fixture(root)
             previous = app.CONFIG.get("workbench_dir")
             app.CONFIG["workbench_dir"] = str(root)
             target = {
@@ -866,20 +905,21 @@ class OpsTests(unittest.TestCase):
                     side_effect=app.HTTPException(status_code=503, detail="receiver offline"),
                 ):
                     result = app.request_workbench_continue(target)
-                command_file = root / "workbench" / "handoff" / "control" / app.CONTINUE_COMMAND_NAME
+                command_file = root / "workbench" / "handoff" / "control" / "recovery-requests" / (result["commandId"] + ".json")
                 self.assertTrue(command_file.is_file())
                 self.assertTrue(result["accepted"])
                 self.assertFalse(result["workbenchStarted"])
                 self.assertEqual("receiver offline", result["workbenchLaunchError"])
                 saved = json.loads(command_file.read_text(encoding="utf-8"))
-                self.assertEqual("receiver offline", saved["workbenchLaunchError"])
+                self.assertEqual("requested", saved["state"])
+                self.assertFalse((command_file.parent.parent / app.CONTINUE_COMMAND_NAME).exists())
             finally:
                 app.CONFIG["workbench_dir"] = previous
 
     def test_continue_keeps_structured_receiver_startup_error(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            (root / "workbench").mkdir()
+            self._install_recovery_transport_fixture(root)
             previous = app.CONFIG.get("workbench_dir")
             app.CONFIG["workbench_dir"] = str(root)
             target = {
@@ -893,9 +933,10 @@ class OpsTests(unittest.TestCase):
                 self.assertEqual("ready_timeout", result["workbenchLaunchCode"])
                 self.assertEqual(detail["message"], result["workbenchLaunchError"])
                 self.assertEqual("C:/temp/log", result["workbenchLaunchLog"])
-                command = app.read_json_object(root / "workbench" / "handoff" / "control" / app.CONTINUE_COMMAND_NAME)
+                command = app.read_json_object(root / "workbench" / "handoff" / "control" / "recovery-requests" / (result["commandId"] + ".json"))
                 self.assertEqual("requested", command["state"])
-                self.assertEqual("ready_timeout", command["workbenchLaunchCode"])
+                self.assertEqual("task-startup", command["taskId"])
+                self.assertFalse((root / "workbench" / "handoff" / "control" / app.CONTINUE_COMMAND_NAME).exists())
             finally:
                 app.CONFIG["workbench_dir"] = previous
 

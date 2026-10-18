@@ -1,0 +1,75 @@
+"""Run the test suite from its worktree with production I/O blocked."""
+import importlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(root / ".test-deps"))
+assert Path.cwd().resolve() == root
+sys.path.insert(0, str(root))
+sys.dont_write_bytecode = True
+
+with tempfile.TemporaryDirectory(prefix="ops-isolated-") as scratch:
+    isolated = Path(scratch)
+    os.environ["LOCALAPPDATA"] = str(isolated / "localappdata")
+    config = {
+        key: str(isolated / key)
+        for key in (
+            "workbench_dir", "workbench_ops_status", "download_state_file",
+            "download_project_status_file", "download_root", "voice_handoff_file",
+            "generation_output_root", "capcut_handoff_dir", "fourth_step_handoff_dir",
+            "final_output_root", "capcut_draft_root", "upload_status_file",
+        )
+    }
+    config.update(simulation_enabled=False, audio_roots=[], prepared_sample_roots=[],
+                  capcut_test_roots=[], baidu_sync_roots=[], receiver_status_url="",
+                  control_plane_url="http://127.0.0.1:18790")
+    original_read_text = Path.read_text
+    def read_text(path, *args, **kwargs):
+        if path.resolve() == root / "config.json":
+            return json.dumps(config)
+        return original_read_text(path, *args, **kwargs)
+
+    # Prevent unexpected writes to any production location, even from a test.
+    write_roots = (root, isolated.resolve(), Path(tempfile.gettempdir()).resolve())
+    def permitted(path):
+        if isinstance(path, int):
+            return True
+        try:
+            resolved = Path(path).resolve()
+            return any(resolved.is_relative_to(base) for base in write_roots)
+        except (ValueError, TypeError):
+            return False
+    def audit(event, args):
+        paths = ()
+        if event == "open":
+            path, mode, flags = args
+            if (mode and any(c in mode for c in "wax+")) or (flags and flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND)):
+                paths = (path,)
+        elif event in {"os.remove", "os.rmdir", "os.mkdir", "os.chmod", "os.utime"}:
+            paths = args[:1]
+        elif event in {"os.rename", "os.link", "os.symlink"}:
+            paths = args[:2]
+        elif event == "sqlite3.connect" and str(args[0]) != ":memory:":
+            paths = args[:1]
+        elif event in {"socket.connect", "socket.bind", "subprocess.Popen", "os.system"}:
+            raise RuntimeError("Production network/process execution blocked: " + event)
+        if any(not permitted(path) for path in paths):
+            raise RuntimeError("Write outside worktree/temp blocked: " + event)
+    sys.addaudithook(audit)
+    with patch.object(Path, "read_text", read_text):
+        import app
+    assert app.BASE_DIR == root
+    with patch("app.urllib.request.urlopen", side_effect=RuntimeError("Live HTTP blocked")), \
+         patch.object(subprocess, "Popen", side_effect=RuntimeError("Process launch blocked")):
+        suite = unittest.defaultTestLoader.discover(str(root / "tests"), pattern="test_ops.py")
+        result = unittest.TextTestRunner(verbosity=1).run(suite)
+    print("Isolation: worktree/temp writes only; live HTTP and process launches blocked.")
+    sys.exit(0 if result.wasSuccessful() else 1)
+
