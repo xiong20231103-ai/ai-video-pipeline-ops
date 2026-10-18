@@ -2,6 +2,7 @@
 from datetime import datetime,timezone
 import json
 import os
+import re
 from pathlib import Path
 import time
 import uuid
@@ -38,6 +39,7 @@ class Lifecycle:
     def __init__(self,state_dir):
         self.state_dir=Path(state_dir);self.instance_id=uuid.uuid4().hex
         self.started=time.monotonic();self.creation_filetime=own_creation_filetime()
+        self.worker_failure=None;self.failure_persisted=False
         self.version='unpackaged'
         path=Path(__file__).resolve().parents[1]/'deployment-manifest.json'
         if path.is_file():
@@ -45,10 +47,27 @@ class Lifecycle:
             if isinstance(version,str) and len(version)==40 and all(char in '0123456789abcdef' for char in version): self.version=version
     def stop_request(self):
         return request_identity(self.state_dir/STOP_FILE) or request_identity(self.state_dir/MAINTENANCE_FILE)
+    def record_worker_failure(self,worker,error):
+        if worker not in {'heartbeat','collection','upload','demand'}:raise ValueError('Unknown worker')
+        def identifier(value):
+            return value if isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9_.-]{1,128}',value) else 'other'
+        frames=[];trace=error.__traceback__
+        while trace:
+            code=trace.tb_frame.f_code
+            frames.append({'file':identifier(Path(code.co_filename).name),'function':identifier(code.co_name),'line':trace.tb_lineno})
+            trace=trace.tb_next
+        # Never stringify an exception or capture messages, source lines or locals.
+        self.worker_failure={'worker':worker,'exceptionType':identifier(type(error).__name__),'frames':frames[-8:]}
+        event={'schema':1,'instanceId':self.instance_id,'pid':os.getpid(),'version':self.version,
+               'observedAt':datetime.now(timezone.utc).isoformat(),'failure':self.worker_failure}
+        atomic_json(self.state_dir/'last-worker-failure.json',event)
+        self.failure_persisted=True
     def publish(self,phase,request_id=None,workers_remaining=0):
         if phase not in {'starting','running','stopped','failed'}: raise ValueError('Invalid lifecycle phase')
         value={'schema':1,'instanceId':self.instance_id,'pid':os.getpid(),'parentPid':os.getppid(),
             'processCreationFileTime':self.creation_filetime,'version':self.version,'phase':phase,
             'observedAt':datetime.now(timezone.utc).isoformat(),'uptimeSeconds':time.monotonic()-self.started,
             'stopRequestId':request_id,'workersRemainingAtExit':workers_remaining}
+        if self.worker_failure is not None:
+            value['workerFailure']=self.worker_failure;value['workerFailurePersisted']=self.failure_persisted
         atomic_json(self.state_dir/STATUS_FILE,value)

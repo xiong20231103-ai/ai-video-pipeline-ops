@@ -215,11 +215,19 @@ class ReadOnlyAgent:
                 self.lifecycle.publish('stopped',requested)
                 return
             self.lifecycle.publish('starting')
-            def supervise(method):
+            failure_lock=threading.Lock()
+            def supervise(worker,method):
                 try: method()
-                except Exception:
-                    self.worker_failed=True; self.engine_state='unavailable'; self.stop.set()
-            threads=[threading.Thread(target=supervise,args=(method,),daemon=True) for method in [self.heartbeat_loop,self.collection_loop,self.upload_loop,self.demand_loop]]
+                except Exception as error:
+                    try:
+                        with failure_lock:
+                            if not self.worker_failed:
+                                self.worker_failed=True
+                                try:self.lifecycle.record_worker_failure(worker,error)
+                                except Exception:pass # Diagnostics failure must never print the original exception.
+                    finally:self.engine_state='unavailable';self.stop.set()
+            methods=(('heartbeat',self.heartbeat_loop),('collection',self.collection_loop),('upload',self.upload_loop),('demand',self.demand_loop))
+            threads=[threading.Thread(target=supervise,args=(worker,method),daemon=True) for worker,method in methods]
             for thread in threads: thread.start()
             requested=None;published=0
             try:
