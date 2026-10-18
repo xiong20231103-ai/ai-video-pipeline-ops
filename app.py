@@ -2937,6 +2937,7 @@ class Store:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         self.path = path
         self.lock = threading.RLock()
+        self._local = threading.local()
         self._init_db()
 
     def connect(self) -> sqlite3.Connection:
@@ -2944,8 +2945,64 @@ class Store:
         connection.row_factory = sqlite3.Row
         return connection
 
+    # One collector scan used to open, commit and close a connection for every
+    # task row (thousands per scan, ~70 s on the production ledger). Inside
+    # ``batch()`` the scan thread reuses one connection; each ``connection()``
+    # block still runs in its own savepoint, so a failing row is rolled back
+    # exactly as before, and work is committed in small chunks so the write
+    # lock is never held long enough to block request handlers.
+    BATCH_COMMIT_ROWS = 100
+    BATCH_COMMIT_SECONDS = 0.5
+
+    @contextmanager
+    def batch(self):
+        if getattr(self._local, "batch", None) is not None:
+            yield
+            return
+        db = self.connect()
+        state = {"db": db, "pending": 0, "since": 0.0}
+        self._local.batch = state
+        try:
+            yield
+        finally:
+            self._local.batch = None
+            try:
+                db.commit()
+            finally:
+                db.close()
+
     @contextmanager
     def connection(self):
+        state = getattr(self._local, "batch", None)
+        if state is not None:
+            db = state["db"]
+            # An explicit BEGIN is required: releasing a savepoint that itself
+            # opened the transaction would commit every row individually.
+            if not db.in_transaction:
+                db.execute("BEGIN")
+            state["depth"] = state.get("depth", 0) + 1
+            db.execute("SAVEPOINT store_row")
+            try:
+                yield db
+            except BaseException:
+                db.execute("ROLLBACK TO store_row")
+                db.execute("RELEASE store_row")
+                state["depth"] -= 1
+                raise
+            db.execute("RELEASE store_row")
+            state["depth"] -= 1
+            if state["depth"]:
+                return
+            if not state["pending"]:
+                state["since"] = time.monotonic()
+            state["pending"] += 1
+            if (
+                state["pending"] >= self.BATCH_COMMIT_ROWS
+                or time.monotonic() - state["since"] >= self.BATCH_COMMIT_SECONDS
+            ):
+                db.commit()
+                state["pending"] = 0
+            return
         db = self.connect()
         try:
             yield db
@@ -4425,9 +4482,10 @@ class Collector:
         self.apply_active_workbench_voice_pending()
 
     def scan(self) -> None:
-        self.scan_metadata()
-        self.scan_statuses()
-        self.scan_pipeline()
+        with self.store.batch():
+            self.scan_metadata()
+            self.scan_statuses()
+            self.scan_pipeline()
         self.last_metrics = system_metrics(self.config)
         self.last_scan_at = now_iso()
         self.last_scan_epoch = time.time()
