@@ -5,28 +5,20 @@ import os
 from pathlib import Path
 import time
 import uuid
+from contracts.state_files import atomic_json,read_json
 
 STOP_FILE='stop-request.json'
 MAINTENANCE_FILE='maintenance.json'
 STATUS_FILE='agent-runtime.json'
 
-def atomic_json(path,value):
-    path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
-    temporary=path.with_name(path.name+'.'+uuid.uuid4().hex+'.tmp')
-    try:
-        with temporary.open('x',encoding='utf-8') as handle:
-            json.dump(value,handle,separators=(',',':'));handle.flush();os.fsync(handle.fileno())
-        temporary.replace(path)
-    finally: temporary.unlink(missing_ok=True)
-
 def request_identity(path):
+    try:data=read_json(path,max_bytes=2048,retry_missing=False)
+    except FileNotFoundError:return None
+    except (ValueError,UnicodeError):return 'manual'
     try:
-        with Path(path).open('r',encoding='utf-8-sig') as handle: raw=handle.read(2049)
-    except FileNotFoundError: return None
-    try:
-        data=json.loads(raw);value=data.get('requestId','')
-        if len(raw)<=2048 and isinstance(value,str) and 1<=len(value)<=64 and all(char in '0123456789abcdef-' for char in value): return value
-    except (ValueError,AttributeError,TypeError): pass
+        value=data.get('requestId','')
+        if isinstance(value,str) and 1<=len(value)<=64 and all(char in '0123456789abcdef-' for char in value):return value
+    except (AttributeError,TypeError):pass
     return 'manual'
 
 def own_creation_filetime():
@@ -49,7 +41,7 @@ class Lifecycle:
         self.version='unpackaged'
         path=Path(__file__).resolve().parents[1]/'deployment-manifest.json'
         if path.is_file():
-            data=json.loads(path.read_text(encoding='utf-8-sig'));version=data.get('commit','')
+            data=read_json(path);version=data.get('commit','')
             if isinstance(version,str) and len(version)==40 and all(char in '0123456789abcdef' for char in version): self.version=version
     def stop_request(self):
         return request_identity(self.state_dir/STOP_FILE) or request_identity(self.state_dir/MAINTENANCE_FILE)

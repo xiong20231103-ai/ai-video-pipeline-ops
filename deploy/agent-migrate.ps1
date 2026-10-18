@@ -5,6 +5,7 @@ param(
     [string]$BackupPath
 )
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'agent-json.ps1')
 $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'One-time migration needs Administrator PowerShell to replace the legacy task and grant this user execute access.' }
 $taskName='OpsConsoleReadonlyAgent';$agentRoot='E:\Backup\ops-agent'
@@ -49,6 +50,7 @@ if ($Action -eq 'Install') {
     $service.GetFolder('\').GetTask($taskName).GetSecurityDescriptor(7) | Set-Content -LiteralPath (Join-Path $BackupPath 'task-before-sddl.txt') -Encoding utf8
     @{enabled=[bool]$task.Settings.Enabled} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $BackupPath 'task-before-state.json') -Encoding utf8
     Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $BackupPath 'agent-migrate.ps1')
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'agent-json.ps1') -Destination (Join-Path $BackupPath 'agent-json.ps1')
     Copy-Item -LiteralPath $legacy -Destination (Join-Path $BackupPath 'agent_legacy_lock.py')
     "& (Join-Path `$PSScriptRoot 'agent-migrate.ps1') -Action Rollback -BackupPath `$PSScriptRoot" | Set-Content -LiteralPath (Join-Path $BackupPath 'rollback.ps1') -Encoding utf8
 }
@@ -91,15 +93,15 @@ if ($Action -eq 'Install') {
 if ($LASTEXITCODE -ne 0) { throw 'Maintenance ownership changed; task not started.' }
 $previousInstance=$null
 $runtimePath=Join-Path $state 'agent-runtime.json'
-if (Test-Path -LiteralPath $runtimePath) { $previousInstance=(Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json).instanceId }
+if (Test-Path -LiteralPath $runtimePath) { $previousInstance=(Read-SharedJson -Path $runtimePath).instanceId }
 $shouldStart=$true
-if ($Action -eq 'Rollback') { $shouldStart=(Get-Content -LiteralPath (Join-Path $BackupPath 'task-before-state.json') -Raw | ConvertFrom-Json).enabled }
+if ($Action -eq 'Rollback') { $shouldStart=(Read-SharedJson -Path (Join-Path $BackupPath 'task-before-state.json')).enabled }
 if ($shouldStart) { Enable-ScheduledTask -TaskName $taskName -TaskPath '\' | Out-Null;Start-ScheduledTask -TaskName $taskName -TaskPath '\' }
 if ($Action -eq 'Install' -and $shouldStart) {
     $started=$false
     for ($attempt=0;$attempt -lt 200;$attempt++) {
         if (Test-Path -LiteralPath $runtimePath) {
-            $runtime=Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json
+            $runtime=Read-SharedJson -Path $runtimePath
             if ($runtime.instanceId -ne $previousInstance -and $runtime.version -eq $ExpectedCommit -and $runtime.phase -eq 'running' -and (Get-ScheduledTask -TaskName $taskName -TaskPath '\').State -eq 'Running') { $started=$true;break }
         }
         Start-Sleep -Milliseconds 100

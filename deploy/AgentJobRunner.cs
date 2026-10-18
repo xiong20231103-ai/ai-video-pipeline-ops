@@ -51,8 +51,18 @@ public static class OpsAgentJob {
             ",\"launcherPid\":"+child+",\"phase\":\""+phase+"\",\"exitCode\":"+code+
             ",\"retryAfterSeconds\":"+retrySeconds+",\"retryAt\":\""+(retrySeconds>0?DateTime.UtcNow.AddSeconds(retrySeconds).ToString("o"):"")+"\""+
             ",\"observedAt\":\""+DateTime.UtcNow.ToString("o")+"\"}";
-        File.WriteAllText(temporary,json,new UTF8Encoding(false));
-        if (File.Exists(target)) File.Replace(temporary,target,null); else File.Move(temporary,target);
+        try {
+            byte[] bytes=new UTF8Encoding(false).GetBytes(json);
+            using (var stream=new FileStream(temporary,FileMode.CreateNew,FileAccess.Write,FileShare.ReadWrite|FileShare.Delete)) {
+                stream.Write(bytes,0,bytes.Length);stream.Flush(true);
+            }
+            for (int attempt=0;attempt<10;attempt++) {
+                try { if (File.Exists(target)) File.Replace(temporary,target,null); else File.Move(temporary,target);return; }
+                catch (IOException) { if (attempt==9) throw; }
+                catch (UnauthorizedAccessException) { if (attempt==9) throw; }
+                System.Threading.Thread.Sleep(200);
+            }
+        } finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
     static bool StopRequested(string state) {
         return File.Exists(Path.Combine(state,"maintenance.json")) || File.Exists(Path.Combine(state,"stop-request.json"));

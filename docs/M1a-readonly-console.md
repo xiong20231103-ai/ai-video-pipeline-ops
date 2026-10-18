@@ -406,3 +406,15 @@ tested separately, as are duplicate supervisors and whole-tree termination.
 These have synthetic services and zero home HTTP. Installed 60s/5min checks,
 ordinary unelevated update, user logoff/logon and full 30-minute observation
 remain separate real acceptance. Never infer them from fixture success.
+
+## State JSON sharing repair (2026-10-18)
+
+The installed b28c828 supervisor's first RecoveryAll attempt stopped on a sharing violation while reading task-job.json. The user's separate observation of Python recovery after 60 seconds remains historical evidence; supervisor recovery and maintenance-trigger acceptance did not run. Repeat all three formal checks on this repair before claiming acceptance.
+
+Agent runtime and supervisor status are published to unique temporary files, flushed and closed, then atomically replaced. Windows readers share read/write/delete access. Python, PowerShell acceptance/update/migration, and the supervisor identity helper retry transient sharing, malformed/truncated JSON and briefly missing snapshots up to ten attempts with 200 ms between attempts. Missing stop/maintenance markers return immediately. Exhaustion fails visibly; readers do not print JSON payloads or infer success from stale status. C# supervisor only checks marker existence and does not parse state JSON.
+
+The runtime whitelist now has 15 files (adds contracts/state_files.py and deploy/agent-json.ps1); standalone controllers have seven tools, including the same Python I/O module under agent_state_io.py. Backups copy both shared helpers so rollback is self-contained. Exactly the prior 11- and 13-file manifests remain accepted, with removal limited to known additive files. No credential files are copied or read by deployment tools.
+
+Regression coverage includes real Windows exclusive and non-delete-shared handles, a held shared snapshot during replacement, repaired partial JSON, concurrent agent publication/readers, concurrent C# publication/PowerShell readers, bounded persistent failure preserving the old document and cleaning temporary files, and 13-to-15-file update/rollback. Temporary process/Job tests send zero home HTTP; they do not replace installed-task acceptance.
+
+After CI succeeds, the pinned administrator handoff first backs up source/task XML/SDDL/enabled state and prints its exact rollback command, then upgrades only OpsConsoleReadonlyAgent and the independent agent directory. RecoveryAll repeats Python crash, supervisor crash across a real five-minute trigger, and maintenance across a real trigger. Ordinary unelevated graceful update is checked afterwards. User-controlled logoff/login and a fresh ten-minute baseline plus full thirty-minute observation remain outstanding. No production application restart, dependency installation, home POST or firewall change is part of this repair.

@@ -40,8 +40,9 @@ def crash_fixture(runtime):
     finally:kernel.CloseHandle(handle)
 
 def read(path):
-    try:return json.loads(path.read_text(encoding='utf-8-sig'))
-    except (FileNotFoundError,json.JSONDecodeError):return None
+    from contracts.state_files import read_json
+    try:return read_json(path)
+    except FileNotFoundError:return None
 
 def wait_for(predicate,timeout=15):
     deadline=time.monotonic()+timeout
@@ -76,6 +77,7 @@ def case(kind):
         (fixture/'agent/__init__.py').write_text('__path__.append('+repr(str(ROOT/'agent'))+')\n')
         (fixture/'agent/launcher.py').write_text(fixture_launcher)
         shutil.copyfile(ROOT/'deploy/AgentJobRunner.cs',fixture/'deploy/AgentJobRunner.cs')
+        shutil.copyfile(ROOT/'deploy/agent-json.ps1',fixture/'deploy/agent-json.ps1')
         environment=dict(os.environ,OPS_AGENT_JOB_FIXTURE_STATE=str(state),PYTHONPATH=str(ROOT))
         # This suite tests one Job's exit propagation; the separate supervisor
         # suite exercises the production wrapper's new restart loop.

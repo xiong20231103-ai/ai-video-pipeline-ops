@@ -9,10 +9,13 @@ from pathlib import Path
 import shutil
 import time
 import uuid
+try:import agent_state_io as state_io
+except ModuleNotFoundError:from contracts import state_files as state_io
 
 LEGACY_FILES=tuple('agent/'+name for name in ('__init__.py','configure.py','launcher.py','metrics.py','polling.py','readonly.py'))+(
     'contracts/__init__.py','contracts/cache.py','contracts/endpoints.json','deploy/agent-run.ps1','deploy/agent-task.ps1')
-FILES=LEGACY_FILES+('agent/lifecycle.py','deploy/AgentJobRunner.cs')
+PREVIOUS_FILES=LEGACY_FILES+('agent/lifecycle.py','deploy/AgentJobRunner.cs')
+FILES=PREVIOUS_FILES+('contracts/state_files.py','deploy/agent-json.ps1')
 
 class UpdateError(ValueError):
     def __init__(self,code): self.code=code;super().__init__(code)
@@ -23,7 +26,7 @@ def reject_link(path):
             raise UpdateError('linked_update_path')
 
 def read_json(path):
-    reject_link(Path(path));return json.loads(Path(path).read_text(encoding='utf-8-sig'))
+    reject_link(Path(path));return state_io.read_json(path)
 
 def validate(root,expected=None):
     root=Path(root).absolute();reject_link(root)
@@ -31,7 +34,7 @@ def validate(root,expected=None):
     if len(commit)!=40 or any(char not in '0123456789abcdef' for char in commit): raise UpdateError('invalid_commit')
     if expected and commit!=expected: raise UpdateError('unexpected_commit')
     names=set(manifest.get('sha256',{}))
-    if names not in (set(LEGACY_FILES),set(FILES)): raise UpdateError('unexpected_source_whitelist')
+    if names not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(FILES)): raise UpdateError('unexpected_source_whitelist')
     for name in names:
         path=root/name;reject_link(path)
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=manifest['sha256'][name]:
@@ -47,7 +50,7 @@ def copy_code(source,target):
         try:
             shutil.copyfile(source/name,temporary);temporary.replace(destination)
         finally: temporary.unlink(missing_ok=True)
-    # Only remove the two known files introduced by this lifecycle revision.
+    # Remove only the explicitly known additive runtime files on rollback.
     for name in set(FILES)-set(names):
         destination=target/name;reject_link(destination);destination.unlink(missing_ok=True)
 
@@ -57,6 +60,7 @@ def prepare(source,target,backup,expected):
     reject_link(backup);backup.mkdir(parents=True,exist_ok=False)
     copy_code(target,backup);validate(backup,old['commit'])
     shutil.copyfile(Path(__file__),backup/'agent_source_update.py')
+    shutil.copyfile(Path(state_io.__file__),backup/'agent_state_io.py')
     metadata={'target':str(target.absolute()),'source':str(source.absolute()),'before':old['commit'],'after':new['commit'],
         'requestId':uuid.uuid4().hex,'at':datetime.now(timezone.utc).isoformat()}
     (backup/'operation.json').write_text(json.dumps(metadata,indent=2)+'\n',encoding='utf-8')
@@ -76,17 +80,12 @@ def restore(backup,target):
     if str(target.absolute())!=metadata['target']: raise UpdateError('rollback_target_mismatch')
     validate(backup,metadata['before']);reject_link(target)
     current=read_json(target/'deployment-manifest.json')
-    if current.get('commit') not in {metadata['before'],metadata['after']} or set(current.get('sha256',{})) not in (set(LEGACY_FILES),set(FILES)):
+    if current.get('commit') not in {metadata['before'],metadata['after']} or set(current.get('sha256',{})) not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(FILES)):
         raise UpdateError('rollback_source_identity_changed')
     copy_code(backup,target);validate(target,metadata['before'])
 
 def atomic_json(path,value):
-    reject_link(path);temporary=path.with_name(path.name+'.'+uuid.uuid4().hex+'.tmp')
-    try:
-        with temporary.open('x',encoding='utf-8') as handle:
-            json.dump(value,handle);handle.flush();os.fsync(handle.fileno())
-        temporary.replace(path)
-    finally: temporary.unlink(missing_ok=True)
+    reject_link(path);state_io.atomic_json(path,value)
 
 @contextmanager
 def exclusive_agent_lock(state):

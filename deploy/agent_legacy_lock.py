@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import sys
+try:from agent_state_io import read_json
+except ModuleNotFoundError:from contracts.state_files import read_json
 
 class UniqueProcess(ctypes.Structure):
     _fields_=[('pid',w.DWORD),('created',w.FILETIME)]
@@ -64,7 +66,7 @@ def terminate_pinned_process(pid,created):
     finally:kernel.CloseHandle(handle)
 
 def terminate_supervisor(state,pid,created):
-    metadata=json.loads((Path(state)/'task-job.json').read_text(encoding='utf-8-sig'))
+    metadata=read_json(Path(state)/'task-job.json')
     if metadata.get('wrapperPid')!=pid or metadata.get('wrapperCreationFileTime')!=created:
         raise ValueError('Supervisor identity changed')
     terminate_pinned_process(pid,created)

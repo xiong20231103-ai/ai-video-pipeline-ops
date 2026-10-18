@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-from deploy.agent_source_update import LEGACY_FILES,FILES,prepare,apply,restore,validate
+from deploy.agent_source_update import LEGACY_FILES,PREVIOUS_FILES,FILES,prepare,apply,restore,validate
 
 def package(path,commit):
     path.mkdir()
@@ -65,3 +65,17 @@ class AgentSourceUpdateTests(unittest.TestCase):
             restore(backup,old)
             self.assertEqual(set(LEGACY_FILES),set(validate(old)['sha256']))
             for name in set(FILES)-set(LEGACY_FILES):self.assertFalse((old/name).exists())
+
+    def test_previous_thirteen_file_migration_and_self_contained_backup(self):
+        with TemporaryDirectory() as folder:
+            root=Path(folder);old=root/'old';new=root/'new';backup=root/'backup'
+            package(old,'a'*40);package(new,'b'*40)
+            manifest=json.loads((old/'deployment-manifest.json').read_text())
+            for name in set(FILES)-set(PREVIOUS_FILES):
+                (old/name).unlink();del manifest['sha256'][name]
+            (old/'deployment-manifest.json').write_text(json.dumps(manifest))
+            prepare(new,old,backup,'b'*40)
+            self.assertTrue((backup/'agent_state_io.py').is_file())
+            apply(new,old,backup,'b'*40);restore(backup,old)
+            self.assertEqual(set(PREVIOUS_FILES),set(validate(old)['sha256']))
+            for name in set(FILES)-set(PREVIOUS_FILES):self.assertFalse((old/name).exists())

@@ -34,6 +34,7 @@ jobs:
           ./tests/test_agent_task.ps1
           ./tests/test_agent_migration.ps1
           ./tests/test_agent_acceptance.ps1
+          ./tests/test_state_files.ps1
       - name: Real Windows job lifecycle with synthetic services and no home HTTP
         shell: powershell
         run: |

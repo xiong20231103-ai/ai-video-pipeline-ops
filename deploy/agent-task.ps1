@@ -66,7 +66,7 @@ function Invoke-AgentTask {
     if ($Operation -ne 'Install') { throw 'Unsupported operation.' }
     $taskRoot = (Resolve-Path -LiteralPath $Root).Path
     if ($taskRoot.TrimEnd('\') -ne 'E:\Backup\ops-agent') { throw 'Installation is restricted to the independent agent directory.' }
-    foreach ($taskFile in @($Python,([IO.Path]::Combine($taskRoot,'agent\readonly.py')),([IO.Path]::Combine($taskRoot,'agent\lifecycle.py')),([IO.Path]::Combine($taskRoot,'deploy\AgentJobRunner.cs')),([IO.Path]::Combine($taskRoot,'deploy\agent-run.ps1')),(Join-Path $env:LOCALAPPDATA 'OpsAgent\config.json'))) {
+    foreach ($taskFile in @($Python,([IO.Path]::Combine($taskRoot,'agent\readonly.py')),([IO.Path]::Combine($taskRoot,'agent\lifecycle.py')),([IO.Path]::Combine($taskRoot,'contracts\state_files.py')),([IO.Path]::Combine($taskRoot,'deploy\agent-json.ps1')),([IO.Path]::Combine($taskRoot,'deploy\AgentJobRunner.cs')),([IO.Path]::Combine($taskRoot,'deploy\agent-run.ps1')),(Join-Path $env:LOCALAPPDATA 'OpsAgent\config.json'))) {
         if (-not (Test-Path -LiteralPath $taskFile -PathType Leaf)) { throw 'Runtime or private configuration missing; no task changed.' }
     }
     $taskExisting = Get-ScheduledTask -TaskName $script:AgentTaskName -TaskPath $script:AgentTaskPath -ErrorAction SilentlyContinue

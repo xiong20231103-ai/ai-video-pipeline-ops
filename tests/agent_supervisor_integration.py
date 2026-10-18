@@ -19,6 +19,7 @@ def fixture(mode='production',marker=None):
         (package/'agent/__init__.py').write_text('__path__.append('+repr(str(ROOT/'agent'))+')\n')
         (package/'agent/launcher.py').write_text(fixture_launcher)
         shutil.copyfile(ROOT/'deploy/AgentJobRunner.cs',package/'deploy/AgentJobRunner.cs')
+        shutil.copyfile(ROOT/'deploy/agent-json.ps1',package/'deploy/agent-json.ps1')
         if marker:(state/marker).write_text('{"requestId":"abc123"}')
         if mode=='production':
             command=['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'deploy/agent-run.ps1'),

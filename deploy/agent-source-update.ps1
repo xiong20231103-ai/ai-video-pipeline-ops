@@ -5,6 +5,7 @@ param(
     [string]$BackupPath
 )
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'agent-json.ps1')
 $taskName='OpsConsoleReadonlyAgent'
 $agentRoot='E:\Backup\ops-agent'
 $python=Join-Path $env:LOCALAPPDATA 'TikHubOPS\venv_cuda\Scripts\python.exe'
@@ -32,13 +33,14 @@ if ($LASTEXITCODE -ne 0) { throw 'Installed source validation failed.' }
 if (-not ($inspection | ConvertFrom-Json).supportsGracefulStop) { throw 'Legacy agent requires one-time migration while its lock is free; no process was killed.' }
 $previousInstance=$null
 $runtimePath=Join-Path $state 'agent-runtime.json'
-if (Test-Path -LiteralPath $runtimePath) { $previousInstance=(Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json).instanceId }
+if (Test-Path -LiteralPath $runtimePath) { $previousInstance=(Read-SharedJson -Path $runtimePath).instanceId }
 if ($Action -eq 'Update') {
     if ($ExpectedCommit -notmatch '^[a-f0-9]{40}$') { throw 'Expected commit required.' }
     $BackupPath=Join-Path 'E:\Backup\ops-agent-deploy-backups' ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ')+'-graceful-update')
     & $python -B $helper prepare --source $SourcePackage --target $agentRoot --backup $BackupPath --commit $ExpectedCommit
     if ($LASTEXITCODE -ne 0) { throw 'Code preparation failed; no stop requested.' }
     Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $BackupPath 'agent-source-update.ps1')
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'agent-json.ps1') -Destination (Join-Path $BackupPath 'agent-json.ps1')
     Export-ScheduledTask -TaskName $taskName -TaskPath '\' | Set-Content -LiteralPath (Join-Path $BackupPath 'task-before.xml') -Encoding Unicode
     "& (Join-Path `$PSScriptRoot 'agent-source-update.ps1') -Action Rollback -BackupPath `$PSScriptRoot" | Set-Content -LiteralPath (Join-Path $BackupPath 'rollback.ps1') -Encoding utf8
     Write-Output "Backup: $BackupPath"
@@ -61,12 +63,12 @@ if ($Action -eq 'Update') {
 if ($LASTEXITCODE -ne 0) { throw 'Source replacement failed; maintenance retained for recovery.' }
 & $python -B $helper finish --target $agentRoot --backup $BackupPath
 if ($LASTEXITCODE -ne 0) { throw 'Maintenance identity changed; no task started.' }
-$expectedVersion=if ($Action -eq 'Update') { $ExpectedCommit } else { (Get-Content -LiteralPath (Join-Path $BackupPath 'operation.json') -Raw | ConvertFrom-Json).before }
+$expectedVersion=if ($Action -eq 'Update') { $ExpectedCommit } else { (Read-SharedJson -Path (Join-Path $BackupPath 'operation.json')).before }
 Start-ScheduledTask -TaskName $taskName -TaskPath '\'
 $started=$false
 for ($attempt=0;$attempt -lt 150;$attempt++) {
     if (Test-Path -LiteralPath $runtimePath) {
-        $runtime=Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json
+        $runtime=Read-SharedJson -Path $runtimePath
         if ($runtime.instanceId -ne $previousInstance -and $runtime.phase -eq 'running' -and $runtime.version -eq $expectedVersion -and (Get-ScheduledTask -TaskName $taskName -TaskPath '\').State -eq 'Running') { $started=$true;break }
     }
     Start-Sleep -Milliseconds 100

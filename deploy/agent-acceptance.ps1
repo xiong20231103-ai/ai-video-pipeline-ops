@@ -3,14 +3,15 @@ param(
     [string]$RecordPath
 )
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'agent-json.ps1')
 $taskName='OpsConsoleReadonlyAgent';$agentRoot='E:\Backup\ops-agent'
 $state=Join-Path $env:LOCALAPPDATA 'OpsAgent'
 $python=Join-Path $env:LOCALAPPDATA 'TikHubOPS\venv_cuda\Scripts\python.exe'
 $runtimePath=Join-Path $state 'agent-runtime.json';$jobPath=Join-Path $state 'task-job.json'
 $helper=Join-Path $PSScriptRoot 'agent_source_update.py';$control=Join-Path $PSScriptRoot 'agent_legacy_lock.py'
-$expected=(Get-Content -LiteralPath (Join-Path $agentRoot 'deployment-manifest.json') -Raw | ConvertFrom-Json).commit
-function Read-Agent { Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json }
-function Read-Job { Get-Content -LiteralPath $jobPath -Raw | ConvertFrom-Json }
+$expected=(Read-SharedJson -Path (Join-Path $agentRoot 'deployment-manifest.json')).commit
+function Read-Agent { Read-SharedJson -Path $runtimePath }
+function Read-Job { Read-SharedJson -Path $jobPath }
 function Test-AgentAlive($Runtime) {
     try { return ((Get-Process -Id $Runtime.pid -ErrorAction Stop).StartTime.ToUniversalTime().ToFileTimeUtc() -eq [Int64]$Runtime.processCreationFileTime) } catch { return $false }
 }
@@ -77,7 +78,7 @@ if ($Action -eq 'LogonBefore') {
     Write-Evidence 'logon-before';Write-Output 'Baseline saved; user chooses idle window. No logoff was performed.';return
 }
 if ($Action -eq 'LogonAfter') {
-    $baseline=Get-Content -LiteralPath $RecordPath -Raw | ConvertFrom-Json
+    $baseline=Read-SharedJson -Path $RecordPath
     $info=Get-ScheduledTaskInfo -TaskName $taskName -TaskPath '\'
     if ($before.instanceId -eq $baseline.instanceId -or $before.version -ne $baseline.version -or $info.LastRunTime.ToUniversalTime().ToFileTimeUtc() -le [Int64]$baseline.capturedFileTime) { throw 'New same-version task instance after baseline not confirmed.' }
     Write-Evidence 'logon-after';Write-Output 'New task instance confirmed; actual user logoff/logon confirmation is also required.';return
