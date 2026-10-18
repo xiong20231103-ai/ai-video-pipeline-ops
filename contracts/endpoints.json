@@ -496,6 +496,30 @@
     "timeoutSeconds": 15
   },
   {
+    "method": "GET",
+    "path": "/api/controls/pending-delete",
+    "query": [],
+    "handler": "control_pending_delete_status",
+    "source": "dashboard",
+    "coverage": "after-operation",
+    "offline": "cached-key-only",
+    "mayWriteSourceState": false,
+    "periodSeconds": 0,
+    "timeoutSeconds": 15
+  },
+  {
+    "method": "POST",
+    "path": "/api/controls/pending-delete/empty",
+    "query": [],
+    "handler": "control_pending_delete_empty",
+    "source": "dashboard",
+    "coverage": "write-command",
+    "offline": "not-applicable",
+    "mayWriteSourceState": true,
+    "periodSeconds": 0,
+    "timeoutSeconds": 900
+  },
+  {
     "method": "POST",
     "path": "/api/controls/testing/reset",
     "query": [],

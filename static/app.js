@@ -1749,7 +1749,7 @@ $("previewDraftCleanupButton")?.addEventListener("click", async event => {
   const draftIds = [...state.selectedDraftIds];
   if (!draftIds.length) {
     $("draftCleanupPreview").classList.remove("hidden");
-    $("draftCleanupPreview").innerHTML = "<strong>尚未选择草稿</strong>请先勾选要移入回收站的草稿。";
+    $("draftCleanupPreview").innerHTML = "<strong>尚未选择草稿</strong>请先勾选要移入待删区的草稿。";
     return;
   }
   button.disabled = true;
@@ -1779,10 +1779,10 @@ $("confirmDraftCleanupButton")?.addEventListener("click", async event => {
   const button = event.currentTarget;
   const preview = state.draftPreview;
   if (!preview?.deletableCount) return;
-  if (!window.confirm(`确认将 ${preview.deletableCount} 个草稿移入 Windows 回收站吗？不会删除视频、音频、成片或生产任务。`)) return;
-  if (preview.containsManualOrUnknown && !window.confirm("选择中包含人工或来源不明草稿。再次确认仍要将这些草稿移入回收站。")) return;
+  if (!window.confirm(`确认将 ${preview.deletableCount} 个草稿移入待删区吗？保留 3 天后自动清除，期间可恢复；不会删除视频、音频、成片或生产任务。`)) return;
+  if (preview.containsManualOrUnknown && !window.confirm("选择中包含人工或来源不明草稿。再次确认仍要将这些草稿移入待删区。")) return;
   button.disabled = true;
-  button.textContent = "正在移入回收站…";
+  button.textContent = "正在移入待删区…";
   try {
     const draftIds = (preview.deletable || []).map(item => item.draftId);
     const result = await postJson("/api/controls/capcut-drafts/cleanup", {
@@ -1803,7 +1803,7 @@ $("confirmDraftCleanupButton")?.addEventListener("click", async event => {
     $("draftCleanupPreview").innerHTML = `<strong>草稿清理失败</strong>${escapeHtml(error.message || "请刷新后重试")}`;
   } finally {
     button.disabled = false;
-    button.textContent = "确认移入回收站";
+    button.textContent = "确认移入待删区";
   }
 });
 $("openAudioManagerButton")?.addEventListener("click", async () => {
@@ -1838,7 +1838,7 @@ $("previewAudioCleanupButton")?.addEventListener("click", async event => {
   const audioIds = [...state.selectedAudioIds];
   if (!audioIds.length) {
     $("audioCleanupPreview").classList.remove("hidden");
-    $("audioCleanupPreview").innerHTML = "<strong>尚未选择音频</strong>请先勾选要移入回收站的音频文件。";
+    $("audioCleanupPreview").innerHTML = "<strong>尚未选择音频</strong>请先勾选要移入待删区的音频文件。";
     return;
   }
   button.disabled = true;
@@ -1872,9 +1872,9 @@ $("confirmAudioCleanupButton")?.addEventListener("click", async event => {
   const button = event.currentTarget;
   const preview = state.audioPreview;
   if (!preview?.deletableCount) return;
-  if (!window.confirm(`确认将 ${preview.deletableCount} 个音频文件（${formatBytes(preview.sizeBytes)}）移入 Windows 回收站吗？不会删除文件夹，也不会改变任务完成状态。`)) return;
+  if (!window.confirm(`确认将 ${preview.deletableCount} 个音频文件（${formatBytes(preview.sizeBytes)}）移入待删区吗？保留 3 天后自动清除，期间可恢复；不会删除文件夹，也不会改变任务完成状态。`)) return;
   button.disabled = true;
-  button.textContent = "正在移入回收站…";
+  button.textContent = "正在移入待删区…";
   try {
     const audioIds = (preview.deletable || []).map(item => item.audioId);
     const result = await postJson("/api/controls/audio-files/recycle", {
@@ -1886,7 +1886,7 @@ $("confirmAudioCleanupButton")?.addEventListener("click", async event => {
     state.selectedAudioIds.clear();
     await loadAudioManager();
     await refresh();
-    window.alert(result.message || "音频已移入 Windows 回收站");
+    window.alert(result.message || "音频已移入待删区");
   } catch (error) {
     const message = error.message || "音频清理失败";
     renderActionResult("audioCleanupResult", {
@@ -1897,7 +1897,7 @@ $("confirmAudioCleanupButton")?.addEventListener("click", async event => {
     window.alert(message);
   } finally {
     button.disabled = false;
-    button.textContent = "确认移入回收站";
+    button.textContent = "确认移入待删区";
   }
 });
 $("openProductionManagerButton")?.addEventListener("click", async () => {
@@ -1934,7 +1934,7 @@ $("previewProductionCleanupButton")?.addEventListener("click", async event => {
   const fileIds = [...state.selectedProductionIds];
   if (!fileIds.length) {
     $("productionCleanupPreview").classList.remove("hidden");
-    $("productionCleanupPreview").innerHTML = "<strong>尚未选择生产文件</strong>请先勾选要移入回收站的文件。";
+    $("productionCleanupPreview").innerHTML = "<strong>尚未选择生产文件</strong>请先勾选要移入待删区的文件。";
     return;
   }
   button.disabled = true;
@@ -1974,10 +1974,10 @@ $("confirmProductionCleanupButton")?.addEventListener("click", async event => {
   const button = event.currentTarget;
   const preview = state.productionPreview;
   if (!preview?.deletableCount) return;
-  if (!window.confirm(`确认将 ${preview.deletableCount} 个生产文件（${formatBytes(preview.sizeBytes)}）移入 Windows 回收站吗？项目状态、上传记录及云端文件不会改变。`)) return;
-  if (preview.containsTestFiles && !window.confirm("选择中包含 CapCut 测试或首帧测试文件。再次确认仍要将这些测试文件移入回收站。")) return;
+  if (!window.confirm(`确认将 ${preview.deletableCount} 个生产文件（${formatBytes(preview.sizeBytes)}）移入待删区吗？保留 3 天后自动清除，期间可恢复；项目状态、上传记录及云端文件不会改变。`)) return;
+  if (preview.containsTestFiles && !window.confirm("选择中包含 CapCut 测试或首帧测试文件。再次确认仍要将这些测试文件移入待删区。")) return;
   button.disabled = true;
-  button.textContent = "正在移入回收站…";
+  button.textContent = "正在移入待删区…";
   try {
     const fileIds = (preview.deletable || []).map(item => item.fileId);
     // Recycling a large, user-confirmed inventory can legitimately take
@@ -2004,7 +2004,43 @@ $("confirmProductionCleanupButton")?.addEventListener("click", async event => {
     window.alert(message);
   } finally {
     button.disabled = false;
-    button.textContent = "确认移入回收站";
+    button.textContent = "确认移入待删区";
+  }
+});
+async function refreshPendingDelete() {
+  const node = $("pendingDeleteStatus");
+  const button = $("emptyPendingDeleteButton");
+  if (!node || !button) return;
+  try {
+    const result = await getJson("/api/controls/pending-delete");
+    state.pendingDelete = result;
+    const count = Number(result.count || 0);
+    const review = Number(result.needsReview || 0);
+    node.textContent = count
+      ? `待删区：${count} 项，约 ${formatBytes(result.sizeBytes)}；${result.note || ""}。最早于 ${formatDateTime(result.nextPurgeAt)} 自动清除。`
+      : "待删区：空";
+    if (review) node.textContent += ` 另有 ${review} 项核验失败，保留待人工检查。`;
+    button.classList.toggle("hidden", !count);
+    button.textContent = `立即清空待删区（${count} 项，约 ${formatBytes(result.sizeBytes)}）`;
+  } catch (error) {
+    node.textContent = `待删区：读取失败（${error.message || "未知原因"}）`;
+    button.classList.add("hidden");
+  }
+}
+$("emptyPendingDeleteButton")?.addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  const info = state.pendingDelete || {};
+  if (!window.confirm(`确认立即永久清除待删区的 ${Number(info.count || 0)} 项（约 ${formatBytes(info.sizeBytes)}）吗？清除后无法恢复。`)) return;
+  if (!window.confirm("再次确认：这一步会永久删除，不进入回收站。")) return;
+  button.disabled = true;
+  try {
+    const result = await postJson("/api/controls/pending-delete/empty", { confirm: "EMPTY_PENDING_DELETE_NOW" }, { timeoutMs: 600000 });
+    window.alert(result.message || "待删区已清空");
+  } catch (error) {
+    window.alert(error.message || "清空待删区失败");
+  } finally {
+    button.disabled = false;
+    await refreshPendingDelete();
   }
 });
 $("continueCurrentButton")?.addEventListener("click", async (event) => {
@@ -2157,3 +2193,5 @@ window.setInterval(updateDataFreshness, 1000);
 document.addEventListener("visibilitychange", updateDataFreshness);
 refreshLoop();
 refreshContinueLoop();
+refreshPendingDelete();
+window.setInterval(refreshPendingDelete, 60000);

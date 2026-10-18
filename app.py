@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-import ctypes
 import hashlib
 import ipaddress
 import json
@@ -22,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 import psutil
+import pending_delete
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
@@ -968,33 +968,48 @@ def preview_capcut_draft_cleanup(draft_ids: list[str], *, root: Path | None = No
             }
             for item in blocked
         ],
-        "message": f"可移入回收站 {len(deletable)} 个，受保护 {len(blocked)} 个",
+        "message": f"可移入待删区 {len(deletable)} 个，受保护 {len(blocked)} 个",
     }
 
 
-def _recycle_directory(path: Path) -> None:
-    if os.name != "nt":
-        raise OSError("草稿回收站操作仅支持 Windows")
+def pending_delete_retention_days() -> float:
+    try:
+        value = float(CONFIG.get("pending_delete_retention_days", pending_delete.DEFAULT_RETENTION_DAYS))
+    except (TypeError, ValueError):
+        value = pending_delete.DEFAULT_RETENTION_DAYS
+    return min(max(value, 0.5), 30.0)
 
-    class SHFILEOPSTRUCTW(ctypes.Structure):
-        _fields_ = [
-            ("hwnd", ctypes.c_void_p),
-            ("wFunc", ctypes.c_uint),
-            ("pFrom", ctypes.c_wchar_p),
-            ("pTo", ctypes.c_wchar_p),
-            ("fFlags", ctypes.c_ushort),
-            ("fAnyOperationsAborted", ctypes.c_bool),
-            ("hNameMappings", ctypes.c_void_p),
-            ("lpszProgressTitle", ctypes.c_wchar_p),
-        ]
 
-    operation = SHFILEOPSTRUCTW()
-    operation.wFunc = 3  # FO_DELETE
-    operation.pFrom = str(path) + "\0\0"
-    operation.fFlags = 0x0040 | 0x0010 | 0x0004 | 0x0400  # undo, no confirm, silent, no UI errors
-    result = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(operation))
-    if result != 0 or operation.fAnyOperationsAborted:
-        raise OSError(f"Windows 回收站操作失败（代码 {result}）")
+def pending_delete_note() -> str:
+    days = pending_delete_retention_days()
+    label = f"{days:g} 天"
+    return f"保留 {label}后自动清除，期间可恢复"
+
+
+def pending_delete_roots() -> list[Path]:
+    roots: list[Path] = []
+    try:
+        partitions = psutil.disk_partitions(all=False)
+    except OSError:
+        partitions = []
+    for partition in partitions:
+        mount = Path(partition.mountpoint)
+        if mount.anchor and mount == Path(mount.anchor):
+            roots.append(mount / pending_delete.DIRNAME)
+    return roots
+
+
+PENDING_DELETE_EMPTY_CONFIRM = "EMPTY_PENDING_DELETE_NOW"
+PENDING_DELETE_PURGE_INTERVAL_SECONDS = 3600.0
+
+
+def _pending_delete_purge_loop(stop_event: threading.Event) -> None:
+    while not stop_event.is_set():
+        try:
+            pending_delete.purge(pending_delete_roots())
+        except Exception:  # A purge failure must never stop the Dashboard.
+            pass
+        stop_event.wait(PENDING_DELETE_PURGE_INTERVAL_SECONDS)
 
 
 def execute_capcut_draft_cleanup(
@@ -1066,7 +1081,8 @@ def execute_capcut_draft_cleanup(
             try:
                 if folder.parent != root_path or not folder.is_dir():
                     raise OSError("草稿目录身份已经变化")
-                _recycle_directory(folder)
+                pending_delete.move(folder, cleanup_id=manifest["cleanupId"], source_kind="capcut_draft",
+                                    retention_days=pending_delete_retention_days())
                 removed.append({"draftId": item["draftId"], "name": item["name"]})
             except OSError as exc:
                 failed.append({"draftId": item["draftId"], "name": item["name"], "reason": str(exc)})
@@ -1083,7 +1099,7 @@ def execute_capcut_draft_cleanup(
         result = {
             "cleanupId": manifest["cleanupId"],
             "state": "completed" if not failed else ("partial" if removed else "failed"),
-            "message": f"已移入回收站 {len(removed)} 个草稿；失败 {len(failed)} 个",
+            "message": f"已移入待删区 {len(removed)} 个草稿（{pending_delete_note()}）；失败 {len(failed)} 个",
             "removedCount": len(removed),
             "failedCount": len(failed),
             "removed": removed,
@@ -1395,7 +1411,7 @@ def preview_audio_cleanup(audio_ids: list[str]) -> dict[str, Any]:
             }
             for item in blocked
         ],
-        "message": f"可移入回收站 {len(deletable)} 个音频；受活动任务保护 {len(blocked)} 个",
+        "message": f"可移入待删区 {len(deletable)} 个音频；受活动任务保护 {len(blocked)} 个",
     }
 
 
@@ -1469,11 +1485,12 @@ def execute_audio_cleanup(audio_ids: list[str], snapshot_token: str) -> dict[str
                     continue
                 if not path.is_file():
                     raise OSError("目标不是音频文件")
-                _recycle_directory(path)
+                pending_delete.move(path, cleanup_id=cleanup_id, source_kind="audio",
+                                    retention_days=pending_delete_retention_days())
                 removed.append({
                     "audioId": item["audioId"],
                     "name": item["name"],
-                    "state": "recycled",
+                    "state": "pending_delete",
                 })
             except OSError as exc:
                 failed.append({
@@ -1485,7 +1502,7 @@ def execute_audio_cleanup(audio_ids: list[str], snapshot_token: str) -> dict[str
         result = {
             "cleanupId": cleanup_id,
             "state": "completed" if not failed else ("partial" if removed else "failed"),
-            "message": f"已移入回收站 {sum(item['state'] == 'recycled' for item in removed)} 个音频；失败 {len(failed)} 个",
+            "message": f"已移入待删区 {sum(item['state'] == 'pending_delete' for item in removed)} 个音频（{pending_delete_note()}）；失败 {len(failed)} 个",
             "removedCount": len(removed),
             "failedCount": len(failed),
             "removed": removed,
@@ -2013,7 +2030,7 @@ def preview_production_file_cleanup(file_ids: list[str]) -> dict[str, Any]:
             }
             for item in blocked
         ],
-        "message": f"可移入回收站 {len(deletable)} 个文件；受保护 {len(blocked)} 个",
+        "message": f"可移入待删区 {len(deletable)} 个文件；受保护 {len(blocked)} 个",
     }
 
 
@@ -2083,11 +2100,12 @@ def execute_production_file_cleanup(file_ids: list[str], snapshot_token: str) ->
                     continue
                 if not path.is_file():
                     raise OSError("目标不是生产视频文件")
-                _recycle_directory(path)
+                pending_delete.move(path, cleanup_id=cleanup_id, source_kind="production_file",
+                                    retention_days=pending_delete_retention_days())
                 removed.append({
                     "fileId": item["fileId"],
                     "name": item["name"],
-                    "state": "recycled",
+                    "state": "pending_delete",
                 })
             except OSError as exc:
                 failed.append({
@@ -2116,7 +2134,7 @@ def execute_production_file_cleanup(file_ids: list[str], snapshot_token: str) ->
                 else ("partial" if removed else "blocked" if blocked and not failed else "failed")
             ),
             "message": (
-                f"已移入回收站 {sum(item['state'] == 'recycled' for item in removed)} 个文件；"
+                f"已移入待删区 {sum(item['state'] == 'pending_delete' for item in removed)} 个文件（{pending_delete_note()}）；"
                 f"此前已清理 {sum(item['state'] == 'already_missing' for item in removed)} 个；"
                 f"受保护 {len(blocked)} 个；失败 {len(failed)} 个"
             ),
@@ -6013,7 +6031,12 @@ def dashboard_summary_etag(payload: Any) -> str:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     COLLECTOR.start()
+    purge_stop = threading.Event()
+    threading.Thread(
+        target=_pending_delete_purge_loop, args=(purge_stop,), name="ops-pending-delete-purge", daemon=True,
+    ).start()
     yield
+    purge_stop.set()
     COLLECTOR.stop()
 
 
@@ -6654,7 +6677,7 @@ async def control_capcut_drafts_cleanup(request: Request):
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="草稿删除请求无效")
     if payload.get("confirm") != CAPCUT_DRAFT_CLEANUP_CONFIRM:
-        raise HTTPException(status_code=400, detail="必须明确确认移入 Windows 回收站")
+        raise HTTPException(status_code=400, detail="必须明确确认移入待删区")
     draft_ids = payload.get("draftIds")
     if not isinstance(draft_ids, list):
         raise HTTPException(status_code=400, detail="请提交要删除的草稿 ID")
@@ -6700,7 +6723,7 @@ async def control_audio_files_recycle(request: Request):
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="音频删除请求无效")
     if payload.get("confirm") != AUDIO_CLEANUP_CONFIRM:
-        raise HTTPException(status_code=400, detail="必须明确确认将音频移入 Windows 回收站")
+        raise HTTPException(status_code=400, detail="必须明确确认将音频移入待删区")
     audio_ids = payload.get("audioIds")
     if not isinstance(audio_ids, list):
         raise HTTPException(status_code=400, detail="请提交要删除的音频 ID")
@@ -6742,7 +6765,7 @@ async def control_production_files_recycle(request: Request):
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="生产文件删除请求无效")
     if payload.get("confirm") != PRODUCTION_FILE_CLEANUP_CONFIRM:
-        raise HTTPException(status_code=400, detail="必须明确确认将生产文件移入 Windows 回收站")
+        raise HTTPException(status_code=400, detail="必须明确确认将生产文件移入待删区")
     file_ids = payload.get("fileIds")
     if not isinstance(file_ids, list):
         raise HTTPException(status_code=400, detail="请提交要删除的生产文件 ID")
@@ -6750,6 +6773,30 @@ async def control_production_files_recycle(request: Request):
         file_ids,
         str(payload.get("snapshotToken") or ""),
     ))
+
+
+@app.get("/api/controls/pending-delete")
+def control_pending_delete_status(request: Request):
+    require_control_permission(request)
+    return {**pending_delete.summary(pending_delete_roots()), "retentionDays": pending_delete_retention_days(),
+            "note": pending_delete_note()}
+
+
+@app.post("/api/controls/pending-delete/empty")
+async def control_pending_delete_empty(request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="清空请求不是有效 JSON") from exc
+    if not isinstance(payload, dict) or payload.get("confirm") != PENDING_DELETE_EMPTY_CONFIRM:
+        raise HTTPException(status_code=400, detail="必须明确确认立即清空待删区")
+    result = pending_delete.purge(pending_delete_roots(), everything=True)
+    result["message"] = (
+        f"已永久清除待删区 {result['removedCount']} 项，释放约 {result['freedBytes'] / 1024 ** 3:.1f} GB"
+        + (f"；{len(result['failed'])} 项清除失败" if result["failed"] else "")
+    )
+    return result
 
 
 @app.get("/api/controls/production-files/recycle/status")

@@ -190,7 +190,7 @@
             <div><p class="eyebrow">CAPCUT DRAFTS</p><h2>CapCut 草稿管理</h2></div>
             <span id="draftManagerCount" class="task-state neutral">未读取</span>
           </div>
-          <p class="queue-control-note">只在你选择并确认后，将草稿移入 Windows 回收站；不会自动清空现有草稿。</p>
+          <p class="queue-control-note">只在你选择并确认后，将草稿移入待删区（保留 3 天后自动清除，期间可恢复）；不会自动清空现有草稿。</p>
           <button id="openDraftManagerButton" class="primary wide" type="button">管理 CapCut 草稿</button>
           <div id="draftCleanupResult" class="action-result neutral">尚未手动清理 CapCut 草稿</div>
         </section>
@@ -199,7 +199,7 @@
             <div><p class="eyebrow">AUDIO FILES</p><h2>音频文件管理</h2></div>
             <span id="audioManagerCount" class="task-state neutral">未读取</span>
           </div>
-          <p class="queue-control-note">仅在你勾选并确认后移入 Windows 回收站；正在运行或等待恢复的任务音频禁止删除。</p>
+          <p class="queue-control-note">仅在你勾选并确认后移入待删区（保留 3 天后自动清除）；正在运行或等待恢复的任务音频禁止删除。</p>
           <button id="openAudioManagerButton" class="primary wide" type="button">管理音频文件</button>
           <div id="audioCleanupResult" class="action-result neutral">尚未手动清理音频</div>
         </section>
@@ -208,9 +208,11 @@
             <div><p class="eyebrow">PRODUCTION FILES</p><h2>生产文件管理</h2></div>
             <span id="productionManagerCount" class="task-state neutral">未读取</span>
           </div>
-          <p class="queue-control-note">统一查看去字幕、拼接、CapCut 临时成片、正式成片及测试文件；只在你勾选并二次确认后移入 Windows 回收站。</p>
+          <p class="queue-control-note">统一查看去字幕、拼接、CapCut 临时成片、正式成片及测试文件；只在你勾选并二次确认后移入待删区（保留 3 天后自动清除，期间可恢复）。</p>
           <button id="openProductionManagerButton" class="primary wide" type="button">管理生产文件</button>
           <div id="productionCleanupResult" class="action-result neutral">尚未手动清理生产文件</div>
+          <p id="pendingDeleteStatus" class="queue-control-note">待删区：读取中…</p>
+          <button id="emptyPendingDeleteButton" class="danger wide hidden" type="button">立即清空待删区</button>
         </section>
         <section class="panel queue-control-card">
           <div class="section-heading compact"><div><p class="eyebrow">QUEUE CONTROL</p><h2>任务确认与撤回</h2></div></div>
@@ -247,7 +249,7 @@
   <dialog id="draftManagerDialog" class="draft-manager-dialog">
     <div class="draft-manager-shell">
       <header>
-        <div><p class="eyebrow">CAPCUT DRAFTS</p><h2>选择要移入回收站的草稿</h2></div>
+        <div><p class="eyebrow">CAPCUT DRAFTS</p><h2>选择要移入待删区的草稿</h2></div>
         <button id="closeDraftManagerButton" class="icon-button" type="button" aria-label="关闭草稿管理">×</button>
       </header>
       <p class="draft-manager-warning">CapCut 或批处理客户端运行时禁止删除。人工及来源不明草稿不会默认勾选。</p>
@@ -281,14 +283,14 @@
       <section id="draftCleanupPreview" class="draft-cleanup-preview hidden"></section>
       <footer>
         <button id="previewDraftCleanupButton" class="primary" type="button">预览删除</button>
-        <button id="confirmDraftCleanupButton" class="danger hidden" type="button">确认移入回收站</button>
+        <button id="confirmDraftCleanupButton" class="danger hidden" type="button">确认移入待删区</button>
       </footer>
     </div>
   </dialog>
   <dialog id="audioManagerDialog" class="draft-manager-dialog audio-manager-dialog">
     <div class="draft-manager-shell">
       <header>
-        <div><p class="eyebrow">AUDIO FILES</p><h2>选择要移入回收站的音频</h2></div>
+        <div><p class="eyebrow">AUDIO FILES</p><h2>选择要移入待删区的音频</h2></div>
         <button id="closeAudioManagerButton" class="icon-button" type="button" aria-label="关闭音频管理">×</button>
       </header>
       <p class="draft-manager-warning">活动、等待恢复、拼接中或 CapCut 处理中任务引用的音频会被锁定。点击受保护行可查看具体原因。</p>
@@ -321,7 +323,7 @@
       <section id="audioCleanupPreview" class="draft-cleanup-preview hidden"></section>
       <footer>
         <button id="previewAudioCleanupButton" class="primary" type="button">预览删除</button>
-        <button id="confirmAudioCleanupButton" class="danger hidden" type="button">确认移入回收站</button>
+        <button id="confirmAudioCleanupButton" class="danger hidden" type="button">确认移入待删区</button>
       </footer>
     </div>
   </dialog>
@@ -340,7 +342,7 @@
   <dialog id="productionManagerDialog" class="draft-manager-dialog production-manager-dialog">
     <div class="draft-manager-shell">
       <header>
-        <div><p class="eyebrow">PRODUCTION FILES</p><h2>选择要移入回收站的生产文件</h2></div>
+        <div><p class="eyebrow">PRODUCTION FILES</p><h2>选择要移入待删区的生产文件</h2></div>
         <button id="closeProductionManagerButton" class="icon-button" type="button" aria-label="关闭生产文件管理">×</button>
       </header>
       <p class="draft-manager-warning">默认只勾选“云端已实时核验、没有活动引用”的安全生产文件。测试文件不会默认勾选；音频、公共素材、Logo、公共样品、草稿及百度同步目录永久排除。</p>
@@ -375,7 +377,7 @@
       <section id="productionCleanupPreview" class="draft-cleanup-preview hidden"></section>
       <footer>
         <button id="previewProductionCleanupButton" class="primary" type="button">预览清理</button>
-        <button id="confirmProductionCleanupButton" class="danger hidden" type="button">确认移入回收站</button>
+        <button id="confirmProductionCleanupButton" class="danger hidden" type="button">确认移入待删区</button>
       </footer>
     </div>
   </dialog>
@@ -396,6 +398,6 @@
     <div id="replenishPanel" class="replenish-panel"></div>
   </dialog>
   <footer><span>AI视频生产线 OPS · Tailscale安全控制</span><span id="footerMachine">--</span></footer>
-  <script src="/static/app.js?v=20261018-h3-target"></script>
+  <script src="/static/app.js?v=20261018-h2-h3"></script>
 </body>
 </html>
