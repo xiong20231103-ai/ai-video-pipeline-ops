@@ -21,6 +21,20 @@ class CloudBackupWorker:
         self.stop=threading.Event();self.status_path=vault.root/'cloud-backup-status.json'
     def status(self,phase,**metadata):
         atomic_json(self.status_path,{'schema':1,'phase':phase,'observedAt':datetime.now(timezone.utc).isoformat(),**metadata})
+    def clean_work(self,work):
+        # The deployed service has exactly one worker/backup thread. On service
+        # restart its old process tree has exited, so only these owned temporary
+        # members may be removed. Never recurse through client-selected paths.
+        allowed={'recipient.pem','cloud.zip','console.db','vault.sqlite','cloud.cms'}
+        for directory in work.iterdir():
+            plain_path(directory)
+            if not directory.is_dir() or not directory.name.startswith('cloud-snapshot-'):raise BackupError('unexpected_cloud_backup_work_member')
+            entries=list(directory.iterdir())
+            for item in entries:
+                plain_path(item)
+                if not item.is_file() or item.name not in allowed:raise BackupError('unexpected_cloud_backup_work_member')
+            for item in entries:item.unlink()
+            directory.rmdir()
     def snapshot(self,source,target):
         started=time.monotonic()
         def progress(code,remaining,total):
@@ -34,6 +48,7 @@ class CloudBackupWorker:
         if not recipient:self.status('waiting_recipient');return None
         if not self.openssl.is_file():raise BackupError('existing_cloud_openssl_missing')
         work=plain_path(self.vault.root/'cloud-work');work.mkdir(mode=0o700,exist_ok=True)
+        self.clean_work(work)
         package_id=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex
         self.status('creating');started=datetime.now(timezone.utc).isoformat()
         with tempfile.TemporaryDirectory(prefix='cloud-snapshot-',dir=work) as temporary:

@@ -8,6 +8,7 @@ import unittest
 import uuid
 from unittest.mock import patch
 from cloud.backups import BackupVault,BackupError,FORMAT,encrypted_cms_header
+from cloud.backup_runtime import CloudBackupWorker
 
 # Shape-only fixtures exercise the vault, never claim real cryptographic validity.
 CMS=b'\x30\x80'+bytes.fromhex('060b2a864886f70d0109100117')+b'vault-shape-fixture'
@@ -122,4 +123,13 @@ class VaultTests(unittest.TestCase):
         self.vault.set_recipient(cert);self.vault.set_recipient(cert)
         with self.assertRaisesRegex(BackupError,'local_admin'):self.vault.set_recipient(cert.replace('A'*100,'B'*100))
         with self.assertRaises(BackupError):self.vault.set_recipient('-----BEGIN PRIVATE KEY-----')
+    def test_cloud_scratch_from_interrupted_process_is_removed_only_by_fixed_names(self):
+        worker=CloudBackupWorker(self.vault,Path(self.temp.name)/'synthetic.db',{})
+        work=self.vault.root/'cloud-work';old=work/'cloud-snapshot-interrupted';old.mkdir(parents=True)
+        (old/'cloud.zip').write_bytes(b'synthetic-inert-state')
+        (old/'console.db').write_bytes(b'synthetic-partial-snapshot')
+        worker.clean_work(work);self.assertEqual([],list(work.iterdir()))
+        unexpected=work/'do-not-delete';unexpected.mkdir();(unexpected/'important').write_bytes(b'inert')
+        with self.assertRaises(BackupError):worker.clean_work(work)
+        self.assertTrue((unexpected/'important').is_file())
 
