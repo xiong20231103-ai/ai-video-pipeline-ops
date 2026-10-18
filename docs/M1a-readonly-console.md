@@ -16,8 +16,8 @@ without merging home production code. No home process is started by deployment.
   home fetch time, content change time, cloud receive time, source scan and source
   health. A 304 renews successful fetch time without inventing a source scan.
   Backfill carries same-host elapsed age so delayed data does not look fresh.
-- Canonical query keys, bounded 128-key single-flight read queue, 45-second expiry,
-  one 30-second read lease, explicit pending 202, no pending object delivered to
+- Canonical query keys, bounded 128-key single-flight read queue, 180-second expiry,
+  one 120-second read lease, explicit pending 202, no pending object delivered to
   the legacy business renderer. Per-section source freshness and independent
   full-page refresh; cached data remains visible on errors.
 - Health preserves receiver formalBatchTotal/projectTotals/contractVersion;
@@ -425,3 +425,91 @@ After CI succeeds, the pinned administrator handoff first backs up source/task X
 After actual logoff/logon, the agent restarted automatically but workers repeatedly exited. The new ten-minute Dashboard baseline completed, while the subsequent active/idle observation was aborted and is not accepted. Root cause is not yet known: previous error reporting retained no worker/type/frame evidence. This change adds only a bounded latest-failure record (worker, exception class, basename/function/line, instance/version/time) and matching failed-runtime metadata. It never formats exceptions, messages, locals, source lines, tokens or response bodies. Diagnostic write failure still stops the worker and releases the lock; no unsafe traceback is emitted. A later successful restart does not erase last-worker-failure.json. Retry timing, polling, GET-only permissions and task definitions do not change.
 
 The latest diagnostics still need Claude deployment to the independent agent directory under the current home-deployment instruction. Do not merge this PR or claim the 30-minute acceptance passed; use the next real failure record to fix the demonstrated cause, then rerun the full observation. No actual credentials, runtime artifacts or production state are committed.
+
+
+## PR #13: SQLite failure, foreground reads and cloud-only archives (2026-10-18)
+
+Status: implementation and isolated tests, NOT production acceptance. The actual
+safe diagnostic from ebf4def identifies upload -> Ledger.next -> Ledger.db line
+36 (`BEGIN IMMEDIATE`) and OperationalError. That diagnostic did not include a
+SQLite error code; do not claim an unrecorded code or an HTTP failure as fact.
+The old reader unnecessarily acquired a reserved write lock. New WAL reads are
+query-only, own writers serialize, and only SQLite BUSY/LOCKED become retryable
+I/O. Other SQLite errors remain visible to the safe worker diagnostics, now with
+an integer SQLite code. Upload next() is inside its existing retry boundary.
+IncompleteRead is a separately reproduced wire-error gap; only that concrete
+HTTP exception is converted to retryable I/O, never all HTTPException/errors.
+
+Home storage:
+
+- No completed-box/prefetch response archive on the agent. Migrate old sources
+  one row at a time to source_validators(target, etag, semantic_hash, scanned),
+  DROP the old body table and VACUUM before worker startup, after acquiring the
+  single-instance lock. Validators and versions are small durable metadata.
+- Outbox alone retains unsent payloads, at most one per canonical key. A matching
+  acknowledgement deletes the row; a late acknowledgement cannot delete a newer
+  version. A 304 carries no body; only an unacknowledged 200 may be preserved when
+  coalescing. Missing/mismatched cloud base triggers a fresh GET.
+- Default 48 MiB queue payload limit; evict oldest unsent rows until bounded and
+  increment durable outboxDropped. This is a queue payload limit, not a claim
+  that SQLite plus WAL plus filesystem overhead fits exactly 48/50 MiB. Full
+  auto-vacuum reclaims deleted pages; report DB and WAL separately in acceptance.
+- outbox_sizes is an additive metadata table: the original four-column outbox
+  schema stays compatible with rollback. Old code recreates an empty sources
+  table and performs a full GET on its first read. Do not back up response bodies
+  as an additional permanent home archive. Runtime credentials are untouched.
+
+Two bounded home GET channels: periodic/slow-demand/prefetch and foreground.
+The long-poll watcher never waits for home HTTP. Fast box reads outrank ordinary
+foreground work, long safety reads stay in the slow channel even when requested
+by a page, same-target in-flight work coalesces, and on-demand uploads outrank
+old periodic outbox work. Cache-recovery GET also uses these channels. At most
+two home GETs are in progress; each channel's receiver health GET is sequential.
+GET /agent/fetch-requests?wait=25 waits for a notification with a 250 ms fallback
+for other server workers/restarts. The agent uses a 35-second transport timeout;
+old-server immediate empty responses have a 250 ms compatibility delay. Browser
+202 retry is 500 ms. A healthy network is required for the <=1-second delivery
+acceptance target; this is not a network-independent guarantee.
+
+Cloud archives require exact selected batch identity, positive complete project
+and video counts, a 64-hex completion receipt with completed_verified, and an
+explicit uploaded/cloud_verified upload status. Completed box display fields
+are reused without TTL; controls, health, events and other global fields come
+from the latest cloud full-dashboard response. The archived selected box does
+not freeze an active project's gaps. Date/batch aliases must match identity and
+date. Browser indicates an uploaded completed cloud archive separately.
+
+Known design decision awaiting user: immutable completion receipts may remain
+upload_pending after uploads finish (app.py persist_task_box_receipt, 607+,
+returns an existing receipt before recomputing upload evidence). Date-wide
+upload totals cannot prove the selected box. Until authorized otherwise, such
+boxes keep normal refresh. A proposed additional read-only box upload-evidence
+GET requires an explicit Dashboard-contract change and Claude deployment; it is
+not silently included or enabled here.
+
+Only while a visible authenticated viewer lease is active, the cloud plans the
+latest 10 boxes from the existing descending box order. The agent holds only
+their target strings, not prefetched response copies. Cloud already archived
+boxes are skipped; other fresh results have a 60-second interval. Prefetch runs
+on the periodic channel and yields to pending foreground work. Idle has none.
+Previous theoretical active/idle budgets remain 1752/666 home GET/hour before
+startup and user-demand reads. Prefetch adds at most 10 cold reads and at most
+600 steady-state GET/hour if all ten boxes remain mutable; already archived
+boxes add zero. Actual load must be measured, not inferred from these bounds.
+
+Acceptance after Claude's home deployment: cached and uncached box switch
+latencies five times each, long-poll delivery latency, active/idle 30-minute
+observation with request-count deltas by reason, baseline Dashboard CPU/memory,
+agent working/private memory and DB/WAL bytes before/after. The existing actual
+baseline was 602.574 seconds on Dashboard PID 31940; it may only be reused if
+PID/source and pipeline conditions remain comparable. Do not call synthetic
+fixtures or a briefly stable agent the completed observation. Do not merge this
+PR until real acceptance. No home POST, production checkout edit, Dashboard
+restart, firewall widening, public listener or Funnel is authorized here.
+
+Rollback: use the code-only updater's generated backup rollback.ps1, which
+gracefully stops only the independent agent and restores its exact source
+manifest. The old code recreates its body cache on subsequent GET; removed
+response archive bodies are deliberately not restored locally. Cloud uses the
+upgrade backup's rollback.sh with additive schema retained. Exact paths are
+recorded by the actual deployment; unexecuted rollback is not called tested.

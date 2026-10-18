@@ -64,10 +64,10 @@ with tempfile.TemporaryDirectory(prefix="ops-isolated-") as scratch:
             # loopback TCP. Permit ONLY that exact stdlib frame, never arbitrary
             # localhost/service connections or application listeners.
             frame = sys._getframe()
-            pair_code = getattr(getattr(socket, "_fallback_socketpair", None), "__code__", None)
+            pair_codes = {getattr(getattr(socket, name, None), "__code__", None) for name in ("_fallback_socketpair", "socketpair")} - {None}
             internal_pair = False
             while frame:
-                if pair_code is not None and frame.f_code is pair_code:
+                if frame.f_code in pair_codes:
                     internal_pair = True
                     break
                 frame = frame.f_back

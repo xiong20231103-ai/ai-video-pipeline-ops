@@ -48,7 +48,7 @@ class Lifecycle:
     def stop_request(self):
         return request_identity(self.state_dir/STOP_FILE) or request_identity(self.state_dir/MAINTENANCE_FILE)
     def record_worker_failure(self,worker,error):
-        if worker not in {'heartbeat','collection','upload','demand'}:raise ValueError('Unknown worker')
+        if worker not in {'heartbeat','collection','upload','demand','foreground'}:raise ValueError('Unknown worker')
         def identifier(value):
             return value if isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9_.-]{1,128}',value) else 'other'
         frames=[];trace=error.__traceback__
@@ -58,6 +58,8 @@ class Lifecycle:
             trace=trace.tb_next
         # Never stringify an exception or capture messages, source lines or locals.
         self.worker_failure={'worker':worker,'exceptionType':identifier(type(error).__name__),'frames':frames[-8:]}
+        code=getattr(error,'sqlite_errorcode',None)
+        if type(code) is int:self.worker_failure['sqliteCode']=code
         event={'schema':1,'instanceId':self.instance_id,'pid':os.getpid(),'version':self.version,
                'observedAt':datetime.now(timezone.utc).isoformat(),'failure':self.worker_failure}
         atomic_json(self.state_dir/'last-worker-failure.json',event)

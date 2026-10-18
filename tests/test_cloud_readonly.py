@@ -80,7 +80,7 @@ class CloudTests(unittest.TestCase):
     def test_reads_expire_and_do_not_lease_twice_before_timeout(self):
         key=cache_key('GET','/api/dashboard'); old=self.store.enqueue_read(key)
         self.assertEqual(1,len(self.store.claim_reads())); self.assertEqual([],self.store.claim_reads())
-        self.now[0]+=46
+        self.now[0]+=181
         self.assertEqual([],self.store.claim_reads()); self.assertNotEqual(old,self.store.enqueue_read(key))
     def test_versions_survive_reopen_and_old_backfill_cannot_replace_new(self):
         self.store.push(self.item(3)); self.assertEqual('old_version_ignored',self.store.push(self.item(2,{'state':'old'})))

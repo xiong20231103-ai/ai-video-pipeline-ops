@@ -18,7 +18,7 @@
     const age = response.headers.get('X-Cache-Age-Seconds');
     if (age !== null) {
       let health={};try{health=JSON.parse(response.headers.get('X-Source-Health')||'{}');}catch{}
-      samples.set(url, {age: Number(age), received: performance.now(), scan: response.headers.get('X-Source-Scanned-At') || '源扫描时间未知', sourceAge:typeof health.scanAgeSeconds==='number'?health.scanAgeSeconds:null});
+      samples.set(url, {archive: response.headers.get('X-Archived-Box')==='completed-uploaded', age: Number(age), received: performance.now(), scan: response.headers.get('X-Source-Scanned-At') || '源扫描时间未知', sourceAge:typeof health.scanAgeSeconds==='number'?health.scanAgeSeconds:null});
     }
   }
   window.fetch = async (input, init = {}) => {
@@ -32,12 +32,12 @@
     // Coalesce browser retries too; the cloud independently coalesces all devices.
     if (inflight.has(key)) return (await inflight.get(key)).clone();
     const work = (async () => {
-      for (let attempt = 0; attempt < 30; attempt++) {
+      for (let attempt = 0; attempt < 120; attempt++) {
         const response = await original(input, init);
         if (response.status === 401) { location.assign('/login'); throw new Error('请重新登录'); }
         if (response.status !== 202) { observe(key, response); return response; }
         // A pending envelope is never delivered to the old business renderer.
-        await wait(2000, init.signal || (input instanceof Request ? input.signal : undefined));
+        await wait(500, init.signal || (input instanceof Request ? input.signal : undefined));
       }
       throw new Error('正在向家里取数，稍后自动刷新；已有数据显示保留');
     })();
@@ -107,8 +107,8 @@
         const name=(names[parsed.pathname]||'页面数据')+(parsed.searchParams.get('date')?' '+parsed.searchParams.get('date'):'');
         const stamp=new Date(sample.scan);
         const effective=sample.sourceAge===null?null:sample.sourceAge+age;
-        row.textContent=name+'：'+(Number.isNaN(stamp.getTime())||effective===null?'源扫描时间未知，该版本最近取数 '+age+' 秒前':'数据截至 '+stamp.toLocaleTimeString('zh-CN',{hour12:false})+'（'+Math.floor(effective)+' 秒前）；该版本最近取数 '+age+' 秒前');
-        row.style.color=age>120||(effective!==null&&effective>120)?'#b42318':age>30||effective===null||effective>30?'#8a5c00':'#38533a'; list.append(row);
+        row.textContent=name+(sample.archive?'（已完成且已上传，云端存档）':'')+'：'+(Number.isNaN(stamp.getTime())||effective===null?'源扫描时间未知，该版本最近取数 '+age+' 秒前':'数据截至 '+stamp.toLocaleTimeString('zh-CN',{hour12:false})+'（'+Math.floor(effective)+' 秒前）；该版本最近取数 '+age+' 秒前');
+        row.style.color=sample.archive?'#38533a':age>120||(effective!==null&&effective>120)?'#b42318':age>30||effective===null||effective>30?'#8a5c00':'#38533a'; list.append(row);
       }
     },1000);
   });

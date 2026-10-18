@@ -6,12 +6,15 @@ from pathlib import Path
 import secrets
 import sqlite3
 import time
+import threading
+from urllib.parse import parse_qs,urlsplit,urlencode
 from contracts.cache import cache_key,semantic_hash
 
 class Store:
     def __init__(self,path,clock=None):
         self.path=Path(path); self.path.parent.mkdir(parents=True,exist_ok=True)
         epoch=time.time(); monotonic=time.monotonic()
+        self.fetch_changed=threading.Condition()
         self.clock=clock or (lambda:epoch+time.monotonic()-monotonic)
         with self.db() as db:
             db.executescript('''
@@ -23,6 +26,8 @@ class Store:
             CREATE TABLE IF NOT EXISTS heartbeats(agent_id TEXT PRIMARY KEY,received REAL NOT NULL,engine_state TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS rate_limits(bucket TEXT PRIMARY KEY,window REAL NOT NULL,count INTEGER NOT NULL);
             CREATE TABLE IF NOT EXISTS page_activity(id INTEGER PRIMARY KEY CHECK(id=1),last_seen REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS agent_storage(id INTEGER PRIMARY KEY CHECK(id=1),received REAL NOT NULL,body TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS completed_boxes(batch_id TEXT PRIMARY KEY,key TEXT NOT NULL,receipt_hash TEXT NOT NULL,stored REAL NOT NULL);
             ''')
     @contextmanager
     def db(self,write=False):
@@ -95,6 +100,7 @@ class Store:
             status=item['status']
             if status==304:
                 if not old: raise ValueError('304_without_body')
+                if item.get('semanticHash') and item['semanticHash']!=old['semantic_hash']: raise ValueError('304_validator_mismatch')
                 body=old['body']; status=old['status']; content_hash=old['semantic_hash']; changed=old['last_changed']
                 # 304 success never invents a later underlying source scan.
                 source_scan=old['source_scanned_at']
@@ -104,8 +110,10 @@ class Store:
                 content_hash=semantic_hash(item['body']); changed=old['last_changed'] if old and old['semantic_hash']==content_hash else obtained
             db.execute('INSERT OR REPLACE INTO responses VALUES(?,?,?,?,?,?,?,?,?,?,?)',(key,version,status,body,content_hash,obtained,changed,source_scan,json.dumps(source_health),source_etag,now))
             db.execute('DELETE FROM fetches WHERE key=?',(key,))
+            if status==200:
+                self._remember_completed(db,key,json.loads(body),now)
         return 'stored'
-    def enqueue_read(self,key,maximum=128,ttl=45):
+    def enqueue_read(self,key,maximum=128,ttl=180):
         now=self.clock()
         with self.db(True) as db:
             db.execute('DELETE FROM fetches WHERE expires<=?',(now,))
@@ -114,17 +122,96 @@ class Store:
             if db.execute('SELECT count(*) FROM fetches').fetchone()[0]>=maximum: raise ValueError('fetch_queue_full')
             request_id=secrets.token_urlsafe(24)
             db.execute('INSERT INTO fetches(key,id,state,created,expires) VALUES(?,?,?,?,?)',(key,request_id,'queued',now,now+ttl))
-            return request_id
+        with self.fetch_changed: self.fetch_changed.notify_all()
+        return request_id
     def claim_reads(self):
         now=self.clock()
         with self.db(True) as db:
             db.execute('DELETE FROM fetches WHERE expires<=?',(now,))
-            row=db.execute("SELECT * FROM fetches WHERE state='queued' OR lease_until<=? ORDER BY created LIMIT 1",(now,)).fetchone()
+            row=db.execute("SELECT * FROM fetches WHERE state='queued' OR lease_until<=? ORDER BY CASE WHEN key LIKE 'GET /api/dashboard?%batchId=%' THEN 0 ELSE 1 END,created LIMIT 1",(now,)).fetchone()
             if not row: return []
-            db.execute("UPDATE fetches SET state='leased',lease_until=? WHERE key=?",(now+30,row['key']))
+            db.execute("UPDATE fetches SET state='leased',lease_until=? WHERE key=?",(now+120,row['key']))
             return [{'id':row['id'],'target':row['key'][4:],'expiresAt':row['expires']}]
-    def heartbeat(self,engine_state):
-        with self.db(True) as db: db.execute('INSERT OR REPLACE INTO heartbeats VALUES(?,?,?)',('home',self.clock(),engine_state))
+    @staticmethod
+    def completed_box(body,batch_id):
+        if not isinstance(body,dict) or body.get('selectedBatchId')!=batch_id: return None
+        boxes=body.get('taskBoxes')
+        if not isinstance(boxes,dict): return None
+        box=boxes.get('selected')
+        if not isinstance(box,dict) or box.get('batchId')!=batch_id: return None
+        receipt=box.get('completionReceipt')
+        if not isinstance(receipt,dict): return None
+        count=box.get('projectCount'); total=box.get('totalVideos')
+        if (type(count) is not int or count<=0 or box.get('completedProjects')!=count
+            or type(total) is not int or total<=0 or box.get('completedVideos')!=total
+            or box.get('state')!='completed' or receipt.get('status')!='completed_verified'
+            or receipt.get('uploadStatus') not in {'cloud_verified','uploaded_pending_verification'}
+            or not isinstance(receipt.get('receiptHash'),str) or len(receipt['receiptHash'])!=64 or any(c not in '0123456789abcdef' for c in receipt['receiptHash'])): return None
+        return receipt
+    def _remember_completed(self,db,key,body,now):
+        parts=urlsplit(key[4:]); batch_id=parse_qs(parts.query).get('batchId',[''])[0]
+        if parts.path!='/api/dashboard' or not batch_id: return
+        receipt=self.completed_box(body,batch_id)
+        if receipt:
+            db.execute('INSERT OR REPLACE INTO completed_boxes VALUES(?,?,?,?)',(batch_id,key,receipt['receiptHash'],now))
+        else: db.execute('DELETE FROM completed_boxes WHERE batch_id=?',(batch_id,))
+    def archive(self,key):
+        parts=urlsplit(key[4:]); params=parse_qs(parts.query); batch_id=params.get('batchId',[''])[0]
+        if parts.path!='/api/dashboard' or not batch_id: return None
+        with self.db() as db:
+            record=db.execute('SELECT key FROM completed_boxes WHERE batch_id=?',(batch_id,)).fetchone()
+        if not record: return None
+        snapshot=self.response(record['key'])
+        if not snapshot: return None
+        historical=json.loads(snapshot['body'])
+        if not self.completed_box(historical,batch_id): return None
+        # A completed box is immutable; the same response's live controls,
+        # events and engine status are not. Overlay only selected-box display.
+        live=self.response(cache_key('GET','/api/dashboard'))
+        if live:
+            merged=json.loads(live['body'])
+            for field in ('selectedDate','selectedBatchId','overview','pipeline','tasks'):
+                if field in historical: merged[field]=historical[field]
+            merged.setdefault('taskBoxes',{})['selected']=historical['taskBoxes']['selected']
+        else:
+            # No live base (e.g. restored archive): do not invent live fields.
+            return None
+        if params.get('date') and params['date'][0]!=historical.get('selectedDate'): return None
+        return {**snapshot,'body':json.dumps(merged,ensure_ascii=False,separators=(',',':')),'liveSuccess':live['last_success']}
+    def prefetch_targets(self):
+        if not self.viewer_state()['viewerActive']: return []
+        row=self.response(cache_key('GET','/api/dashboard'))
+        if not row: return []
+        boxes=(json.loads(row['body']).get('taskBoxes') or {}).get('items') or []
+        targets=[]; seen=set()
+        with self.db() as db:
+            permanent={r['batch_id'] for r in db.execute('SELECT c.batch_id FROM completed_boxes c JOIN responses r ON r.key=c.key')}
+            successes={r['key']:r['last_success'] for r in db.execute('SELECT key,last_success FROM responses')}
+        # Home contract already sorts by task_box_sort_key descending.
+        for box in boxes:
+            if not isinstance(box,dict): continue
+            batch=box.get('batchId')
+            if not isinstance(batch,str) or not batch or batch in seen: continue
+            seen.add(batch)
+            target='/api/dashboard?'+urlencode({'batchId':batch}); key=cache_key('GET',target)
+            if batch not in permanent:
+                last=successes.get(key)
+                if last is None or self.clock()-last>=60: targets.append(target)
+            if len(seen)>=10: break
+        return targets
+    def wait_reads(self,seconds=25,disconnected=None):
+        deadline=time.monotonic()+min(25,max(0,seconds))
+        # Short fallback also works across uvicorn workers/restarts; condition
+        # notification normally delivers immediately. Never hold a DB lock.
+        while True:
+            with self.fetch_changed:
+                items=self.claim_reads()
+                if items or time.monotonic()>=deadline: return items
+                self.fetch_changed.wait(min(0.25,max(0,deadline-time.monotonic())))
+    def heartbeat(self,engine_state,storage=None):
+        with self.db(True) as db:
+            db.execute('INSERT OR REPLACE INTO heartbeats VALUES(?,?,?)',('home',self.clock(),engine_state))
+            if storage is not None: db.execute('INSERT OR REPLACE INTO agent_storage VALUES(1,?,?)',(self.clock(),json.dumps(storage)))
     def page_view(self):
         now=self.clock()
         with self.db(True) as db:
@@ -135,7 +222,9 @@ class Store:
         remaining=120-age if age is not None and 0<=age<120 else 0
         return {'viewerActive':remaining>0,'viewerLeaseSeconds':remaining}
     def health(self):
-        with self.db() as db: row=db.execute('SELECT * FROM heartbeats WHERE agent_id=?',('home',)).fetchone()
+        with self.db() as db:
+            row=db.execute('SELECT * FROM heartbeats WHERE agent_id=?',('home',)).fetchone()
+            storage=db.execute('SELECT * FROM agent_storage WHERE id=1').fetchone()
         age=self.clock()-row['received'] if row else None
         if age is not None and age<0: age=None
-        return {'agentOnline':age is not None and age<=45,'heartbeatAgeSeconds':age,'engineState':row['engine_state'] if row else 'unknown','canContinue':False,'canCleanup':False,'readOnly':True}
+        return {'agentOnline':age is not None and age<=45,'heartbeatAgeSeconds':age,'engineState':row['engine_state'] if row else 'unknown','canContinue':False,'canCleanup':False,'readOnly':True,'agentStorage':json.loads(storage['body']) if storage else None,'agentStorageReportedAt':storage['received'] if storage else None}
