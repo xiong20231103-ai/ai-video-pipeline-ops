@@ -22,6 +22,22 @@ from typing import Any
 
 import psutil
 import pending_delete
+from cleanup_tickets import CleanupTickets
+from contextvars import ContextVar
+from functools import wraps
+
+_CLEANUP_SOURCE_STRICT = ContextVar('cleanup_source_strict', default=False)
+
+
+def cleanup_source_guard(function):
+    @wraps(function)
+    def guarded(*args, **kwargs):
+        marker = _CLEANUP_SOURCE_STRICT.set(True)
+        try:
+            return function(*args, **kwargs)
+        finally:
+            _CLEANUP_SOURCE_STRICT.reset(marker)
+    return guarded
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
@@ -577,8 +593,12 @@ def fish_bridge_status() -> dict[str, Any]:
 def read_json_object(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, ValueError, UnicodeError) as exc:
+        if _CLEANUP_SOURCE_STRICT.get():
+            raise HTTPException(503, "清理引用来源无法读取，请修复后重新盘点") from exc
         return {}
+    if _CLEANUP_SOURCE_STRICT.get() and not isinstance(payload, dict):
+        raise HTTPException(503, "清理引用来源格式无效，禁止清理")
     return payload if isinstance(payload, dict) else {}
 
 
@@ -812,6 +832,16 @@ def _capcut_draft_snapshot(root: Path, index_path: Path) -> str:
     for folder in folders:
         try:
             stat = folder.stat()
+            for child in sorted(folder.rglob("*"), key=str):
+                if pending_delete._is_link(child):
+                    raise HTTPException(409, "草稿含链接，无法安全盘点")
+                if child.is_file():
+                    digest.update(str(child.relative_to(folder)).encode())
+                    content_hash = hashlib.sha256()
+                    with child.open('rb') as stream:
+                        for block in iter(lambda: stream.read(1024 * 1024), b''):
+                            content_hash.update(block)
+                    digest.update(content_hash.digest())
             digest.update(f"{folder.name}\0{stat.st_mtime_ns}\0".encode("utf-8", errors="replace"))
         except OSError:
             digest.update(f"{folder.name}\0missing\0".encode("utf-8", errors="replace"))
@@ -819,8 +849,13 @@ def _capcut_draft_snapshot(root: Path, index_path: Path) -> str:
 
 
 def _capcut_draft_inventory(root: Path | None = None) -> dict[str, Any]:
-    root = (root or capcut_draft_root()).resolve()
+    raw_root = root or capcut_draft_root()
+    if pending_delete.forbidden_source(raw_root) or pending_delete.linked_path(raw_root):
+        return {"available": False, "message": "草稿根受保护或含链接，禁止清理", "items": []}
+    root = raw_root.resolve()
     index_path = root / "root_meta_info.json"
+    if pending_delete.forbidden_source(root):
+        return {"available": False, "message": "用户永久保护的草稿目录，禁止清理", "items": []}
     if not root.is_dir():
         return {
             "available": False, "message": "CapCut 草稿目录不存在", "snapshotToken": "",
@@ -1143,6 +1178,7 @@ def _audio_producer_processes() -> list[dict[str, Any]]:
     return active
 
 
+@cleanup_source_guard
 def _audio_reference_inventory() -> dict[str, list[dict[str, Any]]]:
     references: dict[str, list[dict[str, Any]]] = {}
     seen: set[tuple[str, str, str]] = set()
@@ -1189,18 +1225,20 @@ def _audio_reference_inventory() -> dict[str, list[dict[str, Any]]]:
                 active=task_state not in COMPLETED_STATES,
                 state=task_state,
             )
-    except (OSError, sqlite3.Error):
-        pass
+    except (OSError, sqlite3.Error) as exc:
+        raise HTTPException(503, "活动任务来源不可确认，禁止清理") from exc
 
     # The immutable Step 4/5 metadata supplies project identity even after a
     # task has left the current table.
     try:
         for item in COLLECTOR.metadata.values():
             add(item, source="正式任务清单", active=False)
-    except (AttributeError, RuntimeError):
-        pass
+    except (AttributeError, RuntimeError) as exc:
+        raise HTTPException(503, "任务引用来源不可确认，禁止清理") from exc
 
     handoff = read_json_object(resolve_path(str(CONFIG.get("voice_handoff_file") or "")))
+    if not isinstance(handoff.get("status"), str):
+        raise HTTPException(503, "配音交接状态不可确认，禁止清理")
     handoff_state = str(handoff.get("status") or "").casefold()
     handoff_active = handoff_state not in {"", "completed", "completed_with_errors", "failed", "cancelled"}
     for field in ("completedItems", "failedItems", "items", "tasks"):
@@ -1211,6 +1249,8 @@ def _audio_reference_inventory() -> dict[str, list[dict[str, Any]]]:
                     add(item, source="Fish配音交接", active=handoff_active, state=handoff_state)
 
     upload = read_json_object(resolve_path(str(CONFIG.get("upload_status_file") or "")))
+    if not isinstance(upload.get("tasks"), dict):
+        raise HTTPException(503, "上传引用登记格式不可确认，禁止清理")
     upload_tasks = upload.get("tasks") if isinstance(upload.get("tasks"), dict) else {}
     for item in upload_tasks.values():
         if isinstance(item, dict):
@@ -1305,7 +1345,11 @@ def _audio_inventory(
                 file_references = references.get(path_key, [])
                 active_references = [item for item in file_references if item.get("active")]
                 protected_reason = ""
-                if active_references:
+                if pending_delete.forbidden_source(path) or pending_delete.forbidden_source(path.resolve()):
+                    protected_reason = "用户永久保护的草稿目录，禁止清理"
+                elif pending_delete.linked_path(path):
+                    protected_reason = "音频路径含链接或重解析点，禁止清理"
+                if active_references and not protected_reason:
                     current = active_references[0]
                     identity = " / ".join(
                         value for value in (
@@ -1614,6 +1658,8 @@ def _canonical_task_id(item: dict[str, Any], aliases: dict[str, str] | None = No
 
 def _project_status_records() -> dict[str, dict[str, Any]]:
     payload = read_json_object(resolve_path(str(CONFIG.get("download_project_status_file") or "")))
+    if _CLEANUP_SOURCE_STRICT.get() and not isinstance(payload.get("items"), dict):
+        raise HTTPException(503, "项目完成状态来源不可确认，禁止清理")
     items = payload.get("items") if isinstance(payload.get("items"), dict) else {}
     return {
         str(task_id): dict(item)
@@ -1625,6 +1671,8 @@ def _project_status_records() -> dict[str, dict[str, Any]]:
 def _upload_task_records() -> list[dict[str, Any]]:
     payload = read_json_object(resolve_path(str(CONFIG.get("upload_status_file") or "")))
     tasks = payload.get("tasks")
+    if _CLEANUP_SOURCE_STRICT.get() and not isinstance(tasks, (dict, list)):
+        raise HTTPException(503, "正式上传登记来源不可确认，禁止清理")
     if isinstance(tasks, dict):
         return [dict(item) for item in tasks.values() if isinstance(item, dict)]
     if isinstance(tasks, list):
@@ -1648,6 +1696,7 @@ def _cloud_verification(item: dict[str, Any]) -> tuple[bool, str]:
     return True, ""
 
 
+@cleanup_source_guard
 def _production_active_projects() -> tuple[set[str], dict[str, str]]:
     active: set[str] = set()
     reasons: dict[str, str] = {}
@@ -1666,8 +1715,8 @@ def _production_active_projects() -> tuple[set[str], dict[str, str]]:
             if canonical_id:
                 active.add(canonical_id)
                 reasons[canonical_id] = str(item.get("phaseText") or item.get("error") or state or "任务正在等待或恢复")
-    except (OSError, sqlite3.Error):
-        pass
+    except (OSError, sqlite3.Error) as exc:
+        raise HTTPException(503, "活动任务来源不可确认，禁止清理") from exc
     return active, reasons
 
 
@@ -1728,6 +1777,10 @@ def _production_file_identity(
     task = task or {}
     if resolved.suffix.casefold() not in PRODUCTION_VIDEO_EXTENSIONS:
         return None
+    if pending_delete.forbidden_source(path) or pending_delete.forbidden_source(resolved):
+        protected_reason = "用户永久保护的草稿目录，禁止清理"
+    elif pending_delete.linked_path(path):
+        protected_reason = "生产文件路径含链接或重解析点，禁止清理"
     if _is_baidu_sync_path(resolved):
         protected_reason = "文件位于百度网盘同步目录，永久禁止清理"
     task_state = str(task.get("status") or task.get("state") or "")
@@ -1775,6 +1828,7 @@ def _production_snapshot(items: list[dict[str, Any]]) -> str:
     return digest.hexdigest()
 
 
+@cleanup_source_guard
 def _production_file_inventory() -> dict[str, Any]:
     aliases = _canonical_task_aliases()
     projects = _project_status_records()
@@ -6938,3 +6992,106 @@ if __name__ == "__main__":
         reload=False,
         access_log=False,
     )
+
+
+# Cloud cleanup delegates to the same inventory, locks, manifests and H2 moves
+# as the local Dashboard. Tickets are intentionally not durable across restart.
+CLOUD_CLEANUP_TICKETS = CleanupTickets()
+
+
+def cloud_cleanup_capabilities():
+    if pending_delete_retention_days() != 3:
+        raise HTTPException(503, "云端清理要求待删区保留3天")
+    return {"protocol": 1, "retentionDays": 3, "forbiddenDraftRootProtected": True}
+
+
+def _cloud_cleanup_payload(payload):
+    if not isinstance(payload, dict) or payload.get("kind") not in {"drafts", "audio", "production", "pending"}:
+        raise HTTPException(400, "清理类别无效")
+    ids = payload.get("ids")
+    if not isinstance(ids, list) or any(not isinstance(value, str) for value in ids):
+        raise HTTPException(400, "只能提交服务器对象ID列表")
+    if not isinstance(payload.get("includeUnknown", False), bool):
+        raise HTTPException(400, "额外确认类型无效")
+    kind = payload["kind"]
+    limit, length = {"drafts": (500, 160), "audio": (2000, 80), "production": (5000, 80), "pending": (0, 0)}[kind]
+    ids = list(dict.fromkeys(value.strip() for value in ids if value.strip()))
+    if len(ids) > limit or any(len(value) > length or "/" in value or "\\" in value or re.match(r"^[A-Za-z]:", value) for value in ids):
+        raise HTTPException(400, "清理对象标识无效")
+    ids = list(dict.fromkeys(value.strip() for value in ids))
+    if kind != "pending" and not ids:
+        raise HTTPException(400, "请至少选择一个对象")
+    return kind, ids, payload.get("includeUnknown", False)
+
+
+def cloud_cleanup_preview(payload):
+    cloud_cleanup_capabilities()
+    kind, ids, include_unknown = _cloud_cleanup_payload(payload)
+    if kind == "pending":
+        with pending_delete.LOCK:
+            roots = pending_delete_roots()
+            try:
+                snapshot = pending_delete.snapshot(roots)
+                preview = pending_delete.summary(roots)
+            except OSError as exc:
+                raise HTTPException(409, "待删区无法安全盘点") from exc
+        preview.update(state="preview", snapshotToken=snapshot,
+                       selectedCount=preview["count"], deletableCount=preview["count"],
+                       blockedCount=preview["needsReview"], message="立即清空将永久删除已核验待删内容，不可恢复")
+    else:
+        callback = {"drafts": preview_capcut_draft_cleanup, "audio": preview_audio_cleanup,
+                    "production": preview_production_file_cleanup}[kind]
+        preview = callback(ids)
+    confirm = {"drafts": CAPCUT_DRAFT_CLEANUP_CONFIRM, "audio": AUDIO_CLEANUP_CONFIRM,
+               "production": PRODUCTION_FILE_CLEANUP_CONFIRM, "pending": PENDING_DELETE_EMPTY_CONFIRM}[kind]
+    fields = dict(kind=kind, ids=ids, snapshotToken=preview["snapshotToken"],
+                  includeUnknown=include_unknown, confirm=confirm)
+    return sanitize_public_value({**preview, **CLOUD_CLEANUP_TICKETS.issue(fields)})
+
+
+def cloud_cleanup_execute(payload):
+    cloud_cleanup_capabilities()
+    kind, ids, include_unknown = _cloud_cleanup_payload(payload)
+    CLOUD_CLEANUP_TICKETS.consume(payload)
+    if kind == "pending":
+        with pending_delete.LOCK:
+            roots = pending_delete_roots()
+            try:
+                if pending_delete.snapshot(roots) != payload["snapshotToken"]:
+                    raise HTTPException(409, "待删区已变化，请重新预览")
+                return sanitize_public_value(pending_delete.purge(roots, everything=True))
+            except OSError as exc:
+                raise HTTPException(409, "待删区无法安全核验") from exc
+    if kind == "drafts":
+        result = execute_capcut_draft_cleanup(ids, payload["snapshotToken"], include_unknown=include_unknown)
+    elif kind == "audio":
+        result = execute_audio_cleanup(ids, payload["snapshotToken"])
+    else:
+        result = execute_production_file_cleanup(ids, payload["snapshotToken"])
+    return sanitize_public_value(result)
+
+
+@app.get("/api/controls/cloud-cleanup/capabilities")
+def control_cloud_cleanup_capabilities(request: Request):
+    require_control_permission(request)
+    return cloud_cleanup_capabilities()
+
+
+@app.post("/api/controls/cloud-cleanup/preview")
+async def control_cloud_cleanup_preview(request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(400, "预览请求不是有效JSON") from exc
+    return cloud_cleanup_preview(payload)
+
+
+@app.post("/api/controls/cloud-cleanup/execute")
+async def control_cloud_cleanup_execute(request: Request):
+    require_control_permission(request)
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(400, "执行请求不是有效JSON") from exc
+    return cloud_cleanup_execute(payload)
