@@ -24,6 +24,8 @@ jobs:
           node --check cloud/login.js
           node --check cloud/backups.js
           node --check cloud/commands.js
+          node --check cloud/cleanup.js
+          node --check tests/cleanup_ui_fixture.cjs
           node --check static/app.js
           node --check tests/command_ui_fixture.cjs
       - name: Headless cloud command UI with all network intercepted
@@ -36,6 +38,8 @@ jobs:
           $edge='C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
           if (-not (Test-Path -LiteralPath $edge)) { $edge='C:\Program Files\Microsoft\Edge\Application\msedge.exe' }
           $env:OPS_UI_BROWSER_PATH=$edge
+          node tests/cleanup_ui_fixture.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/command_ui_fixture.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Check deployment shell syntax without executing it

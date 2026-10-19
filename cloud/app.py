@@ -67,7 +67,7 @@ def create_app(config=None,store=None,static_root=None):
     static_root=Path(static_root or Path(__file__).parents[1]/'static')
     vault=BackupVault(Path(store.path).parent/'backups',clock=store.clock)
     backup_worker=CloudBackupWorker(vault,store.path,config)
-    commands=CommandQueue(store,enabled=config.get('command_queue_enabled') is True,h3=config.get('h3_target_contract') is True)
+    commands=CommandQueue(store,enabled=config.get('command_queue_enabled') is True,h3=config.get('h3_target_contract') is True,cleanup=config.get('cleanup_enabled') is True)
     notification_worker=NotificationWorker(store,settings_loader=runtime_settings)
     @asynccontextmanager
     async def lifespan(app):
@@ -129,7 +129,7 @@ def create_app(config=None,store=None,static_root=None):
         if not store.session(request.cookies.get(COOKIE,'')): return RedirectResponse('/login',status_code=303)
         page=(static_root/'index.html').read_text(encoding='utf-8')
         # Insert before app.js executes, while leaving the home static files intact.
-        page=page.replace('<head>','<head><script src="/cloud-readonly.js"></script><script src="/cloud-commands.js"></script><script defer src="/cloud-backups.js"></script>',1)
+        page=page.replace('<head>','<head><script src="/cloud-readonly.js"></script><script src="/cloud-commands.js"></script><script src="/cloud-cleanup.js"></script><script defer src="/cloud-backups.js"></script>',1)
         return HTMLResponse(page)
     @application.get('/cloud-readonly.js')
     def readonly_script(request:Request):
@@ -139,6 +139,10 @@ def create_app(config=None,store=None,static_root=None):
     def backup_script(request:Request):
         session(request)
         return Response((Path(__file__).parent/'backups.js').read_bytes(),media_type='application/javascript')
+    @application.get('/cloud-cleanup.js')
+    def cleanup_script(request:Request):
+        session(request)
+        return Response((Path(__file__).parent/'cleanup.js').read_bytes(),media_type='application/javascript')
     @application.get('/cloud-commands.js')
     def command_script(request:Request):
         session(request)
@@ -204,7 +208,10 @@ def create_app(config=None,store=None,static_root=None):
             try:vault.note_agent_state(backup_state)
             except BackupError as error:raise HTTPException(error.status,error.code) from None
         accepted=True
-        try:commands.advertise(data.get('execution'))
+        try:
+            execution=data.get('execution')
+            if isinstance(execution,dict):execution={**execution,'cleanupProtocol':data.get('cleanupProtocol',0)}
+            commands.advertise(execution)
         except CommandError as error:
             if error.status==400:raise HTTPException(400,error.code) from None
             commands.set_paused(True);accepted=False

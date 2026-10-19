@@ -10,10 +10,11 @@
   const save=()=>localStorage.setItem(key,JSON.stringify(records.slice(-100)));
   const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const stable=value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,stable(value[k])])):value;
-  const allowedPath=path=>/^\/api\/controls\/tasks\/(create|[^/]+\/(start|cancel|replenish))$/.test(path)||/^\/api\/controls\/upload\/(rescan|verify-history)$/.test(path)||path==='/api/control-commands';
+  const allowedPath=path=>/^\/api\/controls\/tasks\/(create|[^/]+\/(start|cancel|replenish))$/.test(path)||/^\/api\/controls\/upload\/(rescan|verify-history)$/.test(path)||path==='/api/control-commands'||/^\/api\/controls\/cloud-cleanup\/(preview|execute)$/.test(path);
   const unfinished=()=>records.some(r=>pending.has(r.state));
   window.opsCloudCanWrite=button=>{
     if(!health.executorAvailable||!health.homeReady||health.commandBlocker||unfinished()||active.size)return false;
+    if(/^(preview|confirm)(Draft|Audio|Production)CleanupButton$/.test(button?.id||'')||button?.id==='emptyPendingDeleteButton')return health.canCleanup===true;
     if(button?.id==='continueCurrentButton')return health.canContinue===true&&button.dataset.allowed==='true';
     if(['uploadRescanButton','historicalCloudVerifyButton'].includes(button?.id))return true;
     return Boolean(button?.closest('#createTaskForm,#replenishForm')||button?.dataset.cloudControl);
@@ -64,6 +65,7 @@
   }
   async function dispatch(path,payload){
     if(!allowedPath(path))throw new Error('此操作尚未开放云端执行');
+    if(path==='/api/controls/cloud-cleanup/preview'){records=records.filter(r=>r.path!==path||pending.has(r.state));save();}
     const comparable={...payload};if(path==='/api/control-commands')delete comparable.clientRequestId;
     const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(path+'\n'+JSON.stringify(stable(comparable))))),v=>v.toString(16).padStart(2,'0')).join('');
     if(active.has(fingerprint))return (await active.get(fingerprint)).clone();
@@ -82,7 +84,7 @@
           else{record.state='not_sent';save();paint();throw new Error(answer.detail||'云端拒绝收件');}
         }catch(error){if(record.state==='not_sent')throw error;/* Lost acknowledgement: GET only, never repeat POST. */}
       }
-      for(let n=0;n<180;n++){
+      for(let n=0;n<(path.endsWith('/cloud-cleanup/execute')?1000:180);n++){
         value=value||await query(record);
         if(value&&!['queued','leased','sent'].includes(value.state))return finalResponse(value);
         await delay(1000);value=null;
@@ -91,6 +93,7 @@
     })();active.set(fingerprint,work);
     try{return (await work).clone();}finally{active.delete(fingerprint);paint();}
   }
+  window.opsCloudDispatch=dispatch;
   window.opsCloudWriteFetch=(url,init={})=>{
     if((init.method||'GET').toUpperCase()!=='POST')throw new Error('仅支持已声明的 POST 命令');
     const path=new URL(url,location.origin).pathname;return dispatch(path,init.body?JSON.parse(init.body):{});
