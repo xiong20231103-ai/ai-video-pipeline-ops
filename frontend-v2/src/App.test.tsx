@@ -51,7 +51,7 @@ describe('V2-0 isolated presentation shell', () => {
     ).toBeVisible()
     expect(screen.getByText('V2 功能预览')).toBeVisible()
     expect(
-      screen.getByText('V2 预览：开放上传与任务操作，其余操作请用旧页面'),
+      screen.getByText('V2 预览：开放上传、任务与家里清理；云端清理尚未开放'),
     ).toBeVisible()
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(

@@ -27,6 +27,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - run: npm run inventory:check
       - run: npm run build
       - run: npm run size
       - run: npm run check:build
@@ -38,6 +39,12 @@ jobs:
         env:
           V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
       - run: node scripts/task-browser-check.cjs
+        env:
+          V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
+      - run: node scripts/home-cleanup-browser-check.cjs
+        env:
+          V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
+      - run: node scripts/queue-wait-browser-check.cjs
         env:
           V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
       - uses: actions/upload-artifact@v4

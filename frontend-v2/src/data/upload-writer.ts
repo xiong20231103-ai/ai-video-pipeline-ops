@@ -1,3 +1,4 @@
+import { controlTimeoutError } from "./control-timeout";
 import { ReadClient } from "./client";
 import {
   captureReceipt,
@@ -99,10 +100,7 @@ export class UploadWriter {
       return answer;
     } catch (error) {
       if (object(error).name === "AbortError")
-        throw new Error(
-          "操作仍在后台处理（已等待 1 分钟），请刷新状态后再继续",
-          { cause: error },
-        );
+        throw controlTimeoutError(10000, error);
       throw error;
     }
   }

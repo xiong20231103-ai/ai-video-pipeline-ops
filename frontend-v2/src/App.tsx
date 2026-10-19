@@ -145,7 +145,7 @@ function SidebarFooter() {
       <div className="sidebar-note">
         <Box size={16} />
         <span>独立预览空间</span>
-        <Badge variant="outline">V2-2B</Badge>
+        <Badge variant="outline">V2-2C</Badge>
       </div>
       <p>专注创作，让流程井然有序。</p>
     </div>
@@ -235,7 +235,7 @@ export default function App() {
                     id="mobile-navigation-description"
                     className="sr-only"
                   >
-                    选择一个控制台分区。当前开放上传和任务操作，其他操作请用旧页面。
+                    选择一个控制台分区。当前开放上传、任务与家里清理；云端清理尚未开放。
                   </SheetDescription>
                   <Brand />
                   <Navigation

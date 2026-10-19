@@ -103,7 +103,7 @@ describe('dual-mode read transport', () => {
     )
     expect(network).toHaveBeenCalledOnce()
   })
-  it('times out an entire queued-read attempt and aborts in-flight work on unmount', async () => {
+  it('times out an individual HTTP request and aborts in-flight work on unmount', async () => {
     vi.useFakeTimers()
     const network = vi.fn(
       (_url: RequestInfo | URL, init?: RequestInit) =>

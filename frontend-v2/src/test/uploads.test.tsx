@@ -192,7 +192,7 @@ describe("upload transport: all network is mocked", () => {
     reader.mode = "home";
     await expect(
       new UploadWriter(reader, () => ({})).post("/api/controls/upload/rescan"),
-    ).rejects.toThrow("操作仍在后台处理（已等待 1 分钟）");
+    ).rejects.toThrow("操作仍在后台处理（已等待 10 秒）");
     expect(network).toHaveBeenCalledTimes(1);
   });
 });
