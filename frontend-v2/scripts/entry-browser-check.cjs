@@ -1,3 +1,4 @@
+const {setTimeout}=require('node:timers');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const root=path.resolve(__dirname,'../..'),out=process.env.V2_EVIDENCE_DIR,origin='https://entry-fixture.invalid',requests=[],errors=[],expected=[],violations=[],screenshots=[];
 const csp="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'";
@@ -5,7 +6,7 @@ const csp="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inlin
 fs.mkdirSync(out,{recursive:true});
 for(const [width,height] of [[1920,1080],[1440,900],[1366,768],[375,812]])for(const theme of ['dark','light']){
  const context=await browser.newContext({viewport:{width,height}});let loginOk=false,logins=0,registrations=0;
- await context.addInitScript(theme=>localStorage.setItem('ops-v2:theme',theme),theme);
+ await context.addInitScript(theme=>window.localStorage.setItem('ops-v2:theme',theme),theme);
  await context.route('**/*',async route=>{const req=route.request(),url=new URL(req.url()),key=url.pathname;assert.equal(url.origin,origin);requests.push({path:key,method:req.method(),intercepted:true});
   if(key==='/login')return route.fulfill({contentType:'text/html',headers:{'Content-Security-Policy':csp},body:fs.readFileSync(root+'/cloud/login.html')});
   if(['/login.js','/login-helpers.js','/login.css'].includes(key))return route.fulfill({contentType:key.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(root+'/cloud'+key)});

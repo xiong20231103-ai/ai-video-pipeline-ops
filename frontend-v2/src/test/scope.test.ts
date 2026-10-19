@@ -7,17 +7,18 @@ const root = resolve(process.cwd(), ".."),
     readFileSync(resolve(root, "docs/v2/inventory.json"), "utf8"),
   ),
   rows = Object.values(inventory.groups).flat() as Row[];
-it("all 900 legacy entries have an implementation or the explicit user-approved V2-4 exception", () => {
+it("all 900 legacy entries now have implementations and isolated evidence", () => {
   expect(rows).toHaveLength(900);
   expect(new Set(rows.map((r) => r.id)).size).toBe(900);
-  const pending = rows.filter((r) => !r.implemented);
-  expect(pending).toHaveLength(22);
-  for (const row of pending) {
-    expect(["cloud/login.js", "cloud/login.html"]).toContain(row.source);
-    expect(row.planned).toBe("V2-4");
-    expect(row.disposition).toBe("user-deferred-login-registration-2026-10-20");
+  expect(rows.filter((r) => !r.implemented)).toHaveLength(0);
+  const login = rows.filter(
+    (r) => r.source === "cloud/login.js" || r.source === "cloud/login.html",
+  );
+  expect(login).toHaveLength(22);
+  for (const row of login) {
+    expect(row.pr).toBe(39);
+    expect(row.evidence).toContain("tests/test_v2_entry.py");
   }
-  expect(rows.filter((r) => r.implemented)).toHaveLength(878);
 });
 it("checked entries retain PR and corresponding worktree evidence paths", () => {
   for (const row of rows.filter((r) => r.implemented)) {
@@ -29,9 +30,9 @@ it("checked entries retain PR and corresponding worktree evidence paths", () => 
 });
 it("current scope explicitly excludes production shadow and default entry switch", () => {
   expect(inventory.scopeDecision).toMatchObject({
-    implemented: 878,
+    implemented: 900,
     total: 900,
-    deferred: 22,
+    deferred: 0,
     productionShadowPassed: false,
     defaultEntrySwitched: false,
   });
