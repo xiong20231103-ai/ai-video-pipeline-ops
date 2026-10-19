@@ -36,6 +36,12 @@
     "role": "build/test only (0 runtime JS)"
   },
   {
+    "name": "@types/jsdom",
+    "version": "30.0.0",
+    "license": "MIT",
+    "role": "build/test only (0 runtime JS)"
+  },
+  {
     "name": "@types/node",
     "version": "24.19.2",
     "license": "MIT",
@@ -105,6 +111,12 @@
     "name": "playwright",
     "version": "1.62.1",
     "license": "Apache-2.0",
+    "role": "build/test only (0 runtime JS)"
+  },
+  {
+    "name": "prettier",
+    "version": "3.9.10",
+    "license": "MIT",
     "role": "build/test only (0 runtime JS)"
   },
   {

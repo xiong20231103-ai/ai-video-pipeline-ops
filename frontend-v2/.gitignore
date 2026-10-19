@@ -1,3 +1,6 @@
 node_modules/
 coverage/
 .vite/
+# Repository-wide data/ ignores runtime ledgers; this directory is source only.
+!src/data/
+!src/data/**

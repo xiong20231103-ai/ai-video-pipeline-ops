@@ -31,7 +31,7 @@ jobs:
       - run: npm run size
       - run: npm run check:build
       - run: npx playwright install --with-deps chromium
-      - run: node scripts/browser-check.cjs
+      - run: node scripts/readonly-browser-check.cjs
         env:
           V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
       - uses: actions/upload-artifact@v4

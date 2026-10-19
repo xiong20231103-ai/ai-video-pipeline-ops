@@ -3,14 +3,20 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { applyTheme, currentView, initialTheme, readPreference, writePreference } from './lib/preferences'
+import fixture from './test/fixture.json'
+
+vi.mock('./data/useDashboard', () => ({ useDashboard: () => ({
+  snapshot: { mode: 'home', dashboard: fixture.dashboard, safety: fixture.safety, status: {}, commands: [], session: {}, sources: {}, pendingDelete: fixture.pendingDelete, loading: false, error: '', receivedAt: new Date(), receivedTick: performance.now(), healthFailures: 0, backups: null },
+  reader: { current: null }, refresh: () => undefined,
+}) }))
 
 describe('V2-0 isolated presentation shell', () => {
-  it('labels the preview without calling an interface or inventing production data', async () => {
+  it('labels the isolated read-only fixture without enabling a business write', async () => {
     const fetchSpy = vi.spyOn(window, 'fetch').mockRejectedValue(new Error('No API allowed'))
     render(<App />)
-    expect(await screen.findByRole('heading', { name: '你的控制台，即将就绪' })).toBeVisible()
-    expect(screen.getByText('非真实生产')).toBeVisible()
-    expect(screen.getByText('未连接生产接口 · 不展示任务数据 · 不提供业务操作')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: '当前生产状态' })).toBeVisible()
+    expect(screen.getByText('V2 只读预览')).toBeVisible()
+    expect(screen.getByText('V2 只读预览，操作请用旧页面')).toBeVisible()
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(screen.queryByRole('button', { name: /安全继续|执行清理/ })).not.toBeInTheDocument()
   })
@@ -82,7 +88,7 @@ describe('V2-0 isolated presentation shell', () => {
     vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
     const animation = vi.spyOn(window, 'requestAnimationFrame')
     render(<App />)
-    expect(await screen.findByRole('heading', { name: '你的控制台，即将就绪' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: '当前生产状态' })).toBeVisible()
     expect(animation).not.toHaveBeenCalled()
   })
 })

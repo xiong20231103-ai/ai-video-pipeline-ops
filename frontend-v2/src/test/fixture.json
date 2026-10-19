@@ -1,0 +1,38 @@
+{
+  "dashboard": {
+    "selectedDate": "10.19",
+    "overview": {
+      "machine": {"name": "隔离示例 · 非真实生产", "online": true, "status": "Alive"},
+      "counts": {"total": 3, "waiting": 1, "running": 1, "completed": 1, "failed": 0},
+      "current": {"date_label": "10.19", "project": "示例项目", "material": "示例材料", "language": "德语", "state": "Waiting", "state_text": "等待CapCut"},
+      "metrics": {"cpu": 16.8, "memory": 41.7, "memory_used_gb": 26.6, "memory_total_gb": 63.8, "gpu": {"available": true, "usage": 9, "temperature": 43, "name": "示例显卡"}, "disk": {"percent": 76.9, "label": "成片磁盘", "free_gb": 220.3}, "network": {"online": true, "interfaces": ["网卡1", "网卡2"]}, "processes": {"workbench": true, "voice": false, "capcut": false}},
+      "pipeline": {}, "upload": {}
+    },
+    "pipeline": {"date": "10.19", "availableDates": ["10.19", "10.18"], "items": [
+      {"key": "download", "step": "1", "name": "TikHub", "program": "工作台", "state": "completed", "stateText": "下载完成", "completed": 3, "failed": 0, "total": 3, "progress": 100, "current": "示例项目 / 示例材料", "programOnline": true, "updatedAt": "2026-10-19T12:00:00+08:00", "ageSeconds": 2, "failureItems": []},
+      {"key": "voice", "step": "2", "name": "AI 配音", "state": "completed", "stateText": "语音完成", "completed": 3, "total": 3, "progress": 100},
+      {"key": "stitch", "step": "3", "name": "AI 拼接", "state": "completed", "stateText": "拼接完成", "completed": 3, "total": 3, "progress": 100},
+      {"key": "capcut", "step": "4", "name": "CapCut", "state": "running", "stateText": "剪辑中", "completed": 1, "failed": 0, "total": 3, "progress": 33, "current": "示例项目 / 示例材料", "isLive": true},
+      {"key": "upload", "step": "5", "name": "网盘上传", "state": "running", "stateText": "正在上传", "completed": 1, "total": 3, "progress": 33.3, "waiting": 1, "uploading": 1, "cloudVerified": 1, "bytesUploaded": 1048576, "bytesTotal": 3145728, "bytesRemaining": 2097152, "speedBytesPerSecond": 1048576, "etaSeconds": 2, "currentFileName": "示例成片.mp4", "currentFileProgress": 33, "permanentKeep": 1}
+    ]},
+    "taskBoxes": {"selected": {"batchId": "fixture-batch-001", "productionDate": "10.19", "completedProjects": 0, "projectCount": 1, "completedVideos": 1, "totalVideos": 3, "selectedProjects": ["示例项目"], "unselectedProjects": ["未选择项目"], "state": "running", "current": {"taskId": "fixture-task", "sequence": 1, "project": "示例项目", "material": "示例材料", "attemptId": "fixture-attempt"}, "items": [{"taskId": "fixture-task", "sequence": 1, "project": "示例项目", "material": "示例材料", "status": "running", "currentStep": "第5步剪辑中", "stateText": "正在处理", "finalCompleted": 1, "expected": 3}]}, "items": [{"batchId": "fixture-batch-001", "productionDate": "10.19", "completedProjects": 0, "projectCount": 1, "state": "running"}], "history": [{"project": "已撤回示例", "productionDate": "10.18", "status": "cancelled", "reason": "用户撤回"}]},
+    "tasks": {"items": [
+      {"task_id": "f1", "project": "示例项目", "material": "示例材料", "language": "德语", "number": "001", "date_label": "10.19", "category": "completed", "state": "completed", "state_text": "剪辑完成", "phase_text": "已完成", "output_name": "示例成片.mp4", "heartbeat_at": "2026-10-19T12:00:00+08:00"},
+      {"task_id": "f2", "project": "示例项目", "material": "示例材料", "language": "英语", "number": "002", "category": "running", "state_text": "剪辑中"},
+      {"task_id": "f3", "project": "另一示例", "material": "另一材料", "language": "法语", "number": "003", "category": "waiting", "state_text": "等待"}
+    ]},
+    "projectGaps": {"items": [{"taskId": "fixture-gap", "date": "10.19", "project": "另一示例", "material": "另一材料", "expectedCount": 3, "completed": 2, "missingCount": 1, "gapActive": true, "stateText": "缺少下载", "videos": {"1": {"url": "https://example.invalid/video", "stage": "download", "error": "模拟下载失败"}}}]},
+    "receiverQueue": {"items": [{"taskId": "fixture-queued", "date": "10.19", "project": "待确认示例", "material": "示例材料", "status": "pending_confirmation", "startMode": "manual", "urls": ["https://example.invalid/video"]}]},
+    "templates": {"items": [{"id": "template-fixture", "project": "示例项目", "label": "示例项目", "materials": ["示例材料"], "expectedCount": 3}]},
+    "events": {"items": [{"message": "隔离示例 · 非真实生产", "severity": "INFO", "created_at": "2026-10-19T12:00:00+08:00"}]},
+    "services": [{"key": "workbench", "name": "工作台", "online": true, "stateText": "运行中", "updatedAt": "2026-10-19T12:00:00+08:00"}],
+    "health": {"updatedAt": "2026-10-19T12:00:00+08:00", "openCommands": [], "recentErrors": [], "logAvailable": true},
+    "controls": {"continue": {"state": "blocked", "allowed": false, "message": "隔离示例：用户暂停，不应继续", "commandId": "fixture-continue", "steps": [{"step": 1, "name": "下载", "actual": 3, "expected": 3}]}, "historicalCloudVerification": {"state": "completed", "total": 3, "processed": 3, "verified": 2, "failed": 1, "message": "历史核验完成"}},
+    "sources": {"errors": [], "stale": false}, "currentProjectStatus": {}
+  },
+  "safety": {"updatedAt": "2026-10-19T12:00:00+08:00", "subtitleVerification": {"counts": {"verified_clean": 3}}, "autoRecovery": {"state": "disabled", "stateText": "已停用", "attemptCount": 0}, "quality": {"passed": 1, "total": 1}, "versions": {"items": [{}]}, "cloud": {"verified": 1, "total": 1}, "disk": {"ready": true, "freeBytes": 2000000000, "requiredFreeBytes": 1000000000}, "credentials": {"ready": true, "items": [{"required": true, "online": true}]}, "integrity": {"safe": true, "activeRecords": 1}, "evidence": {}},
+  "status": {"agentOnline": true, "heartbeatAgeSeconds": 2, "engineState": "healthy", "executorAvailable": true, "homeReady": true, "canContinue": false, "canCleanup": false, "commandsPaused": false},
+  "commands": {"items": [{"cloudCommandId": "fixture-completed", "target": "/api/batches/validate", "state": "completed"}, {"cloudCommandId": "fixture-unknown", "target": "/api/control-commands", "state": "unknown"}]},
+  "backups": {"usedReservedBytes": 1048576, "quotaBytes": 5000000000, "recipientConfigured": true, "retainedDates": ["2026-10-19"], "agentState": {"phase": "completed"}, "items": [{"packageId": "fixture-backup", "kind": "home", "date": "2026-10-19", "bytes": 1048576, "manifest": {"artifacts": [{"name": "ledger.enc"}]}}], "events": []},
+  "pendingDelete": {"count": 0, "sizeBytes": 0, "needsReview": 0}
+}
