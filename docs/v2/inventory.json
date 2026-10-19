@@ -4187,7 +4187,7 @@
         "name": "匿名回调@2",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": true,
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -4198,7 +4198,7 @@
         ],
         "detail": "(() => { const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupB",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated"
       },
       {
         "id": "FN-274",
@@ -4207,7 +4207,7 @@
         "name": "匿名回调@10",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": true,
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -4218,7 +4218,7 @@
         ],
         "detail": "() => { const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupBu",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated"
       },
       {
         "id": "FN-275",
@@ -4407,7 +4407,7 @@
         "name": "匿名回调@48",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": true,
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -4418,7 +4418,7 @@
         ],
         "detail": "() => { const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupBu",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated"
       },
       {
         "id": "FN-285",
@@ -4447,7 +4447,7 @@
         "name": "匿名回调@71",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": true,
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -4458,7 +4458,7 @@
         ],
         "detail": "() => { const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupBu",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated"
       },
       {
         "id": "FN-287",
@@ -10425,7 +10425,7 @@
         "name": "document.addEventListener",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": true,
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -10436,7 +10436,7 @@
         ],
         "detail": "document.addEventListener('submit', event => { if (!event.target.closest('[data-cloud-account]') && !window.opsCloudAcceptForm?.(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); } }, true)",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated"
       },
       {
         "id": "EVENT-056",
@@ -10485,7 +10485,7 @@
         "name": "document.addEventListener",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": true,
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -10496,7 +10496,7 @@
         ],
         "detail": "document.addEventListener('DOMContentLoaded', () => { // The home H4 timer measures browser reception. Cloud reception is not a // fresh home scan: derive displayed age from cloud cache/source ages. const paintCloudAge=()=>{ if(!dashboardSample||typeof state==='undefined')return; const sample=dashboardSample;const since=(performance.now()-sample.received)/1000; const age=sample.age+since;const known=sample.sourceAge!==null&&Nu",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated"
       },
       {
         "id": "EVENT-059",
