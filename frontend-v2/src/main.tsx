@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { applyTheme, initialTheme } from './lib/preferences'
 import './styles.css'
+import './data/view.css'
 
 // External module, not an inline script: compatible with the existing cloud CSP.
 applyTheme(initialTheme())

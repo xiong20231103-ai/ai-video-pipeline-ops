@@ -1,10 +1,19 @@
-# Dashboard V2-0
+# Dashboard V2-1 只读视图
 
-独立的 React 布局预览，入口 `/static/v2/index.html`。默认深色，可切换浅色；侧栏折叠、移动端抽屉和六个 hash 分区均为页面内交互。**非真实生产：未连接任何接口，无业务数据、轮询、业务按钮或写入。** 旧入口仍为 `/`。
+入口 `/static/v2/index.html`，默认深色、可切换浅色，六个 hash 分区与移动端抽屉。支持家里/云端两种模式；所有业务写按钮均禁用并引导到旧页面。生产默认入口未切换。
 
-## 构建与检查
+## 实现与来源
 
-使用 Node **24.19.0** 和 npm **11.17.0**。运行目录为本文件所在 `frontend-v2/`：
+- `src/data/client.ts`：模式识别、同源 GET、超时/重试、202 排队、ETag/304、云端缓存来源和后台刷新。
+- `src/data/useDashboard.ts`：沿用旧页的可见/隐藏轮询、完整/summary 合并、健康降级、安全面板及安全继续状态只读查询；切换日期/任务箱取消旧请求。
+- `src/data/legacy-formatters.js`：从当前 `static/app.js` 的纯显示函数复制，文件中保留函数及原行号。`presentation.ts` 与 React 视图使用相同状态和数字。
+- `src/components/views/`：生产总览、五步流程、任务箱、任务、补链提示、上传、健康、事件、云端来源/命令/备份、待删区只读状态。
+- shadcn/ui 固定源码 `ba1503c64472b82256d9de95e2e62c5901a38e8b` 的 `apps/v4/registry/new-york-v4/ui/table.tsx` → `src/components/ui/table.tsx`；只调整 cn 导入。原有 button/card/badge/separator/sheet/tooltip/input/skeleton 继续沿用同一源码与 MIT 许可证。
+- React Bits 原有 SpotlightCard 源码保留在工程中，V2-1 内容不使用它；V2-3 再处理动效。许可证文件随产物本地交付。
+
+## 验证
+
+Node 24.19.0；运行目录为 `frontend-v2/`：
 
 ```text
 npm ci
@@ -14,32 +23,21 @@ npm test
 npm run build
 npm run size
 npm run check:build
+node scripts/readonly-browser-check.cjs
 ```
 
-`build` 只清空并重建 `../static/v2/`，`base: './'`。将整个产物目录随源码提交；生产端无需 Node。`check:build` 将文件集合（包括新增/遗漏文件）及每个文件的 SHA256 与 HEAD 中的 Git blob 对照，避免只检查已跟踪 diff 的遗漏。更改源码后，先构建并提交产物，再运行该检查。体积检查将**所有** JS chunk 的 gzip 总和限制在 300 KiB 内，比首屏预算更严格。
+`npm test` 含 transport 与新旧页面同数据对比；家里/云端各覆盖 baseline、empty、unconfigured。对比旧 DOM 与新 React 显示的指标、流程行、任务行、任务箱和安全状态；云端回执状态中文与 `cloud/commands.js` 原始 labels 完全比对。它只证明所列隔离夹具的零差异，不代表全部生产数据已经验收。
 
-CI 在 Linux 上从 lockfile 重建；隔离浏览器检查可使用既有 Playwright 和本机 Edge：设置 `OPS_UI_PLAYWRIGHT`（Playwright 包路径）、`OPS_UI_BROWSER_PATH`（浏览器路径），执行 `node scripts/browser-check.cjs`。可选 `V2_EVIDENCE_DIR` 指定截图/证据输出目录。测试服务只绑定随机 loopback 端口，只接受 `/static/v2/` 下的 GET，应用任何外部或接口请求都会令检查失败。CSP 原样使用执行提示词所列值。浏览器由 headless 模式启动，不打开桌面窗口。
+浏览器脚本用 Playwright headless，不打开窗口；所有请求由本地资产/合成数据 fulfill，未建模请求直接失败，绝不放行真实网络。验证双模式、深浅主题、1920×1080 / 1440×900 / 1366×768 / 375×812、六视图、黄色/红色数据年龄、云端备份及命令查询、写按钮全部禁用、无横向溢出、无控制台错误和 CSP 违规。`V2_EVIDENCE_DIR` 可设置截图目录；本机 Edge 可由 `OPS_UI_BROWSER_PATH` 指定。CI 将截图作为 artifact 上传。
 
-## 组件来源与本地适配
+`build` 只重建 `../static/v2/`，产物随源码提交。`check:build` 与 HEAD blob 比对所有产物；应在提交后运行。全部 JS gzip 预算 300 KiB；本次约 126 KiB，静态文件总计约 555 KiB。
 
-| 固定的上游源码 | 本地实现 | 适配 |
-|---|---|---|
-| [shadcn/ui `ba1503c`](https://github.com/shadcn-ui/ui/tree/ba1503c64472b82256d9de95e2e62c5901a38e8b/apps/v4/registry/new-york-v4/ui) 中的 `button/card/badge/separator/sheet/tooltip/input/skeleton.tsx` | `src/components/ui/` 下同名文件 | `cn` 的导入指向 `@/lib/utils`；组件行为保留上游实现。 |
-| [React Bits `e12c221` SpotlightCard.tsx](https://github.com/DavidHDev/react-bits/blob/e12c22192ac7b4b452c5e2feb9b586d74765d696/src/ts-default/Components/SpotlightCard/SpotlightCard.tsx) 与同目录 CSS | `src/components/react-bits/SpotlightCard.tsx/.css` | 调色板读取本项目 token；减少动态效果时不注册动画循环；媒体偏好变化后不再唤醒动画。使用 lazy import，不引入 motion/WebGL。 |
+## 依赖与边界
 
-侧栏为上述真实 shadcn Button/Tooltip/Sheet/Separator 的组合，桌面与移动端共享导航定义；没有将自写组件冒充上游 Sidebar。Card 用于旧页引导，Badge 标记预览，Skeleton 仅为按需模块加载的短暂后备；Input 在基础组件中预备，当前空布局未使用。图标来自 `lucide-react`，字体仅系统字体栈。
+无新增运行时依赖。新增开发依赖：`@types/jsdom` 30.0.0（MIT）、`prettier` 3.9.10（MIT），均不进入运行时 JS。固定全部版本见 package-lock.json；运行时依赖、许可证与打包体积见产物 dependencies.json、THIRD_PARTY_NOTICES.txt。
 
-上游完整许可证随 `public/licenses/` 复制到构建目录。shadcn/ui 是 MIT；React Bits 是 **MIT + Commons Clause**，仅作为本应用组成部分交付，不单独售卖/分发组件包。npm 运行时依赖为 MIT / Apache-2.0 / ISC；固定版本见 `package.json`，全部直接和间接版本见 `package-lock.json`。
+云端旧回执只读兼容 `ops-command-receipts-v1`，查询已有 requestId/cloudCommandId，绝不重发；不会存储密码、令牌或会话秘密。主题/侧栏仅存外观偏好。所有资产本地打包，无 CDN/字体/遥测。
 
-## 设计与安全边界
+未完成：登录/密码/退出等写操作、各类业务操作、完整批次真实影子和切换验收；功能清单未覆盖项保持未勾选。当前 PR 的截图均为合成隔离数据，界面带“非真实生产”标识。不修改 app.py/cloud/agent/contracts/旧 static 页面，不访问家里生产写接口，不切换默认入口、不部署。
 
-- `src/styles.css` 使用 shadcn CSS token + Tailwind v4，深色层级、文字、语义色按用户原稿；浅色共用同一语义变量。只在顶栏使用玻璃材质，并提供不透明降级。
-- React Bits 仅用于空内容面板的轻微指针照明，禁用 ambient、flare、grain。减少动态效果偏好时不显示照明或执行初始动画；没有计时器、循环入场或模拟数据。
-- 本地存储只使用 `ops-v2:theme` 与 `ops-v2:sidebar` 两项外观偏好。hash 只保存视图，不新增后端路由；无 cookie、凭据、后端存储或配置读取。
-- 通过当前云端 CSP；脚本、样式、图标、许可证全部本地打包，无 CDN、外部字体、图片或遥测。
-- V2-0 **没有验证生产部署、真实数据、操作契约、轮询、新鲜度、权限/登录或默认入口切换**。这些属于后续阶段；禁止把本 PR 的隔离测试记为真实影子或生产验收。
-- 本 PR 不要求改动 `app.py` / `cloud/` / `agent/` / `contracts/` / 旧页面。回滚为 revert 本 PR；旧入口继续运行。
-
-## 后续部署（本轮不执行）
-
-由 Claude 审查后按用户授权更新新增静态文件；不改默认入口，不需要重启家里 Dashboard。云端同样仅增加静态文件，继续由现有 `/static` 的会话验证保护。回退只移除本 PR 的 V2 静态目录和源码/CI。生产切换必须另行获批。
+回滚：revert 本 PR 并按原有静态部署方式恢复 `static/v2/`，旧 `/` 入口不受影响，无需重启 Dashboard。
