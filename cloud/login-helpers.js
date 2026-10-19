@@ -4,7 +4,9 @@ export function safeDestination(value) {
   return ['/', '/legacy', '/static/index.html', '/static/v2/index.html'].includes(value.split(/[?#]/, 1)[0]) ? value : '/';
 }
 export function returnDestination() {
-  return safeDestination(new URLSearchParams(window.location.search).get('next'));
+  const target = safeDestination(new URLSearchParams(window.location.search).get('next'));
+  // The fragment never reaches HTTP; browsers retain it over the login redirect.
+  return safeDestination(target.includes('#') ? target : target + window.location.hash);
 }
 export function busy(active) {
   for (const form of document.querySelectorAll('form')) {

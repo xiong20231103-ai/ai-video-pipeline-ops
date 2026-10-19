@@ -109,6 +109,9 @@ def create_app(config=None,store=None,static_root=None):
         if request.method=='POST' and request.headers.get('content-length','').isdigit() and int(request.headers['content-length'])>MAX_BODY:
             return JSONResponse({'detail':'request_too_large'},status_code=413)
         if request.url.path.startswith('/static/') and not store.session(request.cookies.get(COOKIE,'')):
+            if request.method=='GET' and request.url.path=='/static/v2/index.html':
+                target=request.url.path+('?' + request.url.query if request.url.query else '')
+                return RedirectResponse(login_location(target),status_code=303,headers={'Cache-Control':'no-store'})
             return JSONResponse({'detail':'login_required'},status_code=401)
         # Login screen, anonymous submitter health and agent traffic never keep a viewer alive.
         if request.method=='GET' and (request.url.path=='/' or request.url.path=='/console/status' or request.url.path.startswith('/api/')) and request.headers.get('x-ops-page-visible','true')=='true' and store.session(request.cookies.get(COOKIE,'')):

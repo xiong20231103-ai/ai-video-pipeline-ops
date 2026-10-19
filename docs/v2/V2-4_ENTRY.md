@@ -5,10 +5,10 @@
 ## 路由与最小匿名资源
 
 - /login：与 V2 同色板/字体/深浅主题的轻量 HTML 登录、邀请码注册，无新增依赖；不是另起一个 React bundle。
-- 匿名仅能加载固定的 /login.js、/login-helpers.js、/login.css（以及原有 /auth/options）；不放开 /static，包括 V2 HTML/JS、旧页面、备份及任何业务接口。
+- 匿名仅能加载固定的 /login.js、/login-helpers.js、/login.css（以及原有 /auth/options）；不放开 /static。未登录 GET /static/v2/index.html 只返回登录303，不暴露HTML；V2 JS/CSS、旧页面、备份及业务接口仍401。
 - /：未登录 303 到 /login?next=/；已登录且配置 v2_default_enabled **严格为 true** 时 303 到 /static/v2/index.html，否则返回原旧页。缺少构建时拒绝启用。
 - /legacy 和 /static/index.html：登录后都返回注入原 cloud-readonly/commands/cleanup/backups 脚本的旧页。V2 的旧版链接改成 /static/index.html，在未修改的家里挂载也有效；云端必须经过该认证别名，不能漏掉队列包装。
-- 会话过期：V2 将当前 pathname/search/hash 作为 next 回 /login；登录成功才跳回。登录页只允许 /、/legacy、/static/index.html、/static/v2/index.html，保留合法查询/锚点；拒绝外站、双斜杠、反斜杠、控制字符、任意静态/API路径、路径归一化绕过及超长值。
+- 会话过期：V2 将当前 pathname/search/hash 作为 next 回 /login；登录成功才跳回。登录页只允许 /、/legacy、/static/index.html、/static/v2/index.html，保留合法查询/锚点（浏览器保留的HTTP不可见锚点也恢复）；拒绝外站、双斜杠、反斜杠、控制字符、任意静态/API路径、路径归一化绕过及超长值。
 - auth 后端参数、Origin/CSRF、限流、密码哈希、账号上限和安全 Cookie 不改。登录/注册共享提交锁、通用失败文本；成功清空表单。密码/邀请码不进 Storage、日志；仅主题偏好存储。
 
 ## 对照与检查

@@ -54,7 +54,7 @@ class EntryTests(unittest.TestCase):
                 self.assertIn("script-src 'self'",result.headers['content-security-policy'])
                 self.assertIn("form-action 'self'",result.headers['content-security-policy'])
                 self.assertEqual('no-store',result.headers['cache-control'])
-        for path in ['/static/v2/index.html','/static/app.js','/static/index.html','/static/v2/assets/missing.js','/api/dashboard','/console/status','/console/notifications','/console/backups','/auth/session']:
+        for path in ['/static/app.js','/static/index.html','/static/v2/assets/missing.js','/api/dashboard','/console/status','/console/notifications','/console/backups','/auth/session']:
             with self.subTest(path=path): self.assertEqual(401,self.client.get(path).status_code)
         for path in ['/login.css/child','/login-helpers.js/child']:
             self.assertEqual(404,self.client.get(path).status_code)
@@ -67,6 +67,14 @@ class EntryTests(unittest.TestCase):
             with self.subTest(value=value): self.assertEqual('/',safe_destination(value))
         for value in ['/', '/legacy', '/static/index.html', '/static/v2/index.html?date=10.19#uploads']:
             self.assertEqual(value,safe_destination(value))
+    def test_direct_v2_navigation_redirects_without_exposing_bundle(self):
+        path='/static/v2/index.html?date=10.19'
+        result=self.client.get(path,follow_redirects=False)
+        self.assertEqual(303,result.status_code)
+        self.assertEqual(login_location(path),result.headers['location'])
+        self.assertEqual('no-store',result.headers['cache-control'])
+        self.assertNotIn('type="module"',result.text)
+        self.assertEqual(401,self.client.get('/static/v2/assets/not-public.js').status_code)
     def test_login_layout_no_inline_scripts_or_external_assets(self):
         page=self.client.get('/login').text
         self.assertNotIn('<style',page);self.assertNotIn('https://',page)

@@ -17,7 +17,7 @@ for(const [width,height] of [[1920,1080],[1440,900],[1366,768],[375,812]])for(co
   throw Error('Unexpected route '+key);
  });
  const page=await context.newPage();page.on('console',m=>{if(m.type()==='error'){if(m.text().includes('401 (Unauthorized)'))expected.push(m.text());else errors.push(m.text())}});page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>document.addEventListener('securitypolicyviolation',e=>window.__violations=(window.__violations||[]).concat(e.blockedURI)));
- await page.goto(origin+'/login?next='+encodeURIComponent('/static/v2/index.html?date=10.19#uploads'));await page.getByRole('button',{name:'登录',exact:true}).waitFor();
+ await page.goto(origin+'/login?next='+encodeURIComponent('/static/v2/index.html?date=10.19')+'#uploads');await page.getByRole('button',{name:'登录',exact:true}).waitFor();
  assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
  const snap=async suffix=>{await page.evaluate(()=>{let n=document.getElementById('fixture-label');if(!n){n=document.createElement('div');n.id='fixture-label';n.textContent='隔离夹具 · 非真实生产';n.style='position:fixed;bottom:0;left:0;background:#123;color:white;font-size:11px;padding:3px;z-index:99';document.body.append(n)}});const name=`cloud-login-${theme}-${suffix}-${width}x${height}.png`;await page.screenshot({path:path.join(out,name)});screenshots.push(name);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'horizontal overflow')};
  await snap('login');
