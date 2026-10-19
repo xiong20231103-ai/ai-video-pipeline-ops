@@ -1,0 +1,72 @@
+{
+  "files": [
+    {
+      "file": ".gitattributes",
+      "bytes": 43,
+      "gzipBytes": 63
+    },
+    {
+      "file": ".vite/manifest.json",
+      "bytes": 591,
+      "gzipBytes": 251
+    },
+    {
+      "file": "THIRD_PARTY_NOTICES.txt",
+      "bytes": 105210,
+      "gzipBytes": 7149
+    },
+    {
+      "file": "assets/SpotlightCard-B5VVLR7l.js",
+      "bytes": 5865,
+      "gzipBytes": 2517
+    },
+    {
+      "file": "assets/SpotlightCard-DYVtI0ff.css",
+      "bytes": 875,
+      "gzipBytes": 345
+    },
+    {
+      "file": "assets/index-By7Wph5O.js",
+      "bytes": 348405,
+      "gzipBytes": 110548
+    },
+    {
+      "file": "assets/index-DGDyMcHW.css",
+      "bytes": 41758,
+      "gzipBytes": 8577
+    },
+    {
+      "file": "dependencies.json",
+      "bytes": 3651,
+      "gzipBytes": 509
+    },
+    {
+      "file": "index.html",
+      "bytes": 679,
+      "gzipBytes": 445
+    },
+    {
+      "file": "licenses/react-bits.LICENSE.md",
+      "bytes": 2060,
+      "gzipBytes": 1082
+    },
+    {
+      "file": "licenses/react-remove-scroll-bar.LICENSE",
+      "bytes": 1093,
+      "gzipBytes": 678
+    },
+    {
+      "file": "licenses/shadcn-ui.LICENSE.md",
+      "bytes": 1063,
+      "gzipBytes": 650
+    },
+    {
+      "file": "mark.svg",
+      "bytes": 234,
+      "gzipBytes": 191
+    }
+  ],
+  "totalBytes": 511527,
+  "allJavascriptGzipBytes": 113065,
+  "initialJavascriptLimitBytes": 307200
+}
