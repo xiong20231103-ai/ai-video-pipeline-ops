@@ -23,7 +23,7 @@
 
 ## 验证
 
-217项前端测试（新增6项动效/生命周期和3项完整范围校验），typecheck/lint通过；361项隔离业务测试通过（1跳过）。双模式×减少动态效果开/关×四尺寸、深浅主题：32截图与16组计数检查；未变化5秒刷新前后WAAPI/RAF计数完全一致，减少动态效果计数均0，无控制台/CSP错误。
+219项前端测试（新增6项动效/生命周期和3项完整范围校验），typecheck/lint通过；361项隔离业务测试通过（1跳过）。双模式×减少动态效果开/关×四尺寸、深浅主题：32截图与16组计数检查；未变化5秒刷新前后WAAPI/RAF计数完全一致，减少动态效果计数均0，无控制台/CSP错误。
 
 10分钟真实轮询（非假时钟）观察由scripts/memory-browser-check.cjs执行；每分钟CDP显式GC后取JS heap/DOM/listeners，页面每5秒轮询及后台其它原GET保持原间隔。采用1MiB附加合成正文，所有网络拦截，禁止任何POST。原始JSON及JSONL随交付保存。阈值只用于隔离回归：第3分钟后堆趋势<256KiB/分钟、净增长<4MiB、DOM新增<=100、监听器新增<=10；最终数值和局限必须如实记录，不将十分钟当作长期生产证明。
 
@@ -37,4 +37,6 @@
 - 首轮未等请求空闲的样本也保留（600291ms，末端堆跳约1MiB），不隐藏；复采等待请求和页面更新空闲后再GC，避免把大正文在途分配当长期占用。
 - 在相同核心轮询基础上，后续固定cloud-sources/system-health动效标识另有离线心跳秒数变化回归，避免标题变化重播；不改采集、缓存、命令或轮询行为。
 
-原始证据保存在本次交付的implementation-tools/v2-polish-evidence/quiescent/memory-result.json、memory-observation.jsonl；实际代码提供scripts/memory-browser-check.cjs供复验。单测217项、双模式减少动态效果32截图、额外离线2截图、全部操作浏览器回归均通过。仅密码HTTP400与原requestId收件前404为预期负例并单列。
+原始证据保存在本次交付的implementation-tools/v2-polish-evidence/quiescent/memory-result.json、memory-observation.jsonl；实际代码提供scripts/memory-browser-check.cjs供复验。单测219项、双模式减少动态效果32截图、额外离线2截图、全部操作浏览器回归均通过。仅密码HTTP400与原requestId收件前404为预期负例并单列。
+
+后续集成#36摘要目标同步回归（双模式old→new→null）：219前端测试通过。只同步已被taskBoxes.selected引用的当前任务箱，不新增轮询、定时器或数据副本；十分钟核心轮询原始样本保留，另对该目标引用变化定向回归。
