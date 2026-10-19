@@ -113,6 +113,13 @@ class QueueTests(unittest.TestCase):
         self.enqueue('fixture-another-123456');old=self.claim();self.now[0]+=61;self.store.heartbeat('healthy');new=self.claim()
         with self.assertRaises(CommandError):self.finish(old,{'kind':'not_sent','reason':'invalid_or_expired'})
         self.assertNotEqual(old['lease'],new['lease'])
+    def test_agent_rejection_reasons_close_the_lease_as_not_sent(self):
+        # PR #24: the agent reports a rejected (never sent) job with these reasons.
+        for index,reason in enumerate(('agent_rejected_identity','agent_rejected_contract')):
+            self.enqueue('fixture-rejected-'+str(index)+'-123456');job=self.claim()
+            self.finish(job,{'kind':'not_sent','reason':reason});self.assertEqual('not_sent',self.queue.get(job['id'])['state'])
+        self.enqueue('fixture-rejected-x-123456');job=self.claim()
+        with self.assertRaises(CommandError):self.finish(job,{'kind':'not_sent','reason':'agent_rejected_other'})
     def test_cloud_timeout_never_reissues_and_can_accept_late_definitive_reply(self):
         self.enqueue();job=self.claim();self.start(job);self.now[0]+=91
         self.assertEqual('unknown',self.queue.get(job['id'])['state'])

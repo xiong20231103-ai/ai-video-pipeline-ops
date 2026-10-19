@@ -25,7 +25,8 @@ class ExecutionLedger:
             except BaseException:db.rollback();raise
     def receive(self,job):
         spec=command(job['target'],job['body'])
-        if job.get('digest')!=spec['digest'] or job.get('source')!=spec['source'] or job.get('ledgerId')!=self.identity:raise ValueError('Command identity mismatch')
+        if job.get('ledgerId')!=self.identity or job.get('source')!=spec['source']:raise ValueError('Command identity mismatch')
+        if job.get('digest')!=spec['digest']:raise ValueError('Command content conflict')
         with self.db() as db:
             old=db.execute('SELECT * FROM executions WHERE id=?',(job['id'],)).fetchone()
             if old:
@@ -52,7 +53,7 @@ class ExecutionLedger:
         with self.db() as db:db.execute("UPDATE executions SET state='acknowledged',job=NULL,result=NULL,updated=? WHERE id=?",(time.time(),identifier))
 
 class ExecutionWorker:
-    def __init__(self,agent):self.agent=agent;self.state=agent.state_dir;self._ledger=None;self.lock=threading.Lock();self.clock=time.time;self.active=threading.Event();self.home_busy=threading.Event()
+    def __init__(self,agent):self.agent=agent;self.state=agent.state_dir;self._ledger=None;self.lock=threading.Lock();self.clock=time.time;self.active=threading.Event();self.home_busy=threading.Event();self.retry_after=0.0;self.rejection_path=self.state/'execution-rejections.jsonl'
     def enabled(self):
         path=self.state/'command-settings.json'
         if not path.exists():return False
@@ -87,8 +88,29 @@ class ExecutionWorker:
                     'bodyBase64':base64.b64encode(raw).decode('ascii')}
     def process(self,job):
         self.active.set()
-        try:self._process(job)
+        try:
+            try:self._process(job)
+            except ValueError as error:
+                # A malformed or conflicting lease must never reach the home
+                # POST. Keep the worker alive and give the cloud a terminal
+                # not_sent receipt when the identity is usable.
+                self._reject(job,error)
         finally:self.active.clear()
+
+    def _reject(self,job,error):
+        message=str(error)
+        reason='agent_rejected_identity' if 'identity mismatch' in message.lower() else 'agent_rejected_contract'
+        identifier=job.get('id') if isinstance(job,dict) else None
+        self.rejection_path.parent.mkdir(parents=True,exist_ok=True)
+        with self.rejection_path.open('a',encoding='utf-8') as stream:
+            stream.write(json.dumps({'id':identifier if isinstance(identifier,str) else None,'reason':reason,'observedAt':self.clock()},separators=(',',':'))+'\n')
+        if not isinstance(identifier,str) or not isinstance(job.get('lease'),str):
+            self.retry_after=self.clock()+30;return
+        try:
+            answer=self.agent.cloud('/agent/results',{'id':identifier,'lease':job['lease'],'ledgerId':self.ledger.identity,'result':{'kind':'not_sent','reason':reason}})
+            if answer.get('recorded') is not True:self.retry_after=self.clock()+30
+        except (OSError,ValueError,http.client.HTTPException,urllib.error.HTTPError):
+            self.retry_after=self.clock()+30
     def _process(self,job):
         state=self.ledger.receive(job)
         if state!='received':
@@ -127,6 +149,8 @@ class ExecutionWorker:
     def loop(self):
         while not self.agent.stop.is_set():
             if not self.enabled():self.agent.stop.wait(1);continue
+            delay=self.retry_after-self.clock()
+            if delay>0:self.agent.stop.wait(delay);continue
             try:
                 if self.flush():continue
                 if self.stopped():return
@@ -134,6 +158,12 @@ class ExecutionWorker:
                 answer=self.agent.cloud('/agent/commands?wait=25&ledgerId='+self.ledger.identity)
                 if answer.get('item'):self.process(answer['item'])
             except (OSError,json.JSONDecodeError,http.client.HTTPException):self.agent.stop.wait(2)
+            except ValueError:
+                # Includes result acknowledgement loss. The durable result
+                # remains in execution.db and is retried after a bounded
+                # backoff; no home request is repeated.
+                self.retry_after=self.clock()+30
+                self.agent.stop.wait(30)
 
 
 def configure_execution(state,enabled):
