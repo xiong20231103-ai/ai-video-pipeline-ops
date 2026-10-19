@@ -4,11 +4,12 @@ from datetime import datetime,timedelta,timezone
 from contracts.cache import cache_key
 from cloud.notification_facts import current_facts,completion_facts,source_fresh,digest
 from cloud.notification_ledger import NotificationLedger
+from cloud.daily_report import DailyReports
 
 class NotificationWorker:
  def __init__(self,store,config=None,sender=None,settings_loader=None):
   self.store=store;self.config=config or {};self.sender=sender
-  self.ledger=NotificationLedger(store);self.stop=threading.Event()
+  self.ledger=NotificationLedger(store);self.daily=DailyReports(store);self.stop=threading.Event()
   with store.db(True) as db:
    db.execute('CREATE TABLE IF NOT EXISTS notification_health(id INTEGER PRIMARY KEY CHECK(id=1),unavailable_since REAL)')
    db.execute('INSERT OR IGNORE INTO notification_health VALUES(1,NULL)')
@@ -80,6 +81,8 @@ class NotificationWorker:
    for scope,version,items in observations:self.ledger.observe(scope,version,items,self.recovery_identity if scope=='current' else None)
   # A missing/unconfigured provider never consumes a pending event.
   if self.sender is None:return
+  report=getattr(self.sender,'send_report',None)
+  if report is not None:self.daily.tick(report)
   batch=self.ledger.prepare(quiet=self.quiet())
   if batch:
    try:answer=self.sender(batch)
@@ -95,4 +98,4 @@ class NotificationWorker:
     self.last_error=type(error).__name__
    self.stop.wait(5)
  def status(self):
-  return {'enabled':self.config.get('enabled') is True,'providerConfigured':self.sender is not None,'lastError':self.last_error,**self.ledger.status()}
+  return {'enabled':self.config.get('enabled') is True,'providerConfigured':self.sender is not None,'lastError':self.last_error,**self.ledger.status(),**self.daily.status()}
