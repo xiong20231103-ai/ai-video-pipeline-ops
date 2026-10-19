@@ -28,7 +28,7 @@ class NotificationLedger:
    db.execute('INSERT INTO notification_meta VALUES(1,?)',(now,))
    for scope,version,items in observations:self._observe(db,scope,version,items,True)
   return True
- def _observe(self,db,scope,version,items,baseline):
+ def _observe(self,db,scope,version,items,baseline,recovery_identity=None):
   old=db.execute('SELECT version FROM notification_sources WHERE scope=?',(scope,)).fetchone()
   if old and version<=old[0]:return
   now=self.store.clock();keys=set()
@@ -44,10 +44,22 @@ class NotificationLedger:
    state='baseline' if baseline or item.get('historical') else 'pending'
    db.execute('INSERT INTO notification_events VALUES(?,?,?,?,?,?,?,?,NULL)',(event,key,episode,item['kind'],json.dumps(item,ensure_ascii=False),state,now,now))
   for row in db.execute('SELECT base_key FROM notification_episodes WHERE scope=? AND active=1',(scope,)).fetchall():
-   if row[0] not in keys:db.execute('UPDATE notification_episodes SET active=0,last_seen=? WHERE base_key=?',(now,row[0]))
+   if row[0] not in keys:
+    episode=db.execute('SELECT round FROM notification_episodes WHERE base_key=?',(row[0],)).fetchone()[0]
+    original=db.execute('SELECT * FROM notification_events WHERE base_key=? AND round=?',(row[0],episode)).fetchone()
+    payload=json.loads(original['payload'])
+    # A task switch, stale/missing data or changed error is not recovery.
+    # Current-task recovery requires the same positively recovered identity.
+    same_task=recovery_identity is not None and all((payload.get('identity') or {}).get(k)==recovery_identity.get(k) for k in ('batchId','canonicalTaskId'))
+    recovery_allowed=(scope=='connectivity' and not items) or same_task
+    if recovery_allowed and not baseline and not payload.get('once') and original['state']!='baseline':
+     recovery_key=digest([row[0],episode,'recovered'])
+     recovered={**payload,'kind':'recovered','severity':'normal','needsManualReview':False,'recoveredFrom':payload['kind'],'message':'已恢复：'+payload['code']+'；只报告已核对的状态变化。'}
+     db.execute("INSERT OR IGNORE INTO notification_events VALUES(?,?,?,?,?,'pending',?,?,NULL)",(recovery_key,row[0],episode,'recovered',json.dumps(recovered,ensure_ascii=False),now,now))
+    db.execute('UPDATE notification_episodes SET active=0,last_seen=? WHERE base_key=?',(now,row[0]))
   db.execute('INSERT OR REPLACE INTO notification_sources VALUES(?,?)',(scope,version))
- def observe(self,scope,version,items):
-  with self.store.db(True) as db:self._observe(db,scope,version,items,False)
+ def observe(self,scope,version,items,recovery_identity=None):
+  with self.store.db(True) as db:self._observe(db,scope,version,items,False,recovery_identity)
  def prepare(self,*,quiet=False):
   now=self.store.clock()
   with self.store.db(True) as db:

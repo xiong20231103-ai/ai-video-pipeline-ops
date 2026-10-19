@@ -8,7 +8,7 @@ from cloud.notification_ledger import NotificationLedger
 
 def summary(state='blocked'):
  identity={'batchId':'fixture-batch','canonicalTaskId':'fixture-task','attemptId':'fixture-attempt','project':'fixture-project'}
- return {'currentProjectStatus':{'identity':identity,'state':state,'stages':[],'errors':[{'component':'capcut','phase':'import','errorCode':'FIXTURE_IMPORT_FAILED','status':'failed','message':'fixture failure','attemptId':'fixture-attempt'}]},'currentTaskBox':{'batchId':'fixture-batch','current':{'taskId':'fixture-task'}},'controls':{'continue':{'allowed':True,'continueCanRetry':True,'stale':False,'state':'failed'}},'autoRecovery':{'state':'paused'}}
+ return {'currentProjectStatus':{'identity':identity,'state':state,'stages':[],'errors':[{'component':'capcut','phase':'import','errorCode':'FIXTURE_IMPORT_FAILED','status':'failed','message':'fixture failure','attemptId':'fixture-attempt'}]},'currentTaskBox':{'batchId':'fixture-batch','current':{'taskId':'fixture-task'}},'controls':{'continue':{'allowed':True,'continueCanRetry':True,'stale':False,'state':'failed'}},'autoRecovery':{'enabled':False,'state':'paused'}}
 class FactsTests(unittest.TestCase):
  def test_task_failure_and_manual_attention_require_current_identity(self):
   b=summary();items=current_facts(b);self.assertEqual({'task_failed'},{i['kind'] for i in items});self.assertTrue(items[0]['needsManualReview'])

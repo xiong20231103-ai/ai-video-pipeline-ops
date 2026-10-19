@@ -47,6 +47,8 @@ jobs:
           bash -n deploy/m1b-repair-sources.sh
           bash -n deploy/m1b-upgrade.sh
           bash -n deploy/m2a-upgrade.sh
+          bash -n deploy/m2b-upgrade.sh
+          bash -n deploy/m2b-upgrade.sh
       - name: Actual encrypted synthetic snapshots and inert restore
         shell: powershell
         run: |
@@ -54,6 +56,10 @@ jobs:
           python -B -m unittest discover -s tests -p backup_crypto_integration.py -v
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -B -m unittest discover -s tests -p backup_restore_integration.py -v
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -B -m unittest discover -s tests -p notification_backup_integration.py -v
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -B -m unittest discover -s tests -p notification_backup_integration.py -v
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Validate Windows agent task without registering it
         shell: powershell

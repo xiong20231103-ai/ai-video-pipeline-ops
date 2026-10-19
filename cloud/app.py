@@ -20,6 +20,8 @@ from cloud.backup_routes import mount_backups
 from cloud.backup_runtime import CloudBackupWorker
 from cloud.commands import CommandQueue,CommandError
 from cloud.command_routes import mount_commands
+from cloud.notification_runtime import NotificationWorker
+from cloud.notification_settings import runtime_settings
 
 HASHER=PasswordHasher(time_cost=2,memory_cost=19456,parallelism=1)
 COOKIE='ops_console_session'
@@ -66,17 +68,22 @@ def create_app(config=None,store=None,static_root=None):
     vault=BackupVault(Path(store.path).parent/'backups',clock=store.clock)
     backup_worker=CloudBackupWorker(vault,store.path,config)
     commands=CommandQueue(store,enabled=config.get('command_queue_enabled') is True,h3=config.get('h3_target_contract') is True)
+    notification_worker=NotificationWorker(store,settings_loader=runtime_settings)
     @asynccontextmanager
     async def lifespan(app):
         thread=threading.Thread(target=backup_worker.run,daemon=True,name='cloud-backup')
-        thread.start()
+        notifications=threading.Thread(target=notification_worker.run,daemon=True,name='cloud-notifications')
+        thread.start();notifications.start()
         try:yield
-        finally:backup_worker.stop.set();thread.join(timeout=2)
+        finally:
+            backup_worker.stop.set();notification_worker.stop.set()
+            thread.join(timeout=2);notifications.join(timeout=12)
     application=FastAPI(docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
     application.state.commands=commands
     application.state.store=store
     application.state.backups=vault
     application.state.backup_worker=backup_worker
+    application.state.notifications=notification_worker
     def session(request):
         row=store.session(request.cookies.get(COOKIE,''))
         if not row: raise HTTPException(401,'login_required')
@@ -136,6 +143,10 @@ def create_app(config=None,store=None,static_root=None):
     def command_script(request:Request):
         session(request)
         return Response((Path(__file__).parent/'commands.js').read_bytes(),media_type='application/javascript')
+    @application.get('/console/notifications')
+    def notification_status(request:Request):
+        session(request)
+        return notification_worker.status()
     @application.get('/auth/options')
     def options(): return {'registrationOpen':store.user_count()<int(config.get('max_accounts',2))}
     @application.post('/auth/register')
