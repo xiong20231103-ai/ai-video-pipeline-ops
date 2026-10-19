@@ -15,8 +15,8 @@ describe('V2-0 isolated presentation shell', () => {
     const fetchSpy = vi.spyOn(window, 'fetch').mockRejectedValue(new Error('No API allowed'))
     render(<App />)
     expect(await screen.findByRole('heading', { name: '当前生产状态' })).toBeVisible()
-    expect(screen.getByText('V2 只读预览')).toBeVisible()
-    expect(screen.getByText('V2 只读预览，操作请用旧页面')).toBeVisible()
+    expect(screen.getByText('V2 功能预览')).toBeVisible()
+    expect(screen.getByText('V2 预览：仅开放上传重扫与历史核验，其余操作请用旧页面')).toBeVisible()
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(screen.queryByRole('button', { name: /安全继续|执行清理/ })).not.toBeInTheDocument()
   })
@@ -92,3 +92,4 @@ describe('V2-0 isolated presentation shell', () => {
     expect(animation).not.toHaveBeenCalled()
   })
 })
+

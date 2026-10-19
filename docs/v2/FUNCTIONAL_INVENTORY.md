@@ -569,10 +569,10 @@
   - 原实现：`$("continueCurrentButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (button.dataset.allowed === "false") return; if (!window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")) return; button.disabled = true; button.textContent = "正在发送继续指令…"; try { const clientRequestId = (window.crypto?.randomUUID?.() ¦¦ ˋdashboard-${Date.now()}-${Math.random()}ˋ); // Name the project this page s`；实现/测试证据：待补。
 - [ ] **FN-266** `匿名回调@2066` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2066](../../static/app.js#L2066)。
   - 原实现：`const expectedTarget = Object.fromEntries(Object.entries({ batchId: box.batchId, taskId: box.current?.taskId, attemptId: box.current?.attemptId, }).filter(([, value]) => typeof value === "string" && value))`；实现/测试证据：待补。
-- [ ] **FN-267** `匿名回调@2083` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2083](../../static/app.js#L2083)。
-  - 原实现：`$("uploadRescanButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。")) return; button.disabled = true; button.textContent = "正在检查上传缺口…"; try { const result = await postJson("/api/controls/upload/rescan", {}); renderActionResult("uploadActionResult", { state: window.opsCloudPostJson ? (result.sta`；实现/测试证据：待补。
-- [ ] **FN-268** `匿名回调@2107` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2107](../../static/app.js#L2107)。
-  - 原实现：`$("historicalCloudVerifyButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。")) return; button.disabled = true; button.textContent = "正在提交历史核验…"; try { const result = await postJson("/api/controls/upload/verify-history", {}); renderHistoricalCloudVerification(result); await refresh(); } catch (error`；实现/测试证据：待补。
+- [x] **FN-267** `匿名回调@2083` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2083](../../static/app.js#L2083)。
+  - 原实现：`$("uploadRescanButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。")) return; button.disabled = true; button.textContent = "正在检查上传缺口…"; try { const result = await postJson("/api/controls/upload/rescan", {}); renderActionResult("uploadActionResult", { state: window.opsCloudPostJson ? (result.sta`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
+- [x] **FN-268** `匿名回调@2107` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2107](../../static/app.js#L2107)。
+  - 原实现：`$("historicalCloudVerifyButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。")) return; button.disabled = true; button.textContent = "正在提交历史核验…"; try { const result = await postJson("/api/controls/upload/verify-history", {}); renderHistoricalCloudVerification(result); await refresh(); } catch (error`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **FN-269** `匿名回调@2124` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2124](../../static/app.js#L2124)。
   - 原实现：`$("resetTestRecordsButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。")) return; if (!window.confirm("再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。")) return; button.disabled = true; button.textContent = "正在备份并重置…"; try { const result = await postJson("/api/controls/testing/reset", { confirm: "RESET_TEST_RECORDS" }); state.da`；实现/测试证据：待补。
 - [ ] **FN-270** `匿名回调@2153` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2153](../../static/app.js#L2153)。
@@ -816,10 +816,10 @@
   - 原实现：`postJson("/api/controls/pending-delete/empty", { confirm: "EMPTY_PENDING_DELETE_NOW" }, { timeoutMs: 600000 })`；实现/测试证据：待补。
 - [ ] **NET-020** `postJson` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2068](../../static/app.js#L2068)。
   - 原实现：`postJson("/api/control-commands", payload)`；实现/测试证据：待补。
-- [ ] **NET-021** `postJson` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2089](../../static/app.js#L2089)。
-  - 原实现：`postJson("/api/controls/upload/rescan", {})`；实现/测试证据：待补。
-- [ ] **NET-022** `postJson` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2113](../../static/app.js#L2113)。
-  - 原实现：`postJson("/api/controls/upload/verify-history", {})`；实现/测试证据：待补。
+- [x] **NET-021** `postJson` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2089](../../static/app.js#L2089)。
+  - 原实现：`postJson("/api/controls/upload/rescan", {})`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
+- [x] **NET-022** `postJson` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2113](../../static/app.js#L2113)。
+  - 原实现：`postJson("/api/controls/upload/verify-history", {})`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **NET-023** `postJson` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2131](../../static/app.js#L2131)。
   - 原实现：`postJson("/api/controls/testing/reset", { confirm: "RESET_TEST_RECORDS" })`；实现/测试证据：待补。
 - [ ] **NET-024** `postJson` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2159](../../static/app.js#L2159)。
@@ -919,10 +919,10 @@
   - 原实现：`window.alert(error.message ¦¦ "清空待删区失败")`；实现/测试证据：待补。
 - [ ] **CONF-018** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2054](../../static/app.js#L2054)。
   - 原实现：`window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")`；实现/测试证据：待补。
-- [ ] **CONF-019** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2085](../../static/app.js#L2085)。
-  - 原实现：`window.confirm("确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。")`；实现/测试证据：待补。
-- [ ] **CONF-020** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2109](../../static/app.js#L2109)。
-  - 原实现：`window.confirm("确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。")`；实现/测试证据：待补。
+- [x] **CONF-019** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2085](../../static/app.js#L2085)。
+  - 原实现：`window.confirm("确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。")`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
+- [x] **CONF-020** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2109](../../static/app.js#L2109)。
+  - 原实现：`window.confirm("确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。")`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **CONF-021** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2126](../../static/app.js#L2126)。
   - 原实现：`window.confirm("确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。")`；实现/测试证据：待补。
 - [ ] **CONF-022** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2127](../../static/app.js#L2127)。
@@ -1152,12 +1152,12 @@
   - 原实现：`button.dataset.allowed === "false"`；实现/测试证据：待补。
 - [ ] **GUARD-097** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2055](../../static/app.js#L2055)。
   - 原实现：`button.disabled = true`；实现/测试证据：待补。
-- [ ] **GUARD-098** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2086](../../static/app.js#L2086)。
-  - 原实现：`button.disabled = true`；实现/测试证据：待补。
-- [ ] **GUARD-099** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2103](../../static/app.js#L2103)。
-  - 原实现：`button.disabled = false`；实现/测试证据：待补。
-- [ ] **GUARD-100** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2110](../../static/app.js#L2110)。
-  - 原实现：`button.disabled = true`；实现/测试证据：待补。
+- [x] **GUARD-098** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2086](../../static/app.js#L2086)。
+  - 原实现：`button.disabled = true`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
+- [x] **GUARD-099** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2103](../../static/app.js#L2103)。
+  - 原实现：`button.disabled = false`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
+- [x] **GUARD-100** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2110](../../static/app.js#L2110)。
+  - 原实现：`button.disabled = true`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **GUARD-101** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2128](../../static/app.js#L2128)。
   - 原实现：`button.disabled = true`；实现/测试证据：待补。
 - [ ] **GUARD-102** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2147](../../static/app.js#L2147)。
@@ -1371,10 +1371,10 @@
   - 原实现：`class="panel current-card" ¦ CURRENT 当前第五步任务 等待 日期 -- <d`；实现/测试证据：待补。
 - [ ] **DOM-038** `section (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:169](../../static/index.html#L169)。
   - 原实现：`class="panel upload-card" ¦ ↥ UPLOAD SERVICE 正在读取百度网盘状态 等待工作台上传服务写入状态。 检查中 <di`；实现/测试证据：待补。
-- [ ] **DOM-039** `button uploadRescanButton` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/index.html:183](../../static/index.html#L183)。
-  - 原实现：`id="uploadRescanButton" class="primary wide" type="button" ¦ 重新对账、补传并清理 尚未手动检查上传缺口 核验历史云端文件 <div id="historicalCloudV`；实现/测试证据：待补。
-- [ ] **DOM-040** `button historicalCloudVerifyButton` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/index.html:185](../../static/index.html#L185)。
-  - 原实现：`id="historicalCloudVerifyButton" class="wide" type="button" ¦ 核验历史云端文件 只核验历史上传记录，不补传、不删除文件 <div class="section-heading`；实现/测试证据：待补。
+- [x] **DOM-039** `button uploadRescanButton` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/index.html:183](../../static/index.html#L183)。
+  - 原实现：`id="uploadRescanButton" class="primary wide" type="button" ¦ 重新对账、补传并清理 尚未手动检查上传缺口 核验历史云端文件 <div id="historicalCloudV`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
+- [x] **DOM-040** `button historicalCloudVerifyButton` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/index.html:185](../../static/index.html#L185)。
+  - 原实现：`id="historicalCloudVerifyButton" class="wide" type="button" ¦ 核验历史云端文件 只核验历史上传记录，不补传、不删除文件 <div class="section-heading`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **DOM-041** `section (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:188](../../static/index.html#L188)。
   - 原实现：`class="panel draft-manager-card" ¦ CAPCUT DRAFTS CapCut 草稿管理 未读取`；实现/测试证据：待补。
 - [ ] **DOM-042** `button openDraftManagerButton` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:194](../../static/index.html#L194)。
@@ -1636,10 +1636,10 @@
   - 原实现：`$("continueCurrentButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (button.dataset.allowed === "false") return; if (!window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")) return; button.disabled = true; button.textContent = "正在发送继续指令…"; try { const clientRequestId = (window.crypto?.randomUUID?.() ¦¦ ˋdashboard-${Date.now()}-${Math.random()}ˋ); // Name the project this page s`；实现/测试证据：待补。
 - [ ] **EVENT-043** `window.setTimeout` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2080](../../static/app.js#L2080)。
   - 原实现：`window.setTimeout(refreshContinueStatus, 500)`；实现/测试证据：待补。
-- [ ] **EVENT-044** `$("uploadRescanButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2083](../../static/app.js#L2083)。
-  - 原实现：`$("uploadRescanButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。")) return; button.disabled = true; button.textContent = "正在检查上传缺口…"; try { const result = await postJson("/api/controls/upload/rescan", {}); renderActionResult("uploadActionResult", { state: window.opsCloudPostJson ? (result.sta`；实现/测试证据：待补。
-- [ ] **EVENT-045** `$("historicalCloudVerifyButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2107](../../static/app.js#L2107)。
-  - 原实现：`$("historicalCloudVerifyButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。")) return; button.disabled = true; button.textContent = "正在提交历史核验…"; try { const result = await postJson("/api/controls/upload/verify-history", {}); renderHistoricalCloudVerification(result); await refresh(); } catch (error`；实现/测试证据：待补。
+- [x] **EVENT-044** `$("uploadRescanButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2083](../../static/app.js#L2083)。
+  - 原实现：`$("uploadRescanButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。")) return; button.disabled = true; button.textContent = "正在检查上传缺口…"; try { const result = await postJson("/api/controls/upload/rescan", {}); renderActionResult("uploadActionResult", { state: window.opsCloudPostJson ? (result.sta`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
+- [x] **EVENT-045** `$("historicalCloudVerifyButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2107](../../static/app.js#L2107)。
+  - 原实现：`$("historicalCloudVerifyButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。")) return; button.disabled = true; button.textContent = "正在提交历史核验…"; try { const result = await postJson("/api/controls/upload/verify-history", {}); renderHistoricalCloudVerification(result); await refresh(); } catch (error`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **EVENT-046** `$("resetTestRecordsButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2124](../../static/app.js#L2124)。
   - 原实现：`$("resetTestRecordsButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。")) return; if (!window.confirm("再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。")) return; button.disabled = true; button.textContent = "正在备份并重置…"; try { const result = await postJson("/api/controls/testing/reset", { confirm: "RESET_TEST_RECORDS" }); state.da`；实现/测试证据：待补。
 - [ ] **EVENT-047** `$("createTemplate").addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2152](../../static/app.js#L2152)。
@@ -2164,10 +2164,10 @@
   - 原实现：`"/api/controls/pending-delete/empty"`；实现/测试证据：待补。
 - [ ] **PATH-019** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2068](../../static/app.js#L2068)。
   - 原实现：`"/api/control-commands"`；实现/测试证据：待补。
-- [ ] **PATH-020** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2089](../../static/app.js#L2089)。
-  - 原实现：`"/api/controls/upload/rescan"`；实现/测试证据：待补。
-- [ ] **PATH-021** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2113](../../static/app.js#L2113)。
-  - 原实现：`"/api/controls/upload/verify-history"`；实现/测试证据：待补。
+- [x] **PATH-020** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2089](../../static/app.js#L2089)。
+  - 原实现：`"/api/controls/upload/rescan"`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
+- [x] **PATH-021** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2113](../../static/app.js#L2113)。
+  - 原实现：`"/api/controls/upload/verify-history"`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **PATH-022** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2131](../../static/app.js#L2131)。
   - 原实现：`"/api/controls/testing/reset"`；实现/测试证据：待补。
 - [ ] **PATH-023** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2159](../../static/app.js#L2159)。

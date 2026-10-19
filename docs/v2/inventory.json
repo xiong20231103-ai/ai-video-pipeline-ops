@@ -4103,9 +4103,15 @@
         "name": "匿名回调@2083",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"uploadRescanButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。\")) return; button.disabled = true; button.textContent = \"正在检查上传缺口…\"; try { const result = await postJson(\"/api/controls/upload/rescan\", {}); renderActionResult(\"uploadActionResult\", { state: window.opsCloudPostJson ? (result.sta"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "$(\"uploadRescanButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。\")) return; button.disabled = true; button.textContent = \"正在检查上传缺口…\"; try { const result = await postJson(\"/api/controls/upload/rescan\", {}); renderActionResult(\"uploadActionResult\", { state: window.opsCloudPostJson ? (result.sta",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "FN-268",
@@ -4114,9 +4120,15 @@
         "name": "匿名回调@2107",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"historicalCloudVerifyButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。\")) return; button.disabled = true; button.textContent = \"正在提交历史核验…\"; try { const result = await postJson(\"/api/controls/upload/verify-history\", {}); renderHistoricalCloudVerification(result); await refresh(); } catch (error"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "$(\"historicalCloudVerifyButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。\")) return; button.disabled = true; button.textContent = \"正在提交历史核验…\"; try { const result = await postJson(\"/api/controls/upload/verify-history\", {}); renderHistoricalCloudVerification(result); await refresh(); } catch (error",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "FN-269",
@@ -5636,9 +5648,15 @@
         "name": "postJson",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "postJson(\"/api/controls/upload/rescan\", {})"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "postJson(\"/api/controls/upload/rescan\", {})",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "NET-022",
@@ -5647,9 +5665,15 @@
         "name": "postJson",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "postJson(\"/api/controls/upload/verify-history\", {})"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "postJson(\"/api/controls/upload/verify-history\", {})",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "NET-023",
@@ -6215,9 +6239,15 @@
         "name": "window.confirm",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "window.confirm(\"确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。\")"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "window.confirm(\"确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。\")",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "CONF-020",
@@ -6226,9 +6256,15 @@
         "name": "window.confirm",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "window.confirm(\"确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。\")"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "window.confirm(\"确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。\")",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "CONF-021",
@@ -7590,9 +7626,15 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = true"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "button.disabled = true",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "GUARD-099",
@@ -7601,9 +7643,15 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = false"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "button.disabled = false",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "GUARD-100",
@@ -7612,9 +7660,15 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = true"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "button.disabled = true",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "GUARD-101",
@@ -8807,9 +8861,15 @@
         "name": "button uploadRescanButton",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"uploadRescanButton\" class=\"primary wide\" type=\"button\" | 重新对账、补传并清理 尚未手动检查上传缺口 核验历史云端文件 <div id=\"historicalCloudV"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "id=\"uploadRescanButton\" class=\"primary wide\" type=\"button\" | 重新对账、补传并清理 尚未手动检查上传缺口 核验历史云端文件 <div id=\"historicalCloudV",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "DOM-040",
@@ -8818,9 +8878,15 @@
         "name": "button historicalCloudVerifyButton",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"historicalCloudVerifyButton\" class=\"wide\" type=\"button\" | 核验历史云端文件 只核验历史上传记录，不补传、不删除文件 <div class=\"section-heading"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "id=\"historicalCloudVerifyButton\" class=\"wide\" type=\"button\" | 核验历史云端文件 只核验历史上传记录，不补传、不删除文件 <div class=\"section-heading",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "DOM-041",
@@ -10268,9 +10334,15 @@
         "name": "$(\"uploadRescanButton\")?.addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"uploadRescanButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。\")) return; button.disabled = true; button.textContent = \"正在检查上传缺口…\"; try { const result = await postJson(\"/api/controls/upload/rescan\", {}); renderActionResult(\"uploadActionResult\", { state: window.opsCloudPostJson ? (result.sta"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "$(\"uploadRescanButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。\")) return; button.disabled = true; button.textContent = \"正在检查上传缺口…\"; try { const result = await postJson(\"/api/controls/upload/rescan\", {}); renderActionResult(\"uploadActionResult\", { state: window.opsCloudPostJson ? (result.sta",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "EVENT-045",
@@ -10279,9 +10351,15 @@
         "name": "$(\"historicalCloudVerifyButton\")?.addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"historicalCloudVerifyButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。\")) return; button.disabled = true; button.textContent = \"正在提交历史核验…\"; try { const result = await postJson(\"/api/controls/upload/verify-history\", {}); renderHistoricalCloudVerification(result); await refresh(); } catch (error"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "$(\"historicalCloudVerifyButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。\")) return; button.disabled = true; button.textContent = \"正在提交历史核验…\"; try { const result = await postJson(\"/api/controls/upload/verify-history\", {}); renderHistoricalCloudVerification(result); await refresh(); } catch (error",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "EVENT-046",
@@ -10972,9 +11050,15 @@
         "name": "接口/动态路径",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "\"/api/controls/upload/rescan\""
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "\"/api/controls/upload/rescan\"",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "PATH-021",
@@ -10983,9 +11067,15 @@
         "name": "接口/动态路径",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "\"/api/controls/upload/verify-history\""
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2A_UPLOAD_PARITY.md",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/upload-browser-check.cjs"
+        ],
+        "detail": "\"/api/controls/upload/verify-history\"",
+        "pr": 31,
+        "verification": "isolated mocks only; production/shadow/switch not verified"
       },
       {
         "id": "PATH-022",
