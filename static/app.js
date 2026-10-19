@@ -1085,6 +1085,7 @@ function updateMaterialOptions() {
 // for ordinary UI commands, but let long, explicitly confirmed maintenance
 // jobs wait for their real response instead of aborting the browser request.
 async function postJson(url, payload, options = {}) {
+  if (window.opsCloudPostJson) return window.opsCloudPostJson(url, payload);
   const timeoutMs = Number.isFinite(Number(options.timeoutMs))
     ? Math.max(1000, Number(options.timeoutMs))
     : 10000;
@@ -1420,6 +1421,7 @@ function renderSources(source = {}) {
 }
 
 function renderContinueResult(result = {}) {
+  if (window.opsCloudContinueResult) result = window.opsCloudContinueResult(result);
   state.lastContinueResult = result;
   const node = $("continueResult");
   const stateName = String(result.state || "idle");
@@ -1427,10 +1429,11 @@ function renderContinueResult(result = {}) {
   // A continue command is durable on the receiver.  Keep the button locked for
   // every non-terminal recovery phase, including the v3 accepted/recovering
   // states, so a refresh can never make a second click look safe.
-  const inFlightStates = ["requested", "accepted", "running", "recovering", "persisted", "receiver_acknowledged", "workbench_acknowledged", "executing"];
+  const inFlightStates = ["submitting", "queued", "leased", "sent", "unknown", "requested", "accepted", "running", "recovering", "persisted", "receiver_acknowledged", "workbench_acknowledged", "executing"];
   const commandInFlight = !result.stale && inFlightStates.includes(stateName)
     && result.continueCanRetry !== true;
   const stateLabel = {
+    submitting: "收件待查询", queued: "云端排队", leased: "代理已领取", sent: "已发家里，等待回执", unknown: "结果不明，请人工对账",
     idle: "尚未对账", requested: "命令已发送", persisted: "命令已保存",
     receiver_acknowledged: "家里接收器已收到", workbench_acknowledged: "家里工作台已领取",
     executing: "正在安全继续", accepted: "工作台已接收",
@@ -1512,7 +1515,9 @@ async function refreshContinueStatus() {
   if (state.continueStatusBusy) return;
   state.continueStatusBusy = true;
   try {
-    const result = await getJson("/api/control-commands/current");
+    const target = window.opsCloudContinueTarget ? window.opsCloudContinueTarget() : "/api/control-commands/current";
+    if (!target) return;
+    const result = await getJson(target);
     state.continueStatusFailures = 0;
     renderContinueResult(result || {});
   } catch (error) {
@@ -1585,7 +1590,7 @@ async function controlTask(button, action) {
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || "操作失败");
     renderActionResult("queueActionResult", {
-      state: "completed",
+      state: window.opsCloudPostJson ? (result.state || "requested") : "completed",
       message: result.message || (isStart ? "启动命令已发送" : "撤回命令已发送"),
       updatedAt: new Date().toISOString(),
     });
@@ -2083,8 +2088,8 @@ $("uploadRescanButton")?.addEventListener("click", async (event) => {
   try {
     const result = await postJson("/api/controls/upload/rescan", {});
     renderActionResult("uploadActionResult", {
-      state: "completed",
-      message: result.message || "上传检查已完成",
+      state: window.opsCloudPostJson ? (result.state || "requested") : "completed",
+      message: result.message || (window.opsCloudPostJson ? "家里已接收上传检查请求，请查看实际上传状态" : "上传检查已完成"),
       updatedAt: new Date().toISOString(),
     });
     await refresh();
@@ -2147,7 +2152,8 @@ $("createDate").value = currentLocalDateLabel();
 $("createTemplate").addEventListener("change", updateMaterialOptions);
 $("createTaskForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const button = event.currentTarget.querySelector("button[type='submit']");
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type='submit']");
   button.disabled = true;
   try {
     const result = await postJson("/api/controls/tasks/create", {
@@ -2160,7 +2166,7 @@ $("createTaskForm").addEventListener("submit", async (event) => {
       urls: $("createUrls").value,
       startNow: $("createStartNow").checked,
     });
-    event.currentTarget.reset();
+    form.reset();
     $("createDate").value = currentLocalDateLabel();
     renderActionResult("queueActionResult", {
       state: "completed",

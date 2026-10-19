@@ -1,4 +1,4 @@
-"""M1a read-only bridge. No command execution, process control or cleanup exists."""
+"""Cached GET bridge with an explicitly enabled, durable M2a write worker."""
 from contextlib import contextmanager, nullcontext, closing
 from datetime import datetime
 import json
@@ -16,6 +16,7 @@ from contracts.cache import cache_key,endpoint,semantic_hash
 from agent.polling import PollSchedule
 from agent.lifecycle import Lifecycle
 from agent.backup_runtime import BackupWorker
+from agent.execution import ExecutionWorker
 
 HOME_HOST='100.92.17.9'
 
@@ -168,6 +169,7 @@ class ReadOnlyAgent:
         self.lifecycle=Lifecycle(self.state_dir)
         self.authenticated=threading.Event()
         self.backup=BackupWorker(self)
+        self.execution=ExecutionWorker(self)
         self.demands=queue.PriorityQueue(maxsize=128); self.pending_demands=set(); self.prefetch_targets=[]; self.slow_demands=[]; self.force_reads=set(); self.paused_targets=set()
         # The old summary ETag omits scan clocks and its 304 has no scan header.
         # Periodically read the existing response body, without adding a GET.
@@ -185,7 +187,7 @@ class ReadOnlyAgent:
         if data is not None: headers['Content-Type']='application/json'
         request=urllib.request.Request(self.origin+path,data=json.dumps(data).encode() if data is not None else None,headers=headers)
         try:
-            with self.transport.open(request,timeout=35 if path.startswith('/agent/fetch-requests?') else 10) as response: return json.load(response)
+            with self.transport.open(request,timeout=35 if path.startswith(('/agent/fetch-requests?','/agent/commands?')) else 10) as response: return json.load(response)
         except http.client.IncompleteRead: raise OSError('Incomplete cloud response') from None
     def home(self,target,port=8765,conditional=True,reason='periodic'):
         if self.stop.is_set(): raise OSError('Agent stopping')
@@ -245,7 +247,7 @@ class ReadOnlyAgent:
     def heartbeat_loop(self):
         while not self.stop.is_set():
             try:
-                reply=self.cloud('/agent/heartbeat',{'engineState':self.engine_state,'storage':self.ledger.storage(),'backupState':self.backup.public_state()})
+                reply=self.cloud('/agent/heartbeat',{'engineState':'busy' if self.execution.home_busy.is_set() else self.engine_state,'storage':self.ledger.storage(),'backupState':self.backup.public_state(),'execution':self.execution.capability()})
                 self.schedule.update_viewer(reply);self.backup.notify(reply.get('backupRequest'))
                 self.authenticated.set()
             except urllib.error.HTTPError as exc:
@@ -354,7 +356,7 @@ class ReadOnlyAgent:
                                 try:self.lifecycle.record_worker_failure(worker,error)
                                 except Exception:pass # Diagnostics failure must never print the original exception.
                     finally:self.engine_state='unavailable';self.stop.set()
-            methods=(('heartbeat',self.heartbeat_loop),('collection',self.collection_loop),('upload',self.upload_loop),('demand',self.demand_loop),('foreground',self.foreground_loop),('backup',self.backup.loop))
+            methods=(('heartbeat',self.heartbeat_loop),('collection',self.collection_loop),('upload',self.upload_loop),('demand',self.demand_loop),('foreground',self.foreground_loop),('backup',self.backup.loop),('commands',self.execution.loop))
             threads=[threading.Thread(target=supervise,args=(worker,method),daemon=True) for worker,method in methods]
             for thread in threads: thread.start()
             requested=None;published=0
@@ -365,9 +367,10 @@ class ReadOnlyAgent:
                     if time.monotonic()-published>=5:
                         self.lifecycle.publish('running');published=time.monotonic()
             except KeyboardInterrupt: self.stop.set()
-            # M1a workers are GET-only daemons. Bound total drain time, not 20s
-            # per worker; process exit closes outstanding read sockets. Future
-            # write execution must add its own drain/unknown-result contract.
+            # Drain the single write channel before releasing the process lock.
+            # A forced OS termination is recovered as unknown, never re-sent.
+            command_thread=threads[-1]
+            if self.execution.active.is_set():command_thread.join(timeout=50)
             deadline=time.monotonic()+2
             for thread in threads: thread.join(timeout=max(0,deadline-time.monotonic()))
             self.lifecycle.publish('failed' if self.worker_failed else 'stopped',requested,sum(thread.is_alive() for thread in threads))
