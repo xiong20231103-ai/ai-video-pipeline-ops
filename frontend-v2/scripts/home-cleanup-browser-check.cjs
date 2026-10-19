@@ -30,7 +30,7 @@ for(const mode of ['home','cloud'])for(const [width,height]of [[1920,1080],[1440
  for(const theme of ['dark','light']){
   if(theme==='light')await page.getByRole('button',{name:'切换到浅色主题'}).click();
   for(const[kind,spec]of Object.entries(specs)){
-   await page.getByRole('button',{name:'管理 '+spec.title,exact:true}).click();const checkbox=page.getByRole('checkbox',{name:'选择 模拟文件'});await checkbox.waitFor();assert(await page.getByRole('checkbox',{name:'选择 模拟受保护文件'}).isDisabled());
+   await page.getByRole('button',{name:'管理 '+spec.title,exact:true}).click();const checkbox=page.getByRole('checkbox',{name:'选择 模拟文件'});await checkbox.waitFor();await checkbox.evaluate(async node=>{const dialog=node.closest('[role=dialog]');if(dialog)await Promise.all(dialog.getAnimations().map(animation=>animation.finished.catch(()=>{})))});assert(await page.getByRole('checkbox',{name:'选择 模拟受保护文件'}).isDisabled());
    if(kind!=='production')await checkbox.check();
    const snap=async suffix=>{const name=`${mode}-${theme}-${kind}-${suffix}-${width}x${height}.png`;if(evidence)await page.screenshot({path:path.join(evidence,name),animations:'disabled'});screenshots.push(name);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'horizontal page overflow');};
    await snap('list');const preview=page.getByRole('button',{name:kind==='production'?'预览清理':'预览删除',exact:true});

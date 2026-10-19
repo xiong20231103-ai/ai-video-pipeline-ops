@@ -80,3 +80,6 @@
 修复仅把经过本地原ID及submitting核对的查询404单列 expectedNotFound/expectedConsole；其它404、缺资源、未知GET、脚本错误、CSP仍失败。强制竞争验收必须至少出现一次原ID404，并断言模拟业务POST仍为80次（不得重发）。结果先写JSON及带URL日志再断言，避免失败时丢证据。
 本地复验：652请求、80模拟POST、72截图、预期404一次、其它错误0、CSP0。证据 implementation-tools/v2-cloud-cleanup-evidence/ci-404-repro/cloud-cleanup-browser-result.json；132前端测试、typecheck/lint、原12构建产物逐字节一致通过。只改测试脚本及文档，不修改运行时代码或产物。
 
+
+后续run 39287244865失败在更早的home-cleanup浏览器步骤：侧栏滑入未完成，checkbox.check点击后状态未改变；cloud 404步骤尚未执行。两种清理脚本现在先等待实际dialog.getAnimations().finished，再执行原始check，不使用force点击或吞断言；仅测试同步，不改业务。
+
