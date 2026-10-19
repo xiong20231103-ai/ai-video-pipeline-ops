@@ -74,3 +74,9 @@
 132项前端测试（新增26项），typecheck/lint/摘录校验通过。新增覆盖三类原正文和确认、待删区两次输入、过期/确认中到期/改选/重载、坏票据、清理关闭/离线/阻塞/未决门禁、丢回包查询、unknown保留、旧预览终态换新、异步回执竞争。361项隔离业务测试通过（1跳过）。真实无头浏览器全部网络拦截，72张云端截图、80次模拟队列POST，无家里直接清理POST、无CSP/控制台错误；家里模式和云端关闭开关另跑回归。
 
 复用已有固定依赖，无新增依赖；来源及许可证见 public/dependencies.json、THIRD_PARTY_NOTICES.txt 和 licenses/。未验证真实生产、完整批次影子、切换；不合并、不部署。回滚：revert 本PR及 static/v2 产物，旧入口保留。
+
+## 2026-10-20 CI 404 定位与修复
+失败 run 39282832914 的旧日志未保留URL。夹具唯一主动404分支是原请求查询，延迟收件3500ms后已强制复现：/console/commands/request/c1924d59-dae8-43a0-992f-83d917062e86。原请求已以 submitting 持久化，但 CSRF/云端收件尚未完成；是预期API缺记录响应，不是静态资源或缺路由。后端 cloud/command_routes.py:24 与 cloud/commands.py 的 command_not_found=404 一致。
+修复仅把经过本地原ID及submitting核对的查询404单列 expectedNotFound/expectedConsole；其它404、缺资源、未知GET、脚本错误、CSP仍失败。强制竞争验收必须至少出现一次原ID404，并断言模拟业务POST仍为80次（不得重发）。结果先写JSON及带URL日志再断言，避免失败时丢证据。
+本地复验：652请求、80模拟POST、72截图、预期404一次、其它错误0、CSP0。证据 implementation-tools/v2-cloud-cleanup-evidence/ci-404-repro/cloud-cleanup-browser-result.json；132前端测试、typecheck/lint、原12构建产物逐字节一致通过。只改测试脚本及文档，不修改运行时代码或产物。
+
