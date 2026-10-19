@@ -1,3 +1,7 @@
+# Dashboard V2-2B 任务操作
+
+新增补链、建任务、启动、撤回。见 docs/v2/V2-2B_TASK_PARITY.md；隔离浏览器另运行 scripts/task-browser-check.cjs。未部署。下面阶段说明为继承的基线文档；当前可用操作以上述两阶段增量为准。
+
 # Dashboard V2-2A 上传类操作
 
 本 PR 在 V2-1 上仅接入上传重扫和历史核验，其他业务写按钮仍禁用。逐行对照、双模式语义、回滚见 `docs/v2/V2-2A_UPLOAD_PARITY.md`；补充运行 `node scripts/upload-browser-check.cjs`。全部数据为隔离夹具，未部署。

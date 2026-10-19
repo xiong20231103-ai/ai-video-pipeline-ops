@@ -1,3 +1,5 @@
+import { uploadWriterFor } from "@/data/upload-writer";
+import TaskOperations from "./TaskOperations";
 import type { ReadClient } from "@/data/client";
 import { UploadActions } from "./UploadActions";
 import { useState } from "react";
@@ -32,7 +34,7 @@ import {
   pipelineFor,
   continueLabels,
 } from "./presentation";
-import { TaskBox, Pipeline, Tasks, GapsAndQueue } from "./TaskViews";
+import { TaskBox, Pipeline, Tasks } from "./TaskViews";
 import {
   BackupPanel,
   SourcePanel,
@@ -444,8 +446,12 @@ function Events({ data }: { data: Row }) {
 export default function Dashboard({ view }: { view: View }) {
   const [date, setDate] = useState(""),
     [batchId, setBatch] = useState("");
+  const [replenishment, setReplenishment] = useState<Row | null>(null);
   const { snapshot, reader, refresh } = useDashboard(date, batchId);
   const data = snapshot.dashboard;
+  const canWrite = reader.current
+    ? uploadWriterFor(reader.current, () => snapshot.status).available()
+    : false;
   return (
     <div className="dashboard-content">
       <div className="data-toolbar">
@@ -456,7 +462,7 @@ export default function Dashboard({ view }: { view: View }) {
               ? "家里模式"
               : "正在确认运行模式"}
         </Status>
-        <span>V2 预览：仅开放上传重扫与历史核验，其余操作请用旧页面</span>
+        <span>V2 预览：开放上传与任务操作，其余操作请用旧页面</span>
         <Button variant="outline" size="sm" onClick={refresh}>
           刷新
         </Button>
@@ -475,7 +481,15 @@ export default function Dashboard({ view }: { view: View }) {
           <Runtime data={data} />
           {view === "overview" && (
             <>
-              <Overview data={data} snapshot={snapshot} />
+              <Overview
+                data={data}
+                snapshot={snapshot}
+                canWrite={canWrite}
+                onReplenish={(row) => {
+                  setReplenishment(row);
+                  window.location.hash = "tasks";
+                }}
+              />
               <TaskBox
                 data={data}
                 selected={batchId}
@@ -501,7 +515,13 @@ export default function Dashboard({ view }: { view: View }) {
               <Pipeline data={data} date={date} onDate={setDate} />
               <Tasks data={data} />
               <Current current={o(o(data.overview).current)} />
-              <GapsAndQueue data={data} />
+              <TaskOperations
+                snapshot={snapshot}
+                reader={reader.current}
+                refresh={refresh}
+                replenishment={replenishment}
+                onReplenishment={setReplenishment}
+              />
             </>
           )}
           {view === "uploads" && (
@@ -556,14 +576,24 @@ export default function Dashboard({ view }: { view: View }) {
   );
 }
 
-function Overview({ data, snapshot }: { data: Row; snapshot: Snapshot }) {
+function Overview({
+  data,
+  snapshot,
+  canWrite,
+  onReplenish,
+}: {
+  data: Row;
+  snapshot: Snapshot;
+  canWrite: boolean;
+  onReplenish: (row: Row) => void;
+}) {
   const overview = o(data.overview),
     machine = o(overview.machine),
     hero = heroFor(data),
     metrics = metricValues(o(overview.metrics));
   return (
     <>
-      <GapQuickHint data={data} />
+      <GapQuickHint data={data} canWrite={canWrite} onReplenish={onReplenish} />
       <Panel
         title="当前生产状态"
         className="overview-hero"
@@ -601,7 +631,15 @@ function Overview({ data, snapshot }: { data: Row; snapshot: Snapshot }) {
   );
 }
 
-function GapQuickHint({ data }: { data: Row }) {
+function GapQuickHint({
+  data,
+  canWrite,
+  onReplenish,
+}: {
+  data: Row;
+  canWrite: boolean;
+  onReplenish: (row: Row) => void;
+}) {
   const active = list(o(data.projectGaps).items).filter(
     (x) => x.gapActive && String(x.taskId || ""),
   );
@@ -621,9 +659,9 @@ function GapQuickHint({ data }: { data: Row }) {
       </p>
       <div className="data-actions">
         {active.map((x, i) => (
-          <DisabledWrite key={i}>
+          <Button key={i} disabled={!canWrite} onClick={() => onReplenish(x)}>
             {t(x.project, "未分类")} / {t(x.material)} · 缺 {missing(x)} 条
-          </DisabledWrite>
+          </Button>
         ))}
       </div>
     </div>

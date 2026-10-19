@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import {
   object as o,
@@ -441,7 +442,18 @@ export function Tasks({ data }: { data: Row }) {
   )
 }
 
-export function GapsAndQueue({ data }: { data: Row }) {
+export function GapsAndQueue({
+  data,
+  actions,
+}: {
+  data: Row
+  actions?: {
+    available: boolean
+    control: (row: Row, action: 'start' | 'cancel') => void
+    replenish: (row: Row) => void
+    create: () => void
+  }
+}) {
   const gaps = list(o(data.projectGaps).items),
     queue = list(o(data.receiverQueue).items)
   const recent = (x: Row) =>
@@ -466,10 +478,31 @@ export function GapsAndQueue({ data }: { data: Row }) {
           {x.status === 'pending_confirmation' &&
             !['auto_start_first', 'auto_start_sequential'].includes(
               t(x.startMode),
-            ) && <DisabledWrite>启动首项</DisabledWrite>}
+            ) &&
+            (actions ? (
+              <Button
+                disabled={!actions.available}
+                onClick={() => actions.control(x, 'start')}
+              >
+                启动首项
+              </Button>
+            ) : (
+              <DisabledWrite>启动首项</DisabledWrite>
+            ))}
           {['pending_confirmation', 'imported_waiting_start'].includes(
             t(x.status),
-          ) && <DisabledWrite>撤回</DisabledWrite>}
+          ) &&
+            (actions ? (
+              <Button
+                variant="outline"
+                disabled={!actions.available}
+                onClick={() => actions.control(x, 'cancel')}
+              >
+                撤回
+              </Button>
+            ) : (
+              <DisabledWrite>撤回</DisabledWrite>
+            ))}
         </div>
       </article>
     ))
@@ -507,7 +540,16 @@ export function GapsAndQueue({ data }: { data: Row }) {
                 <p>历史失败 {n(x.historicalFailed)} 条，已被有效补链覆盖</p>
               )}
               {x.gapActive && x.taskId ? (
-                <DisabledWrite>按此缺口补链</DisabledWrite>
+                actions ? (
+                  <Button
+                    disabled={!actions.available}
+                    onClick={() => actions.replenish(x)}
+                  >
+                    按此缺口补链
+                  </Button>
+                ) : (
+                  <DisabledWrite>按此缺口补链</DisabledWrite>
+                )
               ) : null}
               {videos.length > 0 && (
                 <details>
@@ -550,7 +592,13 @@ export function GapsAndQueue({ data }: { data: Row }) {
             )}
           </>
         )}
-        <DisabledWrite>新建项目任务</DisabledWrite>
+        {actions ? (
+          <Button disabled={!actions.available} onClick={actions.create}>
+            新建项目任务
+          </Button>
+        ) : (
+          <DisabledWrite>新建项目任务</DisabledWrite>
+        )}
       </Panel>
     </>
   )

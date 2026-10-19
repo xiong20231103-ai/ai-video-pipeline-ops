@@ -41,10 +41,16 @@ export class UploadWriter {
         !localReceipts().some((row) => pendingStates.has(String(row.state))))
     );
   }
-  async post(path: string, body: Row = {}): Promise<Row> {
-    if (!allowed.has(path)) throw new Error("此操作尚未开放云端执行");
+  async post(path: string, body: Row | null = {}): Promise<Row> {
+    if (
+      !allowed.has(path) &&
+      !/^\/api\/controls\/tasks\/(create|[^/]+\/(start|cancel|replenish))$/.test(
+        path,
+      )
+    )
+      throw new Error("此操作尚未开放云端执行");
     if (this.reader.mode === "home") {
-      const key = path + "\n" + JSON.stringify(stable(body));
+      const key = path + "\n" + JSON.stringify(stable(body || {}));
       const prior = this.active.get(key);
       if (prior) return prior;
       const work = this.home(path, body);
@@ -74,17 +80,20 @@ export class UploadWriter {
       this.active.delete(fingerprint);
     }
   }
-  private async home(path: string, body: Row) {
+  private async home(path: string, body: Row | null) {
     try {
-      const response = await this.reader.request(
-        path,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
-        10000,
-      );
+      const response =
+        body === null
+          ? await this.reader.network(path, { method: "POST" })
+          : await this.reader.request(
+              path,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body || {}),
+              },
+              10000,
+            );
       const answer = object(await response.json());
       if (!response.ok) throw new Error(text(answer.detail, "操作失败"));
       return answer;
@@ -136,7 +145,7 @@ export class UploadWriter {
         "尚未得到家里回执；请看云端命令面板，不要重复提交",
     );
   }
-  private async cloud(path: string, body: Row, fingerprint: string) {
+  private async cloud(path: string, body: Row | null, fingerprint: string) {
     let record = localReceipts().find((row) => row.fingerprint === fingerprint);
     let answer: Row | null = null;
     if (!record) {
@@ -161,7 +170,7 @@ export class UploadWriter {
             "X-CSRF-Token": String(info.csrf),
             "X-Client-Request-ID": String(record.requestId),
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify(body || {}),
         });
         const value = object(await response.json());
         if (response.status === 202 && value.cloudCommand) {

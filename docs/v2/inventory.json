@@ -43,18 +43,15 @@
         "name": "currentLocalDateLabel",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
-          "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "function currentLocalDateLabel() { const value = new Date(); return `${value.getMonth() + 1}.${value.getDate()}`; } const state = { date: \"\", batchId: \"\", overview: null, templates: [], templateSignature: \"\", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: \"\", drafts: [], draftSnapshot: \"\", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: \"\", selectedAudioIds: ",
-        "pr": 30,
-        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-002",
@@ -2514,9 +2511,15 @@
         "name": "匿名回调@1012",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "actions.innerHTML = active.map(item => ` <button type=\"button\" data-task-id=\"${escapeHtml(String(item.taskId || \"\"))}\" onclick=\"openReplenishment(this.dataset.taskId)\"> ${escapeHtml(item.project || \"未分类\")} / ${escapeHtml(item.material || \"--\")} · 缺 ${missingFor(item)} 条 </button>`).join(\"\")"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "actions.innerHTML = active.map(item => ` <button type=\"button\" data-task-id=\"${escapeHtml(String(item.taskId || \"\"))}\" onclick=\"openReplenishment(this.dataset.taskId)\"> ${escapeHtml(item.project || \"未分类\")} / ${escapeHtml(item.material || \"--\")} · 缺 ${missingFor(item)} 条 </button>`).join(\"\")",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-162",
@@ -2585,18 +2588,15 @@
         "name": "renderTemplates",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
-          "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "function currentLocalDateLabel() { const value = new Date(); return `${value.getMonth() + 1}.${value.getDate()}`; } const state = { date: \"\", batchId: \"\", overview: null, templates: [], templateSignature: \"\", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: \"\", drafts: [], draftSnapshot: \"\", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: \"\", selectedAudioIds: ",
-        "pr": 30,
-        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-166",
@@ -2605,18 +2605,15 @@
         "name": "匿名回调@1067",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
-          "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "state.templates.map(item => `<option value=\"${escapeHtml(item.id)}\">${escapeHtml(item.label || `${item.project} / ${item.material}`)}</option>` ).join(\"\")}`",
-        "pr": 30,
-        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-167",
@@ -2625,18 +2622,15 @@
         "name": "匿名回调@1070",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
-          "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "{ const nextTemplates = Array.isArray(items) ? items : []; const signature = JSON.stringify(nextTemplates); const select = $(\"createTemplate\"); if (!select) return; if (signature === state.templateSignature && select.options.length > 1) return; state.templates = nextTemplates; state.templateSignature = signature; const previous = select.value; select.innerHTML = `<option value=\"\">请选择项目</option>${state.templates.map(item => `<o",
-        "pr": 30,
-        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-168",
@@ -2645,18 +2639,15 @@
         "name": "updateMaterialOptions",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
-          "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "function currentLocalDateLabel() { const value = new Date(); return `${value.getMonth() + 1}.${value.getDate()}`; } const state = { date: \"\", batchId: \"\", overview: null, templates: [], templateSignature: \"\", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: \"\", drafts: [], draftSnapshot: \"\", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: \"\", selectedAudioIds: ",
-        "pr": 30,
-        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-169",
@@ -2665,18 +2656,15 @@
         "name": "匿名回调@1075",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
-          "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "const template = state.templates.find(item => String(item.id) === String($(\"createTemplate\")?.value || \"\"));",
-        "pr": 30,
-        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-170",
@@ -2685,18 +2673,15 @@
         "name": "匿名回调@1080",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
-          "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "select.innerHTML = materials.map(item => `<option value=\"${escapeHtml(item)}\">${escapeHtml(item)}</option>`).join(\"\")",
-        "pr": 30,
-        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-171",
@@ -2727,9 +2712,15 @@
         "name": "openReplenishment",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "function currentLocalDateLabel() { const value = new Date(); return `${value.getMonth() + 1}.${value.getDate()}`; } const state = { date: \"\", batchId: \"\", overview: null, templates: [], templateSignature: \"\", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: \"\", drafts: [], draftSnapshot: \"\", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: \"\", selectedAudioIds: "
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "function currentLocalDateLabel() { const value = new Date(); return `${value.getMonth() + 1}.${value.getDate()}`; } const state = { date: \"\", batchId: \"\", overview: null, templates: [], templateSignature: \"\", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: \"\", drafts: [], draftSnapshot: \"\", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: \"\", selectedAudioIds: ",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-174",
@@ -2738,9 +2729,15 @@
         "name": "匿名回调@1131",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "function openReplenishment(taskId) { const item = state.gaps[String(taskId)]; const panel = $(\"replenishPanel\"); const dialog = $(\"replenishDialog\"); if (!item || !panel) return; const expected = Number(item.expectedCount || 0); const completed = Number(item.completed || 0); const missing = Number(item.missingCount ?? Math.max(0, expected - completed)); panel.innerHTML = `<header><div><strong>补链：${escapeHtml(item.project)} / $"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "function openReplenishment(taskId) { const item = state.gaps[String(taskId)]; const panel = $(\"replenishPanel\"); const dialog = $(\"replenishDialog\"); if (!item || !panel) return; const expected = Number(item.expectedCount || 0); const completed = Number(item.completed || 0); const missing = Number(item.missingCount ?? Math.max(0, expected - completed)); panel.innerHTML = `<header><div><strong>补链：${escapeHtml(item.project)} / $",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-175",
@@ -2749,9 +2746,15 @@
         "name": "匿名回调@1132",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "function openReplenishment(taskId) { const item = state.gaps[String(taskId)]; const panel = $(\"replenishPanel\"); const dialog = $(\"replenishDialog\"); if (!item || !panel) return; const expected = Number(item.expectedCount || 0); const completed = Number(item.completed || 0); const missing = Number(item.missingCount ?? Math.max(0, expected - completed)); panel.innerHTML = `<header><div><strong>补链：${escapeHtml(item.project)} / $"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "function openReplenishment(taskId) { const item = state.gaps[String(taskId)]; const panel = $(\"replenishPanel\"); const dialog = $(\"replenishDialog\"); if (!item || !panel) return; const expected = Number(item.expectedCount || 0); const completed = Number(item.completed || 0); const missing = Number(item.missingCount ?? Math.max(0, expected - completed)); panel.innerHTML = `<header><div><strong>补链：${escapeHtml(item.project)} / $",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-176",
@@ -3495,9 +3498,15 @@
         "name": "controlTask",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "function currentLocalDateLabel() { const value = new Date(); return `${value.getMonth() + 1}.${value.getDate()}`; } const state = { date: \"\", batchId: \"\", overview: null, templates: [], templateSignature: \"\", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: \"\", drafts: [], draftSnapshot: \"\", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: \"\", selectedAudioIds: "
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "function currentLocalDateLabel() { const value = new Date(); return `${value.getMonth() + 1}.${value.getDate()}`; } const state = { date: \"\", batchId: \"\", overview: null, templates: [], templateSignature: \"\", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: \"\", drafts: [], draftSnapshot: \"\", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: \"\", selectedAudioIds: ",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-216",
@@ -4148,9 +4157,15 @@
         "name": "匿名回调@2153",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"createTaskForm\").addEventListener(\"submit\", async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector(\"button[type='submit']\"); button.disabled = true; try { const result = await postJson(\"/api/controls/tasks/create\", { date: $(\"createDate\").value.trim(), templateId: $(\"createTemplate\").value, material: $(\"createMaterial\").value, audioBatch: $(\"createAudioBatch\").value.tr"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "$(\"createTaskForm\").addEventListener(\"submit\", async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector(\"button[type='submit']\"); button.disabled = true; try { const result = await postJson(\"/api/controls/tasks/create\", { date: $(\"createDate\").value.trim(), templateId: $(\"createTemplate\").value, material: $(\"createMaterial\").value, audioBatch: $(\"createAudioBatch\").value.tr",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "FN-271",
@@ -5456,9 +5471,15 @@
         "name": "postJson",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "postJson(`/api/controls/tasks/${encodeURIComponent(taskId)}/replenish`, { urls: $(\"replenishUrls\").value, startNow: $(\"replenishStartNow\").checked, })"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "postJson(`/api/controls/tasks/${encodeURIComponent(taskId)}/replenish`, { urls: $(\"replenishUrls\").value, startNow: $(\"replenishStartNow\").checked, })",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "NET-007",
@@ -5477,10 +5498,16 @@
         "line": 1589,
         "name": "fetch",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "fetch(`/api/controls/tasks/${encodeURIComponent(taskId)}/${action}`, { method: \"POST\" })"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "fetch(`/api/controls/tasks/${encodeURIComponent(taskId)}/${action}`, { method: \"POST\" })",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "NET-009",
@@ -5693,9 +5720,15 @@
         "name": "postJson",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "postJson(\"/api/controls/tasks/create\", { date: $(\"createDate\").value.trim(), templateId: $(\"createTemplate\").value, material: $(\"createMaterial\").value, audioBatch: $(\"createAudioBatch\").value.trim(), voicePlan: $(\"createVoicePlan\").value, expectedCount: $(\"createExpectedCount\").value, urls: $(\"createUrls\").value, startNow: $(\"createStartNow\").checked, })"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "postJson(\"/api/controls/tasks/create\", { date: $(\"createDate\").value.trim(), templateId: $(\"createTemplate\").value, material: $(\"createMaterial\").value, audioBatch: $(\"createAudioBatch\").value.trim(), voicePlan: $(\"createVoicePlan\").value, expectedCount: $(\"createExpectedCount\").value, urls: $(\"createUrls\").value, startNow: $(\"createStartNow\").checked, })",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "NET-025",
@@ -6040,10 +6073,16 @@
         "line": 1585,
         "name": "window.confirm",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "window.confirm(question)"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "window.confirm(question)",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "CONF-002",
@@ -6887,10 +6926,16 @@
         "line": 1135,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = true"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "button.disabled = true",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "GUARD-036",
@@ -6898,10 +6943,16 @@
         "line": 1155,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = false"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "button.disabled = false",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "GUARD-037",
@@ -7112,10 +7163,16 @@
         "line": 1586,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = true"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "button.disabled = true",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "GUARD-054",
@@ -7123,10 +7180,16 @@
         "line": 1604,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = false"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "button.disabled = false",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "GUARD-055",
@@ -7699,9 +7762,15 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = true"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "button.disabled = true",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "GUARD-104",
@@ -7710,9 +7779,15 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = false"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "button.disabled = false",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "GUARD-105",
@@ -8475,10 +8550,16 @@
         "line": 28,
         "name": "section gapQuickBar",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"gapQuickBar\" class=\"gap-quick-bar hidden\" aria-live=\"polite\" | 当前项目需要补链 --"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"gapQuickBar\" class=\"gap-quick-bar hidden\" aria-live=\"polite\" | 当前项目需要补链 --",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-005",
@@ -9027,9 +9108,15 @@
         "name": "form createTaskForm",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"createTaskForm\" | 日期 项目 材料<select id=\"createM"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"createTaskForm\" | 日期 项目 材料<select id=\"createM",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-054",
@@ -9037,10 +9124,16 @@
         "line": 231,
         "name": "input createDate",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"createDate\" name=\"date\" placeholder=\"例如 7.21\" required | 项目 材料 音频批次<input id=\"createAudio"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"createDate\" name=\"date\" placeholder=\"例如 7.21\" required | 项目 材料 音频批次<input id=\"createAudio",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-055",
@@ -9048,10 +9141,16 @@
         "line": 232,
         "name": "select createTemplate",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"createTemplate\" name=\"templateId\" required | 材料 音频批次 语音策略<select"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"createTemplate\" name=\"templateId\" required | 材料 音频批次 语音策略<select",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-056",
@@ -9059,10 +9158,16 @@
         "line": 233,
         "name": "select createMaterial",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"createMaterial\" name=\"material\" | 音频批次 语音策略 按项目默认 <option value=\"r"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"createMaterial\" name=\"material\" | 音频批次 语音策略 按项目默认 <option value=\"r",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-057",
@@ -9070,10 +9175,16 @@
         "line": 234,
         "name": "input createAudioBatch",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"createAudioBatch\" name=\"audioBatch\" placeholder=\"默认使用日期\" | 语音策略 按项目默认 复用已有语音 新建语音 计划"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"createAudioBatch\" name=\"audioBatch\" placeholder=\"默认使用日期\" | 语音策略 按项目默认 复用已有语音 新建语音 计划",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-058",
@@ -9081,10 +9192,16 @@
         "line": 235,
         "name": "select createVoicePlan",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"createVoicePlan\" name=\"voicePlan\" | 按项目默认 复用已有语音 新建语音 计划视频数 </l"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"createVoicePlan\" name=\"voicePlan\" | 按项目默认 复用已有语音 新建语音 计划视频数 </l",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-059",
@@ -9092,10 +9209,16 @@
         "line": 236,
         "name": "input createExpectedCount",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"createExpectedCount\" name=\"expectedCount\" type=\"number\" min=\"1\" | 视频链接（每行一条） 提交并启动首项"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"createExpectedCount\" name=\"expectedCount\" type=\"number\" min=\"1\" | 视频链接（每行一条） 提交并启动首项",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-060",
@@ -9103,10 +9226,16 @@
         "line": 237,
         "name": "textarea createUrls",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"createUrls\" name=\"urls\" rows=\"4\" required | 提交并启动首项 提交任务"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"createUrls\" name=\"urls\" rows=\"4\" required | 提交并启动首项 提交任务",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-061",
@@ -9114,10 +9243,16 @@
         "line": 238,
         "name": "input createStartNow",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"createStartNow\" type=\"checkbox\" | 提交并启动首项 提交任务 正在读取接收器队列… </se"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"createStartNow\" type=\"checkbox\" | 提交并启动首项 提交任务 正在读取接收器队列… </se",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-062",
@@ -9125,10 +9260,16 @@
         "line": 239,
         "name": "button (无 id)",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"primary wide\" type=\"submit\" | 提交任务 正在读取接收器队列… <div class=\"secti"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "class=\"primary wide\" type=\"submit\" | 提交任务 正在读取接收器队列… <div class=\"secti",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-063",
@@ -9708,10 +9849,16 @@
         "line": 397,
         "name": "dialog replenishDialog",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"replenishDialog\" class=\"replenish-dialog\" | AI视频生产线 OPS · Tailscale安全控制 -- <"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "id=\"replenishDialog\" class=\"replenish-dialog\" | AI视频生产线 OPS · Tailscale安全控制 -- <",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "DOM-116",
@@ -9920,9 +10067,15 @@
         "name": "$(\"closeReplenishDialog\")?.addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"closeReplenishDialog\")?.addEventListener(\"click\", () => dialog?.close())"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "$(\"closeReplenishDialog\")?.addEventListener(\"click\", () => dialog?.close())",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "EVENT-009",
@@ -9931,9 +10084,15 @@
         "name": "$(\"replenishForm\").addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"replenishForm\").addEventListener(\"submit\", async (event) => { event.preventDefault(); const button = event.currentTarget.querySelector(\"button\"); button.disabled = true; try { const result = await postJson(`/api/controls/tasks/${encodeURIComponent(taskId)}/replenish`, { urls: $(\"replenishUrls\").value, startNow: $(\"replenishStartNow\").checked, }); renderActionResult(\"queueActionResult\", { state: \"completed\", message: result."
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "$(\"replenishForm\").addEventListener(\"submit\", async (event) => { event.preventDefault(); const button = event.currentTarget.querySelector(\"button\"); button.disabled = true; try { const result = await postJson(`/api/controls/tasks/${encodeURIComponent(taskId)}/replenish`, { urls: $(\"replenishUrls\").value, startNow: $(\"replenishStartNow\").checked, }); renderActionResult(\"queueActionResult\", { state: \"completed\", message: result.",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "EVENT-010",
@@ -10379,9 +10538,15 @@
         "name": "$(\"createTemplate\").addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"createTemplate\").addEventListener(\"change\", updateMaterialOptions)"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "$(\"createTemplate\").addEventListener(\"change\", updateMaterialOptions)",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "EVENT-048",
@@ -10390,9 +10555,15 @@
         "name": "$(\"createTaskForm\").addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"createTaskForm\").addEventListener(\"submit\", async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector(\"button[type='submit']\"); button.disabled = true; try { const result = await postJson(\"/api/controls/tasks/create\", { date: $(\"createDate\").value.trim(), templateId: $(\"createTemplate\").value, material: $(\"createMaterial\").value, audioBatch: $(\"createAudioBatch\").value.tr"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "$(\"createTaskForm\").addEventListener(\"submit\", async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector(\"button[type='submit']\"); button.disabled = true; try { const result = await postJson(\"/api/controls/tasks/create\", { date: $(\"createDate\").value.trim(), templateId: $(\"createTemplate\").value, material: $(\"createMaterial\").value, audioBatch: $(\"createAudioBatch\").value.tr",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "EVENT-049",
@@ -10857,10 +11028,16 @@
         "line": 1137,
         "name": "接口/动态路径",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "`/api/controls/tasks/${encodeURIComponent(taskId)}/replenish`"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "`/api/controls/tasks/${encodeURIComponent(taskId)}/replenish`",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "PATH-006",
@@ -10879,10 +11056,16 @@
         "line": 1589,
         "name": "接口/动态路径",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "`/api/controls/tasks/${encodeURIComponent(taskId)}/${action}`"
+        "planned": "V2-2B",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "`/api/controls/tasks/${encodeURIComponent(taskId)}/${action}`",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "PATH-008",
@@ -11095,9 +11278,15 @@
         "name": "接口/动态路径",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "\"/api/controls/tasks/create\""
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2B_TASK_PARITY.md",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
+        ],
+        "detail": "\"/api/controls/tasks/create\"",
+        "pr": 32,
+        "verification": "isolated only; no production/shadow/switch verification"
       },
       {
         "id": "PATH-024",
