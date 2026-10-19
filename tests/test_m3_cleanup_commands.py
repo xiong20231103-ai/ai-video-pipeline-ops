@@ -70,6 +70,7 @@ class CleanupRoutesTests(unittest.TestCase):
  def test_m3_requires_csrf_new_agent_and_feature_switch(self):
   data={'kind':'drafts','ids':['draft-id'],'includeUnknown':False}
   self.assertEqual(403,self.client.post(P+'preview',json=data).status_code)
+  self.assertEqual(409,self.client.post('/api/controls/cloud%2dcleanup/preview',json=data,headers=self.headers).status_code)
   self.assertEqual(409,self.client.post(P+'preview',json=data,headers=self.headers).status_code)
   self.q.cleanup=True
   self.assertEqual(409,self.client.post(P+'preview',json=data,headers=self.headers).status_code)

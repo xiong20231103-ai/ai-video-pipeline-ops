@@ -10,7 +10,7 @@ CLEANUP_PREFIX='/api/controls/cloud-cleanup/'
 CLEANUP_CONFIRM={'drafts':'RECYCLE_SELECTED_CAPCUT_DRAFTS','audio':'RECYCLE_SELECTED_AUDIO_FILES','production':'RECYCLE_SELECTED_PRODUCTION_FILES','pending':'EMPTY_PENDING_DELETE_NOW'}
 def cleanup_body(body,execute=False):
     kind=body.get('kind');limits={'drafts':(500,160),'audio':(2000,80),'production':(5000,80),'pending':(0,0)}
-    if kind not in limits:raise ValueError('invalid_cleanup_kind')
+    if not isinstance(kind,str) or kind not in limits:raise ValueError('invalid_cleanup_kind')
     ids=body.get('ids');count,length=limits[kind]
     if not isinstance(ids,list) or len(ids)>10000 or any(not isinstance(x,str) for x in ids):raise ValueError('invalid_cleanup_ids')
     ids=list(dict.fromkeys(x.strip() for x in ids if x.strip()));body['ids']=ids

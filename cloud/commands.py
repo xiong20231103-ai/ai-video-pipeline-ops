@@ -131,7 +131,7 @@ class CommandQueue:
         current=target_from_summary(snapshot)
         if not current or any(body['expectedTarget'].get(k)!=v for k,v in current.items()):raise CommandError('continue_target_changed')
     def enqueue(self,actor,request_id,target,body,ttl=300,public=False):
-        identity(request_id);job=command(target,body);body=job['body']
+        identity(request_id);job=command(target,body);body=job['body'];target=job['target']
         if public and job['source']!='receiver':raise CommandError('public_route_forbidden',403)
         now=self.store.clock()
         with self.store.db(True) as db:
