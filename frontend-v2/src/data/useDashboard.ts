@@ -149,6 +149,7 @@ export function useDashboard(date: string, batchId: string) {
                 ...old.dashboard,
                 pipeline: data.pipeline,
                 currentProjectStatus: data.currentProjectStatus,
+                currentTaskBox: data.currentTaskBox || null,
                 services: data.services,
                 health: data.health,
                 controls: {

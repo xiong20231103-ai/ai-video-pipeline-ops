@@ -353,3 +353,6 @@
 - 无新增依赖，使用已有shadcn Button/Input；第三方来源/许可证见public/dependencies.json及licenses/。回滚revert本PR和static/v2产物，旧入口保留。
 
 真实无头浏览器：双模式、深浅主题、四尺寸，400 个请求 / 16 次模拟 POST / 32 张截图，全部网络拦截；云端重载后按原 homeCommandId 查询，无重复 POST、CSP 或控制台错误。家里 HTTP 随机编号兼容回退已与旧版一致，并补单测。
+
+追加摘要目标同步修复：旧app.js刷新时state.lastGoodDashboard=data，summary当前任务箱更新/清空后，点击目标随之更新/清空。V2摘要合并现在也同步currentTaskBox（无活动任务显式null），避免按钮显示新箱而expectedTarget仍来自上次full。新增summary-target.test双模式真实hook时钟回归：old→new→null，校验目标与显示selected一致、GET-only。188项前端通过。
+
