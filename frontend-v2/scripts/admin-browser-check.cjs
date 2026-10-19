@@ -23,10 +23,10 @@ const csp="default-src 'self'; script-src 'self' ; style-src 'self' 'unsafe-inli
  }else{
  assert(await page.getByRole('button',{name:'重置全部测试记录'}).isDisabled());
  await page.getByRole('button',{name:'修改密码',exact:true}).click();const old=page.getByLabel('当前密码',{exact:true}),next=page.getByLabel('新密码（至少12个字符）',{exact:true});assert.equal(await old.getAttribute('maxlength'),'256');assert.equal(await next.getAttribute('minlength'),'12');assert.equal(await next.getAttribute('maxlength'),'256');
- await old.fill('synthetic-old');await next.fill('synthetic-new-only');await page.getByRole('button',{name:'保存新密码'}).click();await page.getByText('未修改，请核对密码后重试',{exact:true}).waitFor();
+ await old.fill('synthetic-old');await next.fill('synthetic-new-only');await page.getByRole('button',{name:'保存新密码'}).click();await page.getByLabel('账号管理').getByText('未修改，请核对密码后重试',{exact:true}).waitFor();
  for(const theme of ['dark','light']){if(theme==='light')await page.getByRole('button',{name:'切换到浅色主题'}).click();await snap(theme+'-account');}
  await page.evaluate(()=>{window.location.hash='health'});
- await page.getByText('查看备份状态与已完成备份包',{exact:true}).click();await page.getByRole('button',{name:'校验云端文件',exact:true}).click();await page.getByText('校验失败：fixture-backup',{exact:true}).waitFor();await page.getByRole('button',{name:'请求一次备份',exact:true}).click();await page.getByText('请求已排队；代理配置就绪后执行。稍后刷新列表查看。',{exact:true}).waitFor();assert.equal(await page.getByRole('link',{name:'下载 ledger.enc'}).getAttribute('href'),'/console/backups/fixture-backup/ledger.enc');
+ await page.getByText('查看备份状态与已完成备份包',{exact:true}).click();await page.getByRole('button',{name:'校验云端文件',exact:true}).click();await page.locator('[data-panel="异地备份（台账与配置）"]').getByText('校验失败：fixture-backup',{exact:true}).waitFor();await page.getByRole('button',{name:'请求一次备份',exact:true}).click();await page.locator('[data-panel="异地备份（台账与配置）"]').getByText('请求已排队；代理配置就绪后执行。稍后刷新列表查看。',{exact:true}).waitFor();assert.equal(await page.getByRole('link',{name:'下载 ledger.enc'}).getAttribute('href'),'/console/backups/fixture-backup/ledger.enc');
  for(const theme of ['light','dark']){if(theme==='dark')await page.getByRole('button',{name:'切换到深色主题'}).click();await snap(theme+'-backup');}
  assert.equal(await page.evaluate(()=>Object.values(window.localStorage).some(x=>/synthetic-old|synthetic-new-only/.test(x))),false);
  }

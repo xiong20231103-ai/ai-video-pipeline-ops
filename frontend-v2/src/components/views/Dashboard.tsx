@@ -1,3 +1,4 @@
+import { CountUp } from "@/components/react-bits/Motion";
 import ResetAction from "./ResetAction";
 import ContinueActions from "./ContinueActions";
 import FileManagers from "./FileManagers";
@@ -153,6 +154,7 @@ function Health({ data }: { data: Row }) {
     );
   return (
     <Panel
+      motionId="system-health"
       title={
         !data.updatedAt
           ? "系统健康 · 状态暂不可用"
@@ -644,8 +646,11 @@ function Overview({
       <div className="resource-grid">
         {metrics.map((x) => (
           <Panel key={x.key} title={x.label}>
-            <strong className="resource-value" data-legacy={`${x.key}Value`}>
-              {x.value}
+            <strong className="resource-value">
+              <span className="sr-only" data-legacy={`${x.key}Value`}>
+                {x.value}
+              </span>
+              <CountUp value={x.value} />
             </strong>
             <Progress value={x.progress} />
             <small data-legacy={`${x.key}Note`}>{x.note}</small>

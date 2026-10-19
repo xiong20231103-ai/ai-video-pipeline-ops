@@ -1,3 +1,4 @@
+import { useFeedback } from "@/data/use-feedback";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ export default function AccountActions({
     [message, setMessage] = useState(""),
     formRef = useRef<HTMLFormElement>(null),
     lock = useRef(false);
+  useFeedback(message);
   async function logout() {
     if (!reader || lock.current) return;
     lock.current = true;

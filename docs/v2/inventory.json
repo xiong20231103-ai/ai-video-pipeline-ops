@@ -3771,7 +3771,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/home-cleanup.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/cleanup.test.tsx",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/home-cleanup-browser-check.cjs"
         ],
         "detail": "async function postJson(url, payload, options = {}) { if (window.opsCloudPostJson) return window.opsCloudPostJson(url, payload); const timeoutMs = Number.isFinite(Number(options.timeoutMs)) ? Math.max(1000, Number(options.timeoutMs)) : 10000; const controller = new AbortController(); const timer = window.setTimeout(() => controller.abort(), timeoutMs); try { const response = await fetch(url, { method: \"POST\", headers: { \"Conte",
         "excerptStartLine": 1087,
@@ -3792,7 +3795,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/home-cleanup.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/cleanup.test.tsx",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/home-cleanup-browser-check.cjs"
         ],
         "detail": "() => controller.abort()",
         "excerptStartLine": 1093,
@@ -4715,7 +4721,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "function renderActionResult(id, result = {}) { const node = $(id); const stateName = String(result.state || \"idle\"); node.className = `action-result ${stateName === \"completed\" ? \"completed\" : stateName === \"failed\" ? \"failed\" : \"neutral\"}`; node.textContent = `${result.message || \"尚无操作记录\"}${result.updatedAt ? ` · ${formatDateTime(result.updatedAt)}` : \"\"}`; }",
         "excerptStartLine": 1549,
@@ -4736,7 +4746,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "function renderHistoricalCloudVerification(result = {}) { const stateName = String(result.state || \"idle\"); const total = Number(result.total ?? result.eligible ?? 0); const processed = Number(result.processed || 0); const verified = Number(result.verified || 0); const failed = Number(result.failed || 0); const summary = total ? ` · ${processed}/${total}，通过 ${verified}，失败 ${failed}` : \"\"; renderActionResult(\"historicalCloudVer",
         "excerptStartLine": 1556,
@@ -4869,7 +4883,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "event => { state.date = event.target.value; state.historyExplicit = true; refresh(); }",
         "excerptStartLine": 1714,
@@ -4890,7 +4907,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "event => { state.batchId = event.target.value; state.date = \"\"; state.historyExplicit = Boolean(state.batchId); refresh(); }",
         "excerptStartLine": 1719,
@@ -4911,7 +4931,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "event => { state.step5Filter = event.target.value; renderTasks(state.step5Items); }",
         "excerptStartLine": 1725,
@@ -5893,7 +5916,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。\")) return; if (!window.confirm(\"再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。\")) return; button.disabled = true; button.textContent = \"正在备份并重置…\"; try { const result = await postJson(\"/api/controls/testing/reset\", { confirm: \"RESET_TEST_RECORDS\" }); state.date = \"\"; state.batchId = \"\"; renderActionResult(\"resetR",
         "excerptStartLine": 2124,
@@ -5980,7 +6005,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "() => { const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupBu",
         "pr": 37,
@@ -6001,7 +6029,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "event => { if (!event.target.closest('[data-cloud-account]') && !window.opsCloudAcceptForm?.(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); } }",
         "pr": 37,
@@ -6229,7 +6261,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async (input, init = {}) => { const url = new URL(input instanceof Request ? input.url : input, location.href); if (url.origin !== location.origin || !url.pathname.startsWith('/api/')) return original(input, init); const method = (init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase(); if (method !== 'GET') {if(window.opsCloudWriteFetch)return window.opsCloudWriteFetch(url.href,init);throw new Error('写",
         "pr": 37,
@@ -6273,7 +6308,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "() => { // The home H4 timer measures browser reception. Cloud reception is not a // fresh home scan: derive displayed age from cloud cache/source ages. const paintCloudAge=()=>{ if(!dashboardSample||typeof state==='undefined')return; const sample=dashboardSample;const since=(performance.now()-sample.received)/1000; const age=sample.age+since;const known=sample.sourceAge!==null&&Number.isFinite(sample.sourceAge)&&sample.source",
         "pr": 37,
@@ -6317,7 +6355,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async function credentials() { const response = await original('/auth/session'); if (!response.ok) throw new Error(); return response.json(); }",
         "excerptStartLine": 106,
@@ -6338,7 +6378,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async () => { const info = await credentials(); await original('/auth/logout',{method:'POST',headers:{'X-CSRF-Token':info.csrf}}); location.assign('/login'); }",
         "excerptStartLine": 107,
@@ -6359,7 +6401,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "() => { if (account.querySelector('form')) return; const form = document.createElement('form'); for (const [name,label] of [['oldPassword','当前密码'],['newPassword','新密码（至少12个字符）']]) { const input = document.createElement('input'); input.type='password'; input.name=name; input.required=true; input.placeholder=label; input.maxLength=256; input.autocomplete=name==='newPassword'?'new-password':'current-password'; if(name==='newPassw",
         "excerptStartLine": 108,
@@ -6380,7 +6424,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async event=>{event.preventDefault();submit.disabled=true;try{const info=await credentials();const response=await original('/auth/password',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(Object.fromEntries(new FormData(form)))});if(response.ok){form.reset();location.assign('/login');}else alert('未修改，请核对密码后重试');}finally{submit.disabled=false;}}",
         "excerptStartLine": 115,
@@ -6401,7 +6447,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "()=>{ const buttons=[...document.querySelectorAll('button[onclick], button[data-cloud-control], #createTaskForm button, #replenishForm button[type=\"submit\"]'),...writeIds.map(id=>document.getElementById(id)).filter(Boolean)]; for(const button of buttons) { const action=/^controlTask\\(this, '(start|cancel)'\\)$/.exec(button.getAttribute('onclick')||''); if(action){button.dataset.cloudControl=action[1];button.removeAttribute('onc",
         "excerptStartLine": 119,
@@ -6422,7 +6472,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "id=>document.getElementById(id)",
         "excerptStartLine": 120,
@@ -6443,7 +6497,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async function pollHealth() { try { const response=await original('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}}); if(response.status===401){location.assign('/login');return;} if(!response.ok)throw new Error(); const health=await response.json(); const text=health.heartbeatAgeSeconds===null?'等待家里代理部署/连接':!health.agentOnline?'家里离线，距心跳 '+Math.floor(health.heartbeatAgeSeconds)+' 秒'",
         "excerptStartLine": 132,
@@ -6464,7 +6521,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "()=>{ if(typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'){ state.fullDashboardLoaded=false;void refresh(); } }",
         "excerptStartLine": 147,
@@ -6485,7 +6545,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "() => { const list=sourcePanel.querySelector('ul'); list.replaceChildren(); for (const [key,sample] of samples) { const age=Math.floor(sample.age+(performance.now()-sample.received)/1000); const row=document.createElement('li'); const parsed=new URL(key,location.origin); const names={'/api/health':'递交健康','/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/history':'历史任务箱',",
         "excerptStartLine": 152,
@@ -7660,7 +7722,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/console-admin.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "() => { const api = async (path, method = 'GET') => { const headers = {}; if (method !== 'GET') { const session = await fetch('/auth/session').then(r => r.json()); headers['X-CSRF-Token'] = session.csrf; } const response = await fetch(path, {method, headers}); if (!response.ok) throw new Error(`请求失败 (${response.status})`); return response.json(); }; const element = (tag, text) => { const node = document.createElement(tag); if ",
         "excerptStartLine": 2,
@@ -7681,7 +7745,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/console-admin.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async (path, method = 'GET') => { const headers = {}; if (method !== 'GET') { const session = await fetch('/auth/session').then(r => r.json()); headers['X-CSRF-Token'] = session.csrf; } const response = await fetch(path, {method, headers}); if (!response.ok) throw new Error(`请求失败 (${response.status})`); return response.json(); }",
         "excerptStartLine": 3,
@@ -7702,7 +7768,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/console-admin.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "r => r.json()",
         "excerptStartLine": 6,
@@ -7723,7 +7791,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "(tag, text) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; return node; }",
         "excerptStartLine": 13,
@@ -7744,7 +7814,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async (body, message) => { try { const result = await api('/console/backups'); body.replaceChildren(); body.append(element('p', `仅台账和配置恢复；视频、草稿不在备份中。已用及预留 ${(result.usedReservedBytes / 1048576).toFixed(1)} MiB / ${(result.quotaBytes / 1e9).toFixed(0)} GB。`)); const phase = result.agentState?.phase || 'waiting_configuration'; const phases = {waiting_configuration: '等待本机配置恢复密钥', creating: '正在生成', uploading: '正在上传', completed: '最",
         "excerptStartLine": 18,
@@ -7765,7 +7837,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "p => p.name",
         "excerptStartLine": 32,
@@ -7786,7 +7860,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async () => { verify.disabled = true; try { const checked = await api(`/console/backups/${item.packageId}/verify`, 'POST'); message.textContent = checked.verified ? `校验通过：${item.packageId}` : `校验失败：${item.packageId}`; } catch (error) { message.textContent = error.message; } finally { verify.disabled = false; } }",
         "excerptStartLine": 39,
@@ -7807,7 +7883,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "e => `${new Date(e.at * 1000).toLocaleString()} ${e.code}`",
         "excerptStartLine": 47,
@@ -7828,7 +7906,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "() => { const panel = element('details'); panel.id = 'cloudBackupPanel'; panel.style.cssText = 'margin:16px;padding:12px;border:1px solid #888;border-radius:8px;overflow-wrap:anywhere'; panel.append(element('summary', '异地备份（台账与配置）')); const refresh = element('button', '刷新列表'), request = element('button', '请求一次备份'); refresh.type = request.type = 'button'; const message = element('p'), body = element('div'); message.setAttribute",
         "excerptStartLine": 50,
@@ -7849,7 +7929,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "() => show(body, message)",
         "excerptStartLine": 57,
@@ -7870,7 +7952,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async () => { request.disabled = true; try { await api('/console/backups/request', 'POST'); message.textContent = '请求已排队；代理配置就绪后执行。稍后刷新列表查看。'; } catch (error) { message.textContent = error.message; } finally { request.disabled = false; } }",
         "excerptStartLine": 58,
@@ -7891,7 +7975,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "() => { if (panel.open) show(body, message); }",
         "excerptStartLine": 65,
@@ -8036,7 +8122,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/home-cleanup.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/cleanup.test.tsx",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/home-cleanup-browser-check.cjs"
         ],
         "detail": "fetch(url, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), signal: controller.signal, })",
         "pr": 37,
@@ -8360,7 +8449,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "postJson(\"/api/controls/testing/reset\", { confirm: \"RESET_TEST_RECORDS\" })",
         "pr": 37,
@@ -8455,7 +8546,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "original('/auth/session')",
         "pr": 37,
@@ -8473,7 +8566,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "original('/auth/logout',{method:'POST',headers:{'X-CSRF-Token':info.csrf}})",
         "pr": 37,
@@ -8491,7 +8586,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "original('/auth/password',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(Object.fromEntries(new FormData(form)))})",
         "pr": 37,
@@ -8509,7 +8606,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "original('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}})",
         "pr": 37,
@@ -8768,7 +8868,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/console-admin.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "fetch('/auth/session')",
         "pr": 37,
@@ -8786,7 +8888,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/console-admin.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "fetch(path, {method, headers})",
         "pr": 37,
@@ -8804,7 +8908,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "api('/console/backups')",
         "pr": 37,
@@ -8822,7 +8928,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "api(`/console/backups/${item.packageId}/verify`, 'POST')",
         "pr": 37,
@@ -8840,7 +8948,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "api('/console/backups/request', 'POST')",
         "pr": 37,
@@ -9242,7 +9352,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "window.confirm(\"确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。\")",
         "pr": 37,
@@ -9260,7 +9372,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "window.confirm(\"再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。\")",
         "pr": 37,
@@ -9278,7 +9392,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "alert('未修改，请核对密码后重试')",
         "pr": 37,
@@ -10449,7 +10565,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "button.disabled = running",
         "pr": 37,
@@ -10541,7 +10661,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "state.refreshBusy = false",
         "pr": 37,
@@ -11327,7 +11450,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "button.disabled = true",
         "pr": 37,
@@ -11345,7 +11470,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "button.disabled = false",
         "pr": 37,
@@ -11457,7 +11584,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "button.disabled = true",
         "pr": 37,
@@ -11475,7 +11606,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "submit.disabled=true",
         "pr": 37,
@@ -11493,7 +11626,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "submit.disabled=false",
         "pr": 37,
@@ -11511,7 +11646,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "!allowed",
         "pr": 37,
@@ -11529,7 +11668,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "!button.disabled",
         "pr": 37,
@@ -11547,7 +11690,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "button.disabled=true",
         "pr": 37,
@@ -11565,7 +11712,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "button.disabled=false",
         "pr": 37,
@@ -11583,7 +11734,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'",
         "pr": 37,
@@ -11601,7 +11755,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'",
         "pr": 37,
@@ -12408,7 +12565,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "verify.disabled = true",
         "pr": 37,
@@ -12426,7 +12585,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "verify.disabled = false",
         "pr": 37,
@@ -12444,7 +12605,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "request.disabled = true",
         "pr": 37,
@@ -12462,7 +12625,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "request.disabled = false",
         "pr": 37,
@@ -12508,7 +12673,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/App.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/App.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "class=\"topbar\" | OP 家庭 AI 视频生产线 监控与安全控制中心 正在",
         "pr": 37,
@@ -12526,7 +12693,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "id=\"runtimeGuidance\" class=\"runtime-guidance hidden\" aria-live=\"polite\" | 当前项目需要补链<",
         "pr": 37,
@@ -12544,7 +12715,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "id=\"nextAction\" class=\"runtime-guidance needs-action hidden\" aria-live=\"polite\" | 当前项目需要补链 -- <div id=\"gapQuickActions\" class=\"gap-quick-acti",
         "pr": 37,
@@ -12579,7 +12754,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"hero panel\" | 当前生产状态 正在读取生产线 请稍候，Dashboard 正在汇总全部环节状态。 远程总控 可确",
         "pr": 37,
@@ -12597,7 +12776,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "class=\"panel taskbox-panel\" aria-label=\"任务箱总览\" | TASK BOX 正在读取任务箱 任务箱 </l",
         "pr": 37,
@@ -12615,7 +12797,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "id=\"taskBoxSelect\" aria-label=\"选择任务箱\" | 本次项目组合：-- 项目进度 0 / 0 </div",
         "pr": 37,
@@ -12633,7 +12818,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "id=\"taskBoxHistory\" class=\"taskbox-history hidden\" | 撤回历史 0 <section id=\"healthPanel\" class=\"panel health-pan",
         "pr": 37,
@@ -12651,7 +12839,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "id=\"healthPanel\" class=\"panel health-panel\" aria-label=\"系统健康\" aria-live=\"polite\" | HEALTH 系统健康 正在读取… <section class=\"metric",
         "pr": 37,
@@ -12669,7 +12861,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"metrics-grid\" aria-label=\"系统资源\" | C CPU -- 处理器占用 <ar",
         "pr": 37,
@@ -12687,7 +12883,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"metric-card\" | C CPU -- 处理器占用 <div class=",
         "pr": 37,
@@ -12705,7 +12905,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"metric-card\" | M 内存 -- 正在读取 <d",
         "pr": 37,
@@ -12723,7 +12927,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"metric-card\" | G GPU -- 正在检测显卡 <div clas",
         "pr": 37,
@@ -12741,7 +12949,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"metric-card\" | D 成片磁盘 -- 正在读取 <div cl",
         "pr": 37,
@@ -12759,7 +12971,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"metric-card\" | N 网络 -- 正在检查网卡",
         "pr": 37,
@@ -12777,7 +12993,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "class=\"panel pipeline-panel\" | VIDEO PIPELINE 全流程状态 查看日期 <select id=\"pipeline",
         "pr": 37,
@@ -12795,7 +13014,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "id=\"pipelineDateSelect\" aria-label=\"全流程查看日期\" | 工作台 · 检查中 语音客户端 · 检查中 <s",
         "pr": 37,
@@ -12813,7 +13035,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "id=\"stageDownload\" class=\"stage-monitor\" | 下载 / 去字幕 等待 等待工作台状态 0 / 0",
         "pr": 37,
@@ -12831,7 +13056,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "id=\"stageVoice\" class=\"stage-monitor\" | 批量语音 等待 等待语音任务 0 / 0 <str",
         "pr": 37,
@@ -12849,7 +13077,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "id=\"stageStitch\" class=\"stage-monitor\" | AI 素材拼接 等待 等待拼接任务 0 / 0 <",
         "pr": 37,
@@ -12867,7 +13098,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "id=\"stageCapcut\" class=\"stage-monitor\" | CapCut 自动剪辑 等待 等待第五步任务 0 / 0 <article id=\"stageUpload\" class=\"stage-monitor di",
         "pr": 37,
@@ -12885,7 +13119,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "id=\"stageUpload\" class=\"stage-monitor disabled\" | 最终成片上传 未配置 上传服务尚未接入 0 / 0 <section id=\"downloadFailurePanel\" class",
         "pr": 37,
@@ -12903,7 +13140,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "id=\"downloadFailurePanel\" class=\"download-failure-panel hidden\" aria-live=\"polite\" | 下载 / 去字幕失败任务 0 条 这些链接未进入后续语音、拼接与剪辑；补链或重试后再继续。",
         "pr": 37,
@@ -12921,7 +13161,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"panel safety-panel\" aria-label=\"生产安全\" | PRODUCTION SAFETY 生产安全 正在读取确定性检查… <div id=\"safetyGrid\" class=\"safety",
         "pr": 37,
@@ -12939,7 +13183,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"safety-card neutral\" | 去字幕质检 正在读取… 自动安全恢复 正在读取… 成片质检 正在读取… </arti",
         "pr": 37,
@@ -12957,7 +13205,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"safety-card neutral\" | 自动安全恢复 正在读取… 成片质检 正在读取… 版本与配置 正在读取… </arti",
         "pr": 37,
@@ -12975,7 +13227,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"safety-card neutral\" | 成片质检 正在读取… 版本与配置 正在读取… 云端对账 正在读取… </articl",
         "pr": 37,
@@ -12993,7 +13249,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"safety-card neutral\" | 版本与配置 正在读取… 云端对账 正在读取… 磁盘预测 正在读取… </articl",
         "pr": 37,
@@ -13011,7 +13271,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"safety-card neutral\" | 云端对账 正在读取… 磁盘预测 正在读取… 登录状态 正在读取… </article",
         "pr": 37,
@@ -13029,7 +13293,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"safety-card neutral\" | 磁盘预测 正在读取… 登录状态 正在读取… 任务身份 正在读取… </article",
         "pr": 37,
@@ -13047,7 +13315,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"safety-card neutral\" | 登录状态 正在读取… 任务身份 正在读取… 故障证据 正在读取… </article",
         "pr": 37,
@@ -13065,7 +13337,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"safety-card neutral\" | 任务身份 正在读取… 故障证据 正在读取… 本区域全部来自本机确定性检查，正常查询消耗 0 模型 Token。 <",
         "pr": 37,
@@ -13083,7 +13359,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"safety-card neutral\" | 故障证据 正在读取… 本区域全部来自本机确定性检查，正常查询消耗 0 模型 Token。",
         "pr": 37,
@@ -13101,7 +13381,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "class=\"workspace-grid\" | STEP 5 TASKS 第五步任务与进度 <span id=\"t",
         "pr": 37,
@@ -13119,7 +13402,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "id=\"step5ProjectFilter\" aria-label=\"筛选第五步项目\" | 全部项目 总任务 0",
         "pr": 37,
@@ -13137,7 +13423,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"side-column\" | CURRENT 当前第五步任务 等待 <",
         "pr": 37,
@@ -13155,7 +13445,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"panel current-card\" | CURRENT 当前第五步任务 等待 日期 -- <d",
         "pr": 37,
@@ -13173,7 +13467,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"panel upload-card\" | ↥ UPLOAD SERVICE 正在读取百度网盘状态 等待工作台上传服务写入状态。 检查中 <di",
         "pr": 37,
@@ -13225,7 +13523,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"panel draft-manager-card\" | CAPCUT DRAFTS CapCut 草稿管理 未读取",
         "pr": 37,
@@ -13243,7 +13545,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "id=\"openDraftManagerButton\" class=\"primary wide\" type=\"button\" | 管理 CapCut 草稿 尚未手动清理 CapCut 草稿",
         "pr": 37,
@@ -13261,7 +13565,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "class=\"panel audio-manager-card\" | AUDIO FILES 音频文件管理 未读取 <p clas",
         "pr": 37,
@@ -13279,7 +13585,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "id=\"openAudioManagerButton\" class=\"primary wide\" type=\"button\" | 管理音频文件 尚未手动清理音频",
         "pr": 37,
@@ -13297,7 +13605,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "class=\"panel production-manager-card\" | PRODUCTION FILES 生产文件管理 未读取",
         "pr": 37,
@@ -13315,7 +13625,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "id=\"openProductionManagerButton\" class=\"primary wide\" type=\"button\" | 管理生产文件 尚未手动清理生产文件 待删区：读取中… <button id=\"emptyPendingDeleteButton\" clas",
         "pr": 37,
@@ -13333,7 +13645,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "id=\"emptyPendingDeleteButton\" class=\"danger wide hidden\" type=\"button\" | 立即清空待删区 QUEUE CONTROL 任务确认与撤回 <p class=\"queue-contro",
         "pr": 37,
@@ -13351,7 +13665,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "class=\"panel queue-control-card\" | QUEUE CONTROL 任务确认与撤回 只影响尚未开始的队列记录；不会删除视频、音频或素材。 <div id=\"queueActionResult\" class=\"act",
         "pr": 37,
@@ -13369,7 +13685,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "id=\"continueCurrentButton\" class=\"primary wide\" type=\"button\" | 安全继续当前项目 由家里工作台先核对正式清单；已有有效产物会跳过，数量不一致时会安全暂停。 尚未执行安全继续对账",
         "pr": 37,
@@ -13387,7 +13705,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "id=\"continueResult\" class=\"reconcile-result neutral\" | 尚未执行安全继续对账 重置全部测试记录 仅把工作台、接收器、Dashboard 与 CapCut 的任务记录备份",
         "pr": 37,
@@ -13405,7 +13725,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "id=\"resetTestRecordsButton\" class=\"danger wide\" type=\"button\" | 重置全部测试记录 仅把工作台、接收器、Dashboard 与 CapCut 的任务记录备份后归零；不会删除媒体、素材、配置或校准。 尚未重置测试记录 <details class=\"web-task",
         "pr": 37,
@@ -13423,7 +13745,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "class=\"web-task-form\" | 新建项目任务 日期 项目<select id=\"createTemplate\" name=\"templateId\" requi",
         "pr": 37,
@@ -13611,7 +13936,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"panel project-gaps-card\" | PROJECT STATUS 项目状态 正在读取项目状态… <section",
         "pr": 37,
@@ -13629,7 +13958,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/Dashboard.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs",
+          "frontend-v2/scripts/upload-browser-check.cjs"
         ],
         "detail": "class=\"panel events-card\" | RECENT EVENTS 最近事件 正在读取事件… <dialog",
         "pr": 37,
@@ -14564,7 +14897,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/App.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/App.test.tsx",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": " | AI视频生产线 OPS · Tailscale安全控制 --",
         "pr": 37,
@@ -14822,7 +15157,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/home-cleanup.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/cleanup.test.tsx",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/home-cleanup-browser-check.cjs"
         ],
         "detail": "window.setTimeout(() => controller.abort(), timeoutMs)",
         "pr": 37,
@@ -14914,7 +15252,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "$(\"pipelineDateSelect\").addEventListener(\"change\", event => { state.date = event.target.value; state.historyExplicit = true; refresh(); })",
         "pr": 37,
@@ -14932,7 +15273,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "$(\"taskBoxSelect\")?.addEventListener(\"change\", event => { state.batchId = event.target.value; state.date = \"\"; state.historyExplicit = Boolean(state.batchId); refresh(); })",
         "pr": 37,
@@ -14950,7 +15294,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/TaskViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/parity.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/scripts/task-browser-check.cjs"
         ],
         "detail": "$(\"step5ProjectFilter\")?.addEventListener(\"change\", event => { state.step5Filter = event.target.value; renderTasks(state.step5Items); })",
         "pr": 37,
@@ -15521,7 +15868,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "$(\"resetTestRecordsButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。\")) return; if (!window.confirm(\"再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。\")) return; button.disabled = true; button.textContent = \"正在备份并重置…\"; try { const result = await postJson(\"/api/controls/testing/reset\", { confirm: \"RESET_TEST_RECORDS\" }); state.da",
         "pr": 37,
@@ -15670,7 +16019,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "(() => { const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupB",
         "pr": 37,
@@ -15688,7 +16040,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "document.addEventListener('submit', event => { if (!event.target.closest('[data-cloud-account]') && !window.opsCloudAcceptForm?.(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); } }, true)",
         "pr": 37,
@@ -15746,7 +16102,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "document.addEventListener('DOMContentLoaded', () => { // The home H4 timer measures browser reception. Cloud reception is not a // fresh home scan: derive displayed age from cloud cache/source ages. const paintCloudAge=()=>{ if(!dashboardSample||typeof state==='undefined')return; const sample=dashboardSample;const since=(performance.now()-sample.received)/1000; const age=sample.age+since;const known=sample.sourceAge!==null&&Nu",
         "pr": 37,
@@ -15764,7 +16123,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "setInterval(paintCloudAge,1000)",
         "pr": 37,
@@ -15782,7 +16144,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "window.addEventListener('ops-cloud-write-state',disableWrites)",
         "pr": 37,
@@ -15800,7 +16166,11 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/upload-writer.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/test/uploads.test.tsx",
+          "frontend-v2/src/test/tasks.test.tsx",
+          "frontend-v2/src/test/cloud-cleanup.test.tsx",
+          "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "new MutationObserver(disableWrites).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']})",
         "pr": 37,
@@ -15818,7 +16188,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "setInterval(pollHealth,5000)",
         "pr": 37,
@@ -15836,7 +16209,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "setInterval(()=>{ if(typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'){ state.fullDashboardLoaded=false;void refresh(); } },60000)",
         "pr": 37,
@@ -15854,7 +16230,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "setInterval(() => { const list=sourcePanel.querySelector('ul'); list.replaceChildren(); for (const [key,sample] of samples) { const age=Math.floor(sample.age+(performance.now()-sample.received)/1000); const row=document.createElement('li'); const parsed=new URL(key,location.origin); const names={'/api/health':'递交健康','/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/histo",
         "pr": 37,
@@ -16047,7 +16425,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/console-admin.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "(() => { const api = async (path, method = 'GET') => { const headers = {}; if (method !== 'GET') { const session = await fetch('/auth/session').then(r => r.json()); headers['X-CSRF-Token'] = session.csrf; } const response = await fetch(path, {method, headers}); if (!response.ok) throw new Error(`请求失败 (${response.status})`); return response.json(); }; const element = (tag, text) => { const node = document.createElement(tag); if",
         "pr": 37,
@@ -16065,7 +16445,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "document.addEventListener('DOMContentLoaded', () => { const panel = element('details'); panel.id = 'cloudBackupPanel'; panel.style.cssText = 'margin:16px;padding:12px;border:1px solid #888;border-radius:8px;overflow-wrap:anywhere'; panel.append(element('summary', '异地备份（台账与配置）')); const refresh = element('button', '刷新列表'), request = element('button', '请求一次备份'); refresh.type = request.type = 'button'; const message = element('p'",
         "pr": 37,
@@ -16083,7 +16465,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "panel.addEventListener('toggle', () => { if (panel.open) show(body, message); })",
         "pr": 37,
@@ -16496,7 +16880,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/ResetAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "\"/api/controls/testing/reset\"",
         "pr": 37,
@@ -16611,7 +16997,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/auth/session'",
         "pr": 37,
@@ -16629,7 +17017,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/auth/logout'",
         "pr": 37,
@@ -16647,7 +17037,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/AccountActions.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/auth/password'",
         "pr": 37,
@@ -16665,7 +17057,10 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/src/data/client.test.ts",
+          "frontend-v2/src/test/queue-wait.test.ts",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/console/status'",
         "pr": 37,
@@ -16683,7 +17078,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/health'",
         "pr": 37,
@@ -16701,7 +17098,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/dashboard'",
         "pr": 37,
@@ -16719,7 +17118,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/dashboard/summary'",
         "pr": 37,
@@ -16737,7 +17138,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/task-boxes/current'",
         "pr": 37,
@@ -16755,7 +17158,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/task-boxes/history'",
         "pr": 37,
@@ -16773,7 +17178,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/controls/tasks'",
         "pr": 37,
@@ -16791,7 +17198,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/controls/templates'",
         "pr": 37,
@@ -16809,7 +17218,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/safety'",
         "pr": 37,
@@ -16827,7 +17238,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/project-gaps'",
         "pr": 37,
@@ -16845,7 +17258,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/pipeline'",
         "pr": 37,
@@ -16863,7 +17278,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/controls/continue-current/status'",
         "pr": 37,
@@ -16881,7 +17298,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/control-commands/current'",
         "pr": 37,
@@ -16899,7 +17318,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/api/subtitle-verification/current'",
         "pr": 37,
@@ -17258,7 +17679,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/console-admin.ts",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/auth/session'",
         "pr": 37,
@@ -17276,7 +17699,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/console/backups'",
         "pr": 37,
@@ -17294,7 +17719,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/CloudViews.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "`/console/backups/${item.packageId}/${name}`",
         "pr": 37,
@@ -17312,7 +17739,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "`/console/backups/${item.packageId}/verify`",
         "pr": 37,
@@ -17330,7 +17759,9 @@
         "evidence": [
           "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/components/views/BackupAction.tsx",
-          "frontend-v2/src/test/admin.test.tsx"
+          "frontend-v2/src/test/admin.test.tsx",
+          "frontend-v2/scripts/admin-browser-check.cjs",
+          "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "'/console/backups/request'",
         "pr": 37,
@@ -17390,5 +17821,14 @@
         "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       }
     ]
+  },
+  "scopeDecision": {
+    "date": "2026-10-20",
+    "implemented": 878,
+    "total": 900,
+    "deferred": 22,
+    "deferredReason": "User keeps existing /login including invitation registration and 401 redirect; V2-4 requires separate approved cloud PR",
+    "productionShadowPassed": false,
+    "defaultEntrySwitched": false
   }
 }

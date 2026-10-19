@@ -1,3 +1,4 @@
+import { useFeedback } from "@/data/use-feedback";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { consoleAdminFor } from "@/data/console-admin";
@@ -12,6 +13,7 @@ export default function BackupAction({
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
     lock = useRef(false);
+  useFeedback(message);
   async function run() {
     if (!reader || lock.current) return;
     lock.current = true;

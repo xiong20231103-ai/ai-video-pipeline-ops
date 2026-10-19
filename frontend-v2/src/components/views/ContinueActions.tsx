@@ -1,3 +1,4 @@
+import { useFeedback } from "@/data/use-feedback";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { safeContinueFor } from "@/data/safe-continue";
@@ -24,6 +25,7 @@ export default function ContinueActions({
   }, []);
   const controller = reader ? safeContinueFor(reader) : null,
     state = controller?.state(object(snapshot.dashboard), snapshot.status);
+  useFeedback(error);
   async function submit() {
     if (!controller || busy) return;
     setBusy(true);
