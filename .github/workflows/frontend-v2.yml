@@ -1,0 +1,42 @@
+name: Dashboard V2
+
+on:
+  push:
+    branches: [main]
+    paths: [frontend-v2/**, static/v2/**, .github/workflows/frontend-v2.yml]
+  pull_request:
+    paths: [frontend-v2/**, static/v2/**, .github/workflows/frontend-v2.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-v2:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: npm
+          cache-dependency-path: frontend-v2/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run size
+      - run: npm run check:build
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/browser-check.cjs
+        env:
+          V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dashboard-v2-browser-evidence
+          path: ${{ runner.temp }}/dashboard-v2-evidence
+          if-no-files-found: ignore

@@ -1,0 +1,508 @@
+{
+  "verified": true,
+  "productionAccess": false,
+  "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'",
+  "screenshots": [
+    {
+      "name": "dark-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "theme": "dark",
+      "overflow": false,
+      "background": "rgb(11, 13, 18)",
+      "card": "rgb(24, 27, 34)",
+      "inlineScripts": 0
+    },
+    {
+      "name": "light-1920x1080.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "theme": "light",
+      "overflow": false,
+      "background": "rgb(244, 245, 248)",
+      "card": "rgb(255, 255, 255)",
+      "inlineScripts": 0
+    },
+    {
+      "name": "dark-1440x900.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "overflow": false,
+      "background": "rgb(11, 13, 18)",
+      "card": "rgb(24, 27, 34)",
+      "inlineScripts": 0
+    },
+    {
+      "name": "light-1440x900.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "overflow": false,
+      "background": "rgb(244, 245, 248)",
+      "card": "rgb(255, 255, 255)",
+      "inlineScripts": 0
+    },
+    {
+      "name": "dark-1366x768.png",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "theme": "dark",
+      "overflow": false,
+      "background": "rgb(11, 13, 18)",
+      "card": "rgb(24, 27, 34)",
+      "inlineScripts": 0
+    },
+    {
+      "name": "light-1366x768.png",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "theme": "light",
+      "overflow": false,
+      "background": "rgb(244, 245, 248)",
+      "card": "rgb(255, 255, 255)",
+      "inlineScripts": 0
+    },
+    {
+      "name": "dark-375x812.png",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "overflow": false,
+      "background": "rgb(11, 13, 18)",
+      "card": "rgb(24, 27, 34)",
+      "inlineScripts": 0
+    },
+    {
+      "name": "light-375x812.png",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "overflow": false,
+      "background": "rgb(244, 245, 248)",
+      "card": "rgb(255, 255, 255)",
+      "inlineScripts": 0
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/index.html"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-By7Wph5O.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/index-DGDyMcHW.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-B5VVLR7l.js"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/assets/SpotlightCard-DYVtI0ff.css"
+    },
+    {
+      "method": "GET",
+      "path": "/static/v2/mark.svg"
+    }
+  ],
+  "errors": [],
+  "violations": [],
+  "failures": []
+}

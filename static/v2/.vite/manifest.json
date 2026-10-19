@@ -1,0 +1,26 @@
+{
+  "index.html": {
+    "file": "assets/index-By7Wph5O.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "dynamicImports": [
+      "src/components/react-bits/SpotlightCard.tsx"
+    ],
+    "css": [
+      "assets/index-DGDyMcHW.css"
+    ]
+  },
+  "src/components/react-bits/SpotlightCard.tsx": {
+    "file": "assets/SpotlightCard-B5VVLR7l.js",
+    "name": "SpotlightCard",
+    "src": "src/components/react-bits/SpotlightCard.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/SpotlightCard-DYVtI0ff.css"
+    ]
+  }
+}
