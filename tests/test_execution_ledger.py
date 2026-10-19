@@ -82,6 +82,32 @@ class ExecutionTests(unittest.TestCase):
         with patch.object(worker,'home_post') as home:worker.process(self.job);home.assert_not_called()
         self.assertEqual('invalid_or_expired',json.loads(self.ledger.pending()['result'])['reason'])
 
+    def test_identity_and_content_conflicts_are_rejected_without_home_post(self):
+        worker,agent=self.worker();agent.cloud.return_value={'recorded':True}
+        changed={**self.job,**command('/api/controls/upload/verify-history',{})}
+        self.ledger.receive(self.job)
+        with patch.object(worker,'home_post') as home:
+            worker.process({**self.job,'ledgerId':'f'*32})
+            worker.process(changed)
+            home.assert_not_called()
+        reasons=[json.loads(line)['reason'] for line in worker.rejection_path.read_text(encoding='utf-8').splitlines()]
+        self.assertEqual(['agent_rejected_identity','agent_rejected_contract'],reasons)
+        self.assertEqual(2,agent.cloud.call_count)
+
+    def test_missing_result_ack_keeps_result_and_loop_survives(self):
+        worker,agent=self.worker();self.ledger.receive(self.job);self.ledger.sent(self.job['id']);self.ledger.result(self.job['id'],HTTP)
+        agent.cloud.side_effect=ValueError('Result acknowledgement missing')
+        with self.assertRaisesRegex(ValueError,'acknowledgement'):
+            worker.flush()
+        self.assertIsNotNone(self.ledger.pending())
+        worker.retry_after=worker.clock()+30
+        class ImmediateStop:
+            def __init__(self):self.flag=False
+            def is_set(self):return self.flag
+            def wait(self,_):self.flag=True
+        agent.stop=ImmediateStop();worker.loop()
+        self.assertTrue(agent.stop.is_set())
+
     def test_real_home_exchange_marks_heartbeat_busy_without_marking_agent_offline(self):
         from agent.readonly import ReadOnlyAgent
         instance=ReadOnlyAgent('https://fixture.ts.net','inert-fixture',self.root/'heartbeat');instance.engine_state='healthy';instance.execution.home_busy.set();captured=[]
