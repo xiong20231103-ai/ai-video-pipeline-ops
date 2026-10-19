@@ -110,6 +110,8 @@ class ExecutionWorker:
             self.ledger.result(job['id'],{'kind':'not_sent','reason':'send_permit_denied'});return
         if job['expiresAt']<=self.clock():
             self.ledger.result(job['id'],{'kind':'not_sent','reason':'invalid_or_expired'});return
+        if job['target']=='/api/controls/cloud-cleanup/execute' and not self.clock()<job['body']['expiresAt']:
+            self.ledger.result(job['id'],{'kind':'not_sent','reason':'invalid_or_expired'});return
         self.home_busy.set()
         try:result=self.home_post(job)
         except (OSError,http.client.HTTPException):result={'kind':'unknown','reason':'transport_uncertain'}

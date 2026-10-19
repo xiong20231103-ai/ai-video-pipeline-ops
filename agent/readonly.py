@@ -247,7 +247,7 @@ class ReadOnlyAgent:
     def heartbeat_loop(self):
         while not self.stop.is_set():
             try:
-                reply=self.cloud('/agent/heartbeat',{'engineState':'busy' if self.execution.home_busy.is_set() else self.engine_state,'storage':self.ledger.storage(),'backupState':self.backup.public_state(),'execution':self.execution.capability()})
+                reply=self.cloud('/agent/heartbeat',{'engineState':'busy' if self.execution.home_busy.is_set() else self.engine_state,'storage':self.ledger.storage(),'backupState':self.backup.public_state(),'execution':self.execution.capability(),'cleanupProtocol':1})
                 self.schedule.update_viewer(reply);self.backup.notify(reply.get('backupRequest'))
                 self.authenticated.set()
             except urllib.error.HTTPError as exc:
@@ -370,7 +370,7 @@ class ReadOnlyAgent:
             # Drain the single write channel before releasing the process lock.
             # A forced OS termination is recovered as unknown, never re-sent.
             command_thread=threads[-1]
-            if self.execution.active.is_set():command_thread.join(timeout=50)
+            if self.execution.active.is_set():command_thread.join(timeout=920)
             deadline=time.monotonic()+2
             for thread in threads: thread.join(timeout=max(0,deadline-time.monotonic()))
             self.lifecycle.publish('failed' if self.worker_failed else 'stopped',requested,sum(thread.is_alive() for thread in threads))

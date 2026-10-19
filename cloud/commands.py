@@ -7,8 +7,8 @@ class CommandError(ValueError):
     def __init__(self,code,status=409):self.code=code;self.status=status;super().__init__(code)
 
 class CommandQueue:
-    def __init__(self,store,enabled=False,h3=False):
-        self.store=store;self.enabled=enabled;self.h3=h3;self.changed=threading.Condition()
+    def __init__(self,store,enabled=False,h3=False,cleanup=False):
+        self.store=store;self.enabled=enabled;self.h3=h3;self.cleanup=cleanup;self.changed=threading.Condition()
         with store.db(True) as db:
             db.executescript('''CREATE TABLE IF NOT EXISTS commands(
               id TEXT PRIMARY KEY,actor TEXT NOT NULL,request_id TEXT NOT NULL,target TEXT NOT NULL,body TEXT NOT NULL,digest TEXT NOT NULL,
@@ -17,6 +17,7 @@ class CommandQueue:
               CREATE TABLE IF NOT EXISTS command_audit(id INTEGER PRIMARY KEY,at REAL NOT NULL,command_id TEXT NOT NULL,actor TEXT NOT NULL,event TEXT NOT NULL,note TEXT NOT NULL);
               CREATE TABLE IF NOT EXISTS command_executor(id INTEGER PRIMARY KEY CHECK(id=1),ledger_id TEXT,enabled INTEGER NOT NULL,last_seen REAL NOT NULL);
               CREATE TABLE IF NOT EXISTS command_cancelled_requests(actor TEXT NOT NULL,request_id TEXT NOT NULL,at REAL NOT NULL,PRIMARY KEY(actor,request_id));
+              CREATE TABLE IF NOT EXISTS cleanup_executor(id INTEGER PRIMARY KEY CHECK(id=1),protocol INTEGER NOT NULL);
               CREATE TABLE IF NOT EXISTS command_gate(id INTEGER PRIMARY KEY CHECK(id=1),paused INTEGER NOT NULL);
               INSERT OR IGNORE INTO command_gate VALUES(1,0);
             ''')
@@ -26,10 +27,12 @@ class CommandQueue:
         with self.changed:self.changed.notify_all()
     def advertise(self,value):
         value=value or {'enabled':False}
-        if not isinstance(value,dict) or set(value)-{'enabled','ledgerId','protocol'} or type(value.get('enabled')) is not bool:raise CommandError('invalid_executor_capability',400)
+        if not isinstance(value,dict) or set(value)-{'enabled','ledgerId','protocol','cleanupProtocol'} or type(value.get('enabled')) is not bool:raise CommandError('invalid_executor_capability',400)
         enabled=value['enabled'];ledger=value.get('ledgerId')
+        if 'cleanupProtocol' in value and type(value['cleanupProtocol']) is not int:raise CommandError('invalid_cleanup_capability',400)
         if enabled and (value.get('protocol')!=1 or not isinstance(ledger,str) or len(ledger)!=32 or any(c not in '0123456789abcdef' for c in ledger)):raise CommandError('invalid_executor_capability',400)
         with self.store.db(True) as db:
+            db.execute('INSERT OR REPLACE INTO cleanup_executor VALUES(1,?)',(int(enabled and value.get('cleanupProtocol')==1),))
             old=db.execute('SELECT * FROM command_executor WHERE id=1').fetchone()
             if enabled and old and old['ledger_id'] and old['ledger_id']!=ledger:raise CommandError('executor_ledger_change_requires_manual_reconciliation')
             db.execute('INSERT OR REPLACE INTO command_executor VALUES(1,?,?,?)',(ledger if enabled else old['ledger_id'] if old else None,int(enabled),self.store.clock()))
@@ -41,8 +44,43 @@ class CommandQueue:
         # Keep the last token until another claim replaces it, so a delayed
         # not-sent receipt can close its own expired pre-send lease safely.
         db.execute("UPDATE commands SET state='queued',lease_until=0 WHERE state='leased' AND lease_until<=?",(now,))
-        for row in db.execute("SELECT id,actor FROM commands WHERE state='sent' AND updated<=?",(now-90,)).fetchall():
+        for row in db.execute("SELECT id,actor FROM commands WHERE state='sent' AND updated<=? AND target NOT LIKE '/api/controls/cloud-cleanup/%'",(now-90,)).fetchall():
             db.execute("UPDATE commands SET state='unknown',updated=? WHERE id=?",(now,row['id']));self.audit(db,row,'result_timeout_unknown_no_retry')
+        for row in db.execute("SELECT id,actor FROM commands WHERE state='sent' AND target LIKE '/api/controls/cloud-cleanup/%' AND updated<=?",(now-960,)).fetchall():
+            db.execute("UPDATE commands SET state='unknown',updated=? WHERE id=?",(now,row['id']));self.audit(db,row,'cleanup_result_timeout_unknown_no_retry')
+    def cleanup_guard(self,body=None):
+        if not self.cleanup:raise CommandError('cleanup_milestone_disabled')
+        if not self.ready():raise CommandError('home_offline_or_busy')
+        with self.store.db() as db:
+            cap=db.execute('SELECT protocol FROM cleanup_executor WHERE id=1').fetchone()
+            if not cap or cap['protocol']!=1:raise CommandError('cleanup_agent_not_deployed')
+            if db.execute("SELECT 1 FROM commands WHERE state='unknown' LIMIT 1").fetchone():raise CommandError('cleanup_unknown_requires_reconciliation')
+        now=self.store.clock()
+        for target in ('/api/dashboard/summary','/api/controls/cloud-cleanup/capabilities'):
+            row=self.store.response(cache_key('GET',target))
+            if not row or row['status']!=200 or not 0<=now-row['last_success']<=60:raise CommandError('cleanup_capability_or_summary_stale')
+            value=json.loads(row['body'])
+            if target.endswith('/capabilities'):
+                if not isinstance(value,dict) or type(value.get('protocol')) is not int or value.get('protocol')!=1 or type(value.get('retentionDays')) is not int or value.get('retentionDays')!=3 or value.get('forbiddenDraftRootProtected') is not True:raise CommandError('cleanup_dashboard_not_deployed')
+            else:
+                source=json.loads(row['source_health']);age=source.get('scanAgeSeconds') if isinstance(source,dict) else None
+                if type(age) not in (int,float) or not 0<=age+now-row['last_success']<=60:raise CommandError('cleanup_scan_stale')
+        if body and 'expiresAt' in body and not now<body['expiresAt']:raise CommandError('cleanup_preview_expired')
+    def cleanup_owner(self,actor,body):
+        # The opaque home ticket is never sufficient by itself: bind its exact
+        # preview to the authenticated account and the original selected IDs.
+        with self.store.db() as db:
+            rows=db.execute("SELECT body,result,updated FROM commands WHERE actor=? AND target='/api/controls/cloud-cleanup/preview' AND state='completed' ORDER BY created DESC LIMIT 100",(actor,)).fetchall()
+        for row in rows:
+            result=json.loads(row['result']) if row['result'] else None
+            if not result or result.get('kind')!='http' or result.get('httpStatus')!=200:continue
+            try:preview=json.loads(base64.b64decode(result['bodyBase64'],validate=True))
+            except (ValueError,KeyError,TypeError):continue
+            original=json.loads(row['body'])
+            if not isinstance(preview,dict):continue
+            if not 0<=self.store.clock()-row['updated']<=120:continue
+            if all(preview.get(k)==body.get(k) for k in ('ticket','snapshotToken','expiresAt')) and all(original.get(k,False)==body.get(k,False) for k in ('kind','ids','includeUnknown')):return
+        raise CommandError('cleanup_preview_account_or_selection_mismatch')
     def capability(self):
         with self.store.db() as db:executor=db.execute('SELECT * FROM command_executor WHERE id=1').fetchone()
         return bool(self.enabled and executor and executor['enabled'])
@@ -64,8 +102,12 @@ class CommandQueue:
         with self.store.db() as db:
             paused=bool(db.execute('SELECT paused FROM command_gate WHERE id=1').fetchone()[0])
             blocked=db.execute("SELECT state FROM commands WHERE state IN ('sent','unknown') ORDER BY created LIMIT 1").fetchone()
+        can_cleanup=False
+        if not blocked:
+            try:self.cleanup_guard();can_cleanup=True
+            except CommandError:pass
         return {'executorAvailable':available,'homeReady':ready,'commandsPaused':paused,'commandBlocker':blocked['state'] if blocked else None,
-                'canContinue':can_continue and not blocked,'canCleanup':False,'readOnly':not available}
+                'canContinue':can_continue and not blocked,'canCleanup':can_cleanup,'readOnly':not available}
     def resume(self,empty_only=False):
         with self.store.db(True) as db:
             self.expire(db)
@@ -89,7 +131,7 @@ class CommandQueue:
         current=target_from_summary(snapshot)
         if not current or any(body['expectedTarget'].get(k)!=v for k,v in current.items()):raise CommandError('continue_target_changed')
     def enqueue(self,actor,request_id,target,body,ttl=300,public=False):
-        identity(request_id);job=command(target,body)
+        identity(request_id);job=command(target,body);body=job['body'];target=job['target']
         if public and job['source']!='receiver':raise CommandError('public_route_forbidden',403)
         now=self.store.clock()
         with self.store.db(True) as db:
@@ -101,13 +143,16 @@ class CommandQueue:
             if not self.capability():raise CommandError('executor_not_deployed_or_disabled',503)
             self.expire(db)
             if db.execute("SELECT count(*) FROM commands WHERE state IN ('queued','leased','sent','unknown')").fetchone()[0]>=100:raise CommandError('command_queue_full',429)
+            if target.startswith('/api/controls/cloud-cleanup/'):
+                self.cleanup_guard(body)
+                if target.endswith('/execute'):self.cleanup_owner(actor,body)
             if target=='/api/control-commands':
                 if not self.ready():raise CommandError('home_offline_or_busy')
                 self.continue_guard(body)
             if type(ttl) is not int or not 1<=ttl<=300:raise CommandError('invalid_command_ttl',400)
             identifier=secrets.token_urlsafe(32)
             db.execute('INSERT INTO commands(id,actor,request_id,target,body,digest,source,state,created,expires,updated) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-                (identifier,actor,request_id,job['target'],canonical(body),job['digest'],job['source'],'queued',now,now+ttl,now))
+                (identifier,actor,request_id,job['target'],canonical(body),job['digest'],job['source'],'queued',now,min(now+ttl,now+120,body['expiresAt']) if target=='/api/controls/cloud-cleanup/execute' else now+ttl,now))
             row=db.execute('SELECT * FROM commands WHERE id=?',(identifier,)).fetchone();self.audit(db,row,'queued')
             answer=self.public(row)
         self.wake();return answer
@@ -159,6 +204,9 @@ class CommandQueue:
             self.expire(db);row=db.execute('SELECT * FROM commands WHERE id=?',(identifier,)).fetchone()
             if not row or row['state']!='leased' or row['lease']!=lease or row['ledger_id']!=ledger:raise CommandError('command_no_send_permit')
             if not self.ready():raise CommandError('home_offline_or_busy')
+            if row['target'].startswith('/api/controls/cloud-cleanup/'):
+                self.cleanup_guard(json.loads(row['body']))
+                if row['target'].endswith('/execute'):self.cleanup_owner(row['actor'],json.loads(row['body']))
             if row['target']=='/api/control-commands':self.continue_guard(json.loads(row['body']))
             db.execute("UPDATE commands SET state='sent',updated=? WHERE id=?",(self.store.clock(),identifier));self.audit(db,row,'send_permitted')
         self.wake();return {'sendPermitted':True,'cloudCommandId':identifier}
@@ -185,6 +233,9 @@ class CommandQueue:
             db.execute('UPDATE commands SET state=?,result=?,result_digest=?,updated=? WHERE id=?',(state,encoded,digest,self.store.clock(),identifier));self.audit(db,row,state)
         if result['kind']=='http':
             self.refresh_source()
+            if row['target']=='/api/controls/cloud-cleanup/execute':
+                for target in ('/api/controls/capcut-drafts','/api/controls/audio-files','/api/controls/production-files','/api/controls/pending-delete'):
+                    self.store.enqueue_read(cache_key('GET',target))
             if row['target']=='/api/control-commands':
                 try:local_id=json.loads(raw).get('commandId')
                 except (ValueError,AttributeError):local_id=None

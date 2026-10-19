@@ -94,8 +94,9 @@
     const summary = document.createElement('summary'); summary.textContent = '云端只读预览 · 家里代理部署前等待取数 · 写命令尚未启用';
     const explanation=document.createElement('p'); explanation.textContent='列表记录本页读到的各份数据；切换日期后旧条目会保留，请以当前所选看板为准。';
     sourcePanel.append(summary, explanation, document.createElement('ul')); document.body.prepend(sourcePanel);
+    const forced=new WeakSet();
     for (const id of writeIds) {
-      const button = document.getElementById(id); if (button) { button.disabled = true; button.title = '当前云端为只读里程碑'; }
+      const button = document.getElementById(id); if (button) { forced.add(button); button.disabled = true; button.title = '当前云端为只读里程碑'; }
     }
     const account = document.createElement('details');
     account.dataset.cloudAccount='true';
@@ -115,7 +116,6 @@
       account.append(form);
     };
     account.append(password,logout); sourcePanel.append(account);
-    const forced=new WeakSet();
     const disableWrites=()=>{
       const buttons=[...document.querySelectorAll('button[onclick], button[data-cloud-control], #createTaskForm button, #replenishForm button[type="submit"]'),...writeIds.map(id=>document.getElementById(id)).filter(Boolean)];
       for(const button of buttons) {
@@ -123,7 +123,7 @@
         if(action){button.dataset.cloudControl=action[1];button.removeAttribute('onclick');}
         if(button.getAttribute('onclick')==='openReplenishment(this.dataset.taskId)'){button.dataset.cloudControl='replenish-open';button.removeAttribute('onclick');}
         const allowed=window.opsCloudCanWrite?.(button)===true;
-        if(!allowed){if(!button.disabled){forced.add(button);button.disabled=true;}button.title='云端执行通道未就绪、数据过期或有待对账命令；清理功能尚未开放';}
+        if(!allowed){if(!button.disabled){forced.add(button);button.disabled=true;}button.title='云端执行通道未就绪、数据过期或有待对账命令；清理需新版代理、Dashboard、有效预览和清理开关';}
         else if(forced.has(button)){forced.delete(button);button.disabled=false;button.title='';}
       }
     };

@@ -67,4 +67,9 @@ class ContractTests(unittest.TestCase):
                         if path.startswith('/api/'):
                             actual.add((deco.func.attr.upper(),path))
         documented={(row['method'],row['path']) for row in MATRIX if row['source']=='dashboard'}
-        self.assertEqual(actual,documented)
+        staged={(row['method'],row['path']) for row in MATRIX if row.get('requiresCapability')=='cleanupProtocol:1'}
+        self.assertEqual(staged,{('GET','/api/controls/cloud-cleanup/capabilities'),('POST','/api/controls/cloud-cleanup/preview'),('POST','/api/controls/cloud-cleanup/execute')})
+        # These exact negotiated routes may be staged before the separately
+        # reviewed home PR; every ordinary route still requires an exact match.
+        self.assertEqual(actual-staged,documented-staged)
+        self.assertTrue(actual<=documented)
