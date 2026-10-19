@@ -1,3 +1,4 @@
+import FileManagers from "./FileManagers";
 import { uploadWriterFor } from "@/data/upload-writer";
 import TaskOperations from "./TaskOperations";
 import type { ReadClient } from "@/data/client";
@@ -35,13 +36,7 @@ import {
   continueLabels,
 } from "./presentation";
 import { TaskBox, Pipeline, Tasks } from "./TaskViews";
-import {
-  BackupPanel,
-  SourcePanel,
-  CommandList,
-  Freshness,
-  PendingDelete,
-} from "./CloudViews";
+import { BackupPanel, SourcePanel, CommandList, Freshness } from "./CloudViews";
 
 function Current({ current }: { current: Row }) {
   const fields = currentValues(current);
@@ -462,7 +457,7 @@ export default function Dashboard({ view }: { view: View }) {
               ? "家里模式"
               : "正在确认运行模式"}
         </Status>
-        <span>V2 预览：开放上传与任务操作，其余操作请用旧页面</span>
+        <span>V2 预览：开放上传、任务与家里清理；云端清理尚未开放</span>
         <Button variant="outline" size="sm" onClick={refresh}>
           刷新
         </Button>
@@ -533,20 +528,11 @@ export default function Dashboard({ view }: { view: View }) {
             />
           )}
           {view === "files" && (
-            <>
-              <Panel title="文件管理">
-                <p>
-                  草稿、音频与生产文件将在独立清理 PR
-                  中逐项接入；当前没有清理操作。
-                </p>
-                <div className="data-actions">
-                  <DisabledWrite>管理 CapCut 草稿</DisabledWrite>
-                  <DisabledWrite>管理音频文件</DisabledWrite>
-                  <DisabledWrite>管理生产文件</DisabledWrite>
-                </div>
-              </Panel>
-              <PendingDelete data={snapshot.pendingDelete} />
-            </>
+            <FileManagers
+              snapshot={snapshot}
+              reader={reader.current}
+              refresh={refresh}
+            />
           )}
           {view === "commands" && (
             <>

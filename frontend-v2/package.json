@@ -14,7 +14,9 @@
     "test": "vitest run",
     "test:parity": "vitest run src/test/parity.test.tsx",
     "size": "node scripts/check-size.mjs",
-    "check:build": "node scripts/check-build.mjs"
+    "check:build": "node scripts/check-build.mjs",
+    "inventory:refresh": "node scripts/refresh-inventory.cjs",
+    "inventory:check": "node scripts/refresh-inventory.cjs --check"
   },
   "dependencies": {
     "class-variance-authority": "0.7.1",

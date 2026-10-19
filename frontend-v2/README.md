@@ -1,3 +1,7 @@
+# Dashboard V2-2C 家里清理与审查修复
+
+新增现有三类清理与待删区入口，云端写仍关闭；四项审查修复与逐行对照见 docs/v2/V2-2C_CLEANUP_PARITY.md。新增运行 npm run inventory:check / inventory:refresh，以及 scripts/home-cleanup-browser-check.cjs、scripts/queue-wait-browser-check.cjs。没有新增依赖。以下为历史阶段基线说明，操作开放范围以本节和对应PR为准。
+
 # Dashboard V2-2B 任务操作
 
 新增补链、建任务、启动、撤回。见 docs/v2/V2-2B_TASK_PARITY.md；隔离浏览器另运行 scripts/task-browser-check.cjs。未部署。下面阶段说明为继承的基线文档；当前可用操作以上述两阶段增量为准。
