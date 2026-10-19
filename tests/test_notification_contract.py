@@ -36,6 +36,10 @@ class FactsTests(unittest.TestCase):
   b=summary();b['currentTaskBox']['current'].update(gapActive=True,missingCount=3)
   b['currentProjectStatus']['errors'][0]['component']='workbench'
   kinds=[i['kind'] for i in current_facts(b)];self.assertIn('download_gap',kinds);self.assertNotIn('task_failed',kinds)
+ def test_gap_uses_real_summary_fields_without_missing_count(self):
+  b=summary();b['currentProjectStatus']['errors']=[];b['currentTaskBox']['current'].update(gapActive=True,expected=24,downloadCompleted=21)
+  facts=current_facts(b);self.assertEqual(['download_gap'],[i['kind'] for i in facts]);self.assertIn('3条',facts[0]['message'])
+  b['currentTaskBox']['current']['downloadCompleted']=24;self.assertNotIn('download_gap',[i['kind'] for i in current_facts(b)])
  def test_stale_source_and_future_clocks_not_fresh(self):
   row={'status':200,'last_success':90,'source_health':json.dumps({'scanAgeSeconds':8})}
   self.assertTrue(source_fresh(row,100,60));self.assertFalse(source_fresh(row,100,15));self.assertFalse(source_fresh(row,80,60))

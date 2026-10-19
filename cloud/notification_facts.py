@@ -34,9 +34,14 @@ def current_facts(body,*,cloud_inflight=False):
  if not identity.get('canonicalTaskId') or not identity.get('batchId'):return []
  box=object_value(body.get('currentTaskBox'));current=object_value(box.get('current'))
  if box.get('batchId')!=identity['batchId'] or (current.get('canonicalTaskId') or current.get('taskId'))!=identity['canonicalTaskId']:return []
- result=[];gap=bool(current.get('gapActive')) and type(current.get('missingCount')) is int and current['missingCount']>0
+ missing=current.get('missingCount')
+ # The real summary current item exposes expected/downloadCompleted, while
+ # /api/project-gaps has missingCount. Do not require a synthetic-only field.
+ if missing is None and type(current.get('expected')) is int and type(current.get('downloadCompleted')) is int and 0<=current['downloadCompleted']<current['expected']:
+  missing=current['expected']-current['downloadCompleted']
+ result=[];gap=bool(current.get('gapActive')) and type(missing) is int and missing>0
  if gap:
-  item=fact('download_gap',identity,'download','DOWNLOAD_LINKS_MISSING','下载需补链：'+str(current['missingCount'])+'条')
+  item=fact('download_gap',identity,'download','DOWNLOAD_LINKS_MISSING','下载需补链：'+str(missing)+'条')
   if item:result.append(item)
  errors=status.get('errors')
  if not isinstance(errors,list):return result
