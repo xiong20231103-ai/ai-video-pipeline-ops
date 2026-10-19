@@ -1,10 +1,11 @@
+const {setTimeout}=require('node:timers');
 const {Buffer}=require('node:buffer');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.OPS_UI_PLAYWRIGHT||'playwright');
 const fixture=require('../src/test/fixture.json'),root=path.resolve(__dirname,'../../static/v2'),evidence=process.env.V2_EVIDENCE_DIR;
 const csp="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'";
 const specs={drafts:{title:'CapCut 草稿',endpoint:'capcut-drafts',id:'draftId',ids:'draftIds',action:'cleanup',confirm:'RECYCLE_SELECTED_CAPCUT_DRAFTS'},audio:{title:'音频文件',endpoint:'audio-files',id:'audioId',ids:'audioIds',action:'recycle',confirm:'RECYCLE_SELECTED_AUDIO_FILES'},production:{title:'生产文件',endpoint:'production-files',id:'fileId',ids:'fileIds',action:'recycle',confirm:'RECYCLE_SELECTED_PRODUCTION_FILES'}};
-const requests=[],errors=[],dialogs=[],screenshots=[],violations=[];
+const requests=[],errors=[],dialogs=[],screenshots=[],violations=[],expectedNotFound=[],expectedConsole=[],notFoundUrls=new Set();let raceInjected=false;
 (async()=>{const browser=await chromium.launch({headless:true,executablePath:process.env.OPS_UI_BROWSER_PATH});try{
 if(evidence)fs.mkdirSync(evidence,{recursive:true});
 for(const mode of ['cloud'])for(const [width,height]of [[1920,1080],[1440,900],[1366,768],[375,812]]){
@@ -20,14 +21,28 @@ for(const mode of ['cloud'])for(const [width,height]of [[1920,1080],[1440,900],[
   else {assert.equal(body.snapshotToken,'synthetic-token');assert(body.ticket.startsWith('synthetic-ticket-'));assert.equal(body.confirm,body.kind==='pending'?'EMPTY_PENDING_DELETE_NOW':spec.confirm);if(body.kind==='pending')pendingCount=0;result={state:'partial_failed',message:'隔离模拟：部分失败，请看逐项结果',results:[{name:'模拟失败文件',reason:'模拟共享引用'}]};}
   const id='synthetic-'+(++sequence);requestIds.set(req.headers()['x-client-request-id'],id);commands.set(id,{cloudCommand:true,cloudCommandId:id,state:'completed',result:{kind:'http',httpStatus:200,bodyBase64:Buffer.from(JSON.stringify(result)).toString('base64')}});return route.fulfill({status:202,json:{cloudCommand:true,cloudCommandId:id,state:'queued'}});
  }
- if(key.startsWith('/console/commands/request/')){const id=requestIds.get(key.split('/').pop());return id?route.fulfill({json:commands.get(id)}):route.fulfill({status:404,json:{detail:'尚未收件'}});}
+ if(key.startsWith('/console/commands/request/')){
+  const requestId=key.split('/').pop(),id=requestIds.get(requestId);
+  if(id)return route.fulfill({json:commands.get(id)});
+  // A persisted submitting receipt can be polled BEFORE CSRF/receive finishes.
+  // This is an intentional API 404, never an asset fallback or missing route.
+  const original=await req.frame().evaluate(id=>JSON.parse(window.localStorage.getItem('ops-command-receipts-v1')||'[]').some(r=>r.requestId===id&&r.state==='submitting'&&!r.cloudCommandId),requestId);
+  assert(original,'unexpected missing request identity '+key);notFoundUrls.add(req.url());expectedNotFound.push({path:key,status:404,reason:'persisted request not yet received',intercepted:true});
+  return route.fulfill({status:404,json:{detail:'尚未收件'}});
+ }
+ if(key==='/auth/session'&&!raceInjected){
+  const submitting=await req.frame().evaluate(()=>JSON.parse(window.localStorage.getItem('ops-command-receipts-v1')||'[]').some(r=>r.state==='submitting'));
+  if(submitting){raceInjected=true;await new Promise(resolve=>setTimeout(resolve,3500));}
+ }
  if(key.startsWith('/console/commands/synthetic-')){const answer=commands.get(key.split('/').pop());assert(answer);return route.fulfill({json:answer});}
  assert.equal(req.method(),'GET');
  if(key==='/api/controls/cloud-cleanup/capabilities')return route.fulfill({json:{protocol:1}});
  if(spec)return route.fulfill({json:{items:[{[spec.id]:'server-object',name:'模拟文件',category:kind==='drafts'?'formal':'capcut_test',categoryLabel:'模拟类别',defaultSelected:kind==='production',sizeBytes:1024,date:'2026-10-19',updatedAt:'2026-10-19T12:00:00+08:00',project:'隔离项目',material:'模拟材料',language:'DE',audioBatch:'A',sourceLabel:'隔离来源'}, {[spec.id]:'locked',name:'模拟受保护文件',protected:true,protectedReason:'模拟活动租约',sizeBytes:2048}],counts:{total:2,protected:1,deletable:1,categories:{capcut_test:{label:'模拟测试文件',total:1,sizeBytes:1024,deletable:1,protected:0}}},snapshotToken:'synthetic-list'}});
  const body=key==='/auth/options'?{registrationOpen:false}:key==='/auth/session'?{username:'隔离账号',csrf:'synthetic-only'}:key==='/console/status'?{...fixture.status,canCleanup:true,executorAvailable:true,homeReady:true,commandBlocker:null}:key==='/console/commands'?fixture.commands:key==='/api/controls/pending-delete'?{count:pendingCount,sizeBytes:pendingCount*1024,nextPurgeAt:'2026-10-22T12:00:00+08:00'}:key==='/api/safety'?fixture.safety:key.startsWith('/api/dashboard')?fixture.dashboard:null;assert(body,'Unexpected GET '+key);return route.fulfill({json:body});
  });
- const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));page.on('console',entry=>{if(entry.type()==='error')errors.push(entry.text())});page.on('dialog',async dialog=>{dialogs.push({mode,type:dialog.type(),text:dialog.message(),accepted:accept});if(dialog.type()==='prompt'&&accept){const magic=Object.values(specs).map(s=>s.confirm).concat('EMPTY_PENDING_DELETE_NOW').find(x=>dialog.message().includes(x));assert(magic);await dialog.accept(magic);}else if(dialog.type()==='alert'||accept)await dialog.accept();else await dialog.dismiss();});
+ const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));page.on('console',entry=>{if(entry.type()!=='error')return;const url=entry.location().url;
+ if(notFoundUrls.has(url)&&entry.text()==='Failed to load resource: the server responded with a status of 404 (Not Found)')expectedConsole.push({url,message:entry.text(),reason:'modeled request-id query before receive'});
+ else errors.push({url,message:entry.text()});});page.on('dialog',async dialog=>{dialogs.push({mode,type:dialog.type(),text:dialog.message(),accepted:accept});if(dialog.type()==='prompt'&&accept){const magic=Object.values(specs).map(s=>s.confirm).concat('EMPTY_PENDING_DELETE_NOW').find(x=>dialog.message().includes(x));assert(magic);await dialog.accept(magic);}else if(dialog.type()==='alert'||accept)await dialog.accept();else await dialog.dismiss();});
  await page.exposeFunction('recordCsp',value=>violations.push(value));await page.addInitScript(()=>document.addEventListener('securitypolicyviolation',event=>window.recordCsp({directive:event.violatedDirective,blocked:event.blockedURI})));
  await page.goto(origin+'/static/v2/index.html#files',{waitUntil:'networkidle'}); await page.evaluate(()=>{const label=document.createElement('div');label.textContent='隔离夹具 · 非真实生产';label.style.cssText='position:fixed;bottom:8px;left:8px;z-index:2147483647;background:#132033;color:#fff;border:1px solid #4499ff;border-radius:6px;padding:5px 8px;font-size:11px;pointer-events:none';document.body.append(label)});
  for(const theme of ['dark','light']){
@@ -49,7 +64,9 @@ for(const mode of ['cloud'])for(const [width,height]of [[1920,1080],[1440,900],[
  if(mode==='cloud'){await page.getByRole('button',{name:/^立即清空待删区（/}).click();await page.getByRole('button',{name:/^立即清空待删区（/}).waitFor({state:'hidden'});}
  await context.close();
 }
-assert.deepEqual(errors,[]);assert.deepEqual(violations,[]);if(evidence)fs.writeFileSync(path.join(evidence,'cloud-cleanup-browser-result.json'),JSON.stringify({verified:true,productionAccess:false,allRequestsIntercepted:true,requests,errors,violations,dialogs,screenshots},null,2));console.log(JSON.stringify({verified:true,productionAccess:false,requests:requests.length,posts:requests.filter(row=>row.method==='POST').length,screenshots:screenshots.length,errors,violations}));
+const result={productionAccess:false,allRequestsIntercepted:true,requests,errors,violations,dialogs,screenshots,raceInjected,expectedNotFound,expectedConsole};
+if(evidence)fs.writeFileSync(path.join(evidence,'cloud-cleanup-browser-result.json'),JSON.stringify(result,null,2));
+console.log(JSON.stringify({requests:requests.length,posts:requests.filter(row=>row.method==='POST').length,screenshots:screenshots.length,raceInjected,expectedNotFound,expectedConsole,errors,violations}));
+assert(raceInjected,'receive race must be exercised');assert(expectedNotFound.length>0,'poll-before-receive must query original missing identity');assert.deepEqual(errors,[]);assert.deepEqual(violations,[]);
+assert.equal(requests.filter(row=>row.method==='POST').length,80,'a pending receive must not cause duplicate command POST');
 }finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1});
-
-
