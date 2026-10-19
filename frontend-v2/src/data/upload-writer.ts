@@ -10,6 +10,8 @@ import { object, text, type Row } from "./types";
 import { commandLabels } from "@/components/views/presentation";
 
 const allowed = new Set([
+  "/api/controls/cloud-cleanup/preview",
+  "/api/controls/cloud-cleanup/execute",
   "/api/controls/upload/rescan",
   "/api/controls/upload/verify-history",
 ]);
@@ -36,6 +38,7 @@ export class UploadWriter {
     return (
       (this.reader.mode === "home" && this.active.size === 0) ||
       (this.reader.mode === "cloud" &&
+        this.active.size === 0 &&
         h.executorAvailable === true &&
         h.homeReady === true &&
         !h.commandBlocker &&
@@ -144,6 +147,13 @@ export class UploadWriter {
     );
   }
   private async cloud(path: string, body: Row | null, fingerprint: string) {
+    if (path === "/api/controls/cloud-cleanup/preview") {
+      saveReceipts(
+        localReceipts().filter(
+          (row) => row.path !== path || pendingStates.has(String(row.state)),
+        ),
+      );
+    }
     let record = localReceipts().find((row) => row.fingerprint === fingerprint);
     let answer: Row | null = null;
     if (!record) {
@@ -187,7 +197,11 @@ export class UploadWriter {
         // Lost receive acknowledgement: query original identity; never repeat POST.
       }
     }
-    for (let index = 0; index < 180; index++) {
+    for (
+      let index = 0;
+      index < (path.endsWith("/cloud-cleanup/execute") ? 1000 : 180);
+      index++
+    ) {
       answer = answer || (await this.query(record));
       if (
         answer &&

@@ -715,34 +715,34 @@
   - 原实现：`local=>local.cloudCommandId===r.cloudCommandId`；实现/测试证据：待补。
 - [ ] **FN-339** `匿名回调@135` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
   - 原实现：`r=>({...r,path:r.target,remote:true})`；实现/测试证据：待补。
-- [ ] **FN-340** `匿名回调@3` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:3](../../cloud/cleanup.js#L3)。
-  - 原实现：`() => { const endpoint='/api/controls/cloud-cleanup/',previews=new Map(); const kinds={Draft:'drafts',Audio:'audio',Production:'production'}; const spec={drafts:{prefix:'draft',selection:'selectedDraftIds',confirm:'RECYCLE_SELECTED_CAPCUT_DRAFTS'},audio:{prefix:'audio',selection:'selectedAudioIds',confirm:'RECYCLE_SELECTED_AUDIO_FILES'},production:{prefix:'production',selection:'selectedProductionIds',confirm:'RECYCLE_SELECTED`；实现/测试证据：待补。
-- [ ] **FN-341** `send` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:7](../../cloud/cleanup.js#L7)。
-  - 原实现：`async function send(action,payload){const r=await window.opsCloudDispatch(endpoint+action,payload),body=await r.json();if(!r.ok)throw new Error(body.detail¦¦'家里拒绝清理');return body;}`；实现/测试证据：待补。
-- [ ] **FN-342** `capability` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:8](../../cloud/cleanup.js#L8)。
-  - 原实现：`async function capability(){try{await fetch(endpoint+'capabilities');}catch{}}`；实现/测试证据：待补。
-- [ ] **FN-343** `show` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:9](../../cloud/cleanup.js#L9)。
-  - 原实现：`function show(kind,message){const node=document.getElementById(spec[kind]?.prefix+'CleanupPreview')¦¦document.getElementById('pendingDeleteStatus');if(node){node.classList.remove('hidden');node.textContent=message;}}`；实现/测试证据：待补。
-- [ ] **FN-344** `preview` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:10](../../cloud/cleanup.js#L10)。
-  - 原实现：`async function preview(kind){ previews.delete(kind);const item=spec[kind],ids=kind==='pending'?[]:[...state[item.selection]]; if(kind!=='pending'&&!ids.length)throw new Error('请先勾选对象'); const includeUnknown=kind==='drafts'&&confirm('本次选择是否包含人工或来源不明草稿？选“取消”将保护这类草稿。'); const value=await send('preview',{kind,ids,includeUnknown}); if(value.kind!==kind¦¦!Array.isArray(value.ids)¦¦JSON.stringify(value.ids)!==JSON.stringify(ids)¦¦typ`；实现/测试证据：待补。
-- [ ] **FN-345** `匿名回调@19` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:19](../../cloud/cleanup.js#L19)。
-  - 原实现：`k=>kinds[k]===kind`；实现/测试证据：待补。
-- [ ] **FN-346** `匿名回调@22` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:22](../../cloud/cleanup.js#L22)。
-  - 原实现：`x=>x.name+'：'+x.reason`；实现/测试证据：待补。
-- [ ] **FN-347** `execute` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:25](../../cloud/cleanup.js#L25)。
-  - 原实现：`async function execute(kind){ const item=spec[kind],p=kind==='pending'?await preview(kind):previews.get(kind); if(!p¦¦performance.now()-p.received>=120000)throw new Error('预览已过期或页面已重载，请重新预览'); if(kind!=='pending'&&JSON.stringify([...state[item.selection]])!==JSON.stringify(p.ids))throw new Error('选择已变化，请重新预览'); if(p.containsManualOrUnknown&&!confirm('包含人工或来源不明草稿，请再次确认所选对象。'))return; if(p.containsTestFiles&&!confirm('包含测试文件，请再次`；实现/测试证据：待补。
-- [ ] **FN-348** `匿名回调@43` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:43](../../cloud/cleanup.js#L43)。
-  - 原实现：`event=>{ const button=event.target.closest('button');if(!button)return; const match=/^(preview¦confirm)(Draft¦Audio¦Production)CleanupButton$/.exec(button.id),pending=button.id==='emptyPendingDeleteButton'; if(!match&&!pending){if(/(Draft¦Audio¦Production)ManagerButton$/.test(button.id))void capability();return;} event.preventDefault();event.stopImmediatePropagation();if(button.disabled¦¦!window.opsCloudCanWrite(button))return`；实现/测试证据：待补。
-- [ ] **FN-349** `匿名回调@49` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:49](../../cloud/cleanup.js#L49)。
-  - 原实现：`error=>show(kind,error.message)`；实现/测试证据：待补。
-- [ ] **FN-350** `匿名回调@49` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:49](../../cloud/cleanup.js#L49)。
-  - 原实现：`()=>{button.disabled=false;window.dispatchEvent(new Event('ops-cloud-write-state'));}`；实现/测试证据：待补。
-- [ ] **FN-351** `匿名回调@52` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
-  - 原实现：`()=>{const button=document.createElement('button');button.type='button';button.textContent='检查清理通道';button.id='checkCleanupCapabilityButton';button.addEventListener('click',()=>void capability());document.getElementById('pendingDeleteStatus')?.after(button);setInterval(()=>{if(document.querySelector('#draftManagerDialog[open],#audioManagerDialog[open],#productionManagerDialog[open]'))void capability();},30000);}`；实现/测试证据：待补。
-- [ ] **FN-352** `匿名回调@52` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
-  - 原实现：`()=>void capability()`；实现/测试证据：待补。
-- [ ] **FN-353** `匿名回调@52` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
-  - 原实现：`()=>{if(document.querySelector('#draftManagerDialog[open],#audioManagerDialog[open],#productionManagerDialog[open]'))void capability();}`；实现/测试证据：待补。
+- [x] **FN-340** `匿名回调@3` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:3](../../cloud/cleanup.js#L3)。
+  - 原实现：`() => { const endpoint='/api/controls/cloud-cleanup/',previews=new Map(); const kinds={Draft:'drafts',Audio:'audio',Production:'production'}; const spec={drafts:{prefix:'draft',selection:'selectedDraftIds',confirm:'RECYCLE_SELECTED_CAPCUT_DRAFTS'},audio:{prefix:'audio',selection:'selectedAudioIds',confirm:'RECYCLE_SELECTED_AUDIO_FILES'},production:{prefix:'production',selection:'selectedProductionIds',confirm:'RECYCLE_SELECTED`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-341** `send` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:7](../../cloud/cleanup.js#L7)。
+  - 原实现：`async function send(action,payload){const r=await window.opsCloudDispatch(endpoint+action,payload),body=await r.json();if(!r.ok)throw new Error(body.detail¦¦'家里拒绝清理');return body;}`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-342** `capability` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:8](../../cloud/cleanup.js#L8)。
+  - 原实现：`async function capability(){try{await fetch(endpoint+'capabilities');}catch{}}`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-343** `show` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:9](../../cloud/cleanup.js#L9)。
+  - 原实现：`function show(kind,message){const node=document.getElementById(spec[kind]?.prefix+'CleanupPreview')¦¦document.getElementById('pendingDeleteStatus');if(node){node.classList.remove('hidden');node.textContent=message;}}`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-344** `preview` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:10](../../cloud/cleanup.js#L10)。
+  - 原实现：`async function preview(kind){ previews.delete(kind);const item=spec[kind],ids=kind==='pending'?[]:[...state[item.selection]]; if(kind!=='pending'&&!ids.length)throw new Error('请先勾选对象'); const includeUnknown=kind==='drafts'&&confirm('本次选择是否包含人工或来源不明草稿？选“取消”将保护这类草稿。'); const value=await send('preview',{kind,ids,includeUnknown}); if(value.kind!==kind¦¦!Array.isArray(value.ids)¦¦JSON.stringify(value.ids)!==JSON.stringify(ids)¦¦typ`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-345** `匿名回调@19` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:19](../../cloud/cleanup.js#L19)。
+  - 原实现：`k=>kinds[k]===kind`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-346** `匿名回调@22` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:22](../../cloud/cleanup.js#L22)。
+  - 原实现：`x=>x.name+'：'+x.reason`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-347** `execute` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:25](../../cloud/cleanup.js#L25)。
+  - 原实现：`async function execute(kind){ const item=spec[kind],p=kind==='pending'?await preview(kind):previews.get(kind); if(!p¦¦performance.now()-p.received>=120000)throw new Error('预览已过期或页面已重载，请重新预览'); if(kind!=='pending'&&JSON.stringify([...state[item.selection]])!==JSON.stringify(p.ids))throw new Error('选择已变化，请重新预览'); if(p.containsManualOrUnknown&&!confirm('包含人工或来源不明草稿，请再次确认所选对象。'))return; if(p.containsTestFiles&&!confirm('包含测试文件，请再次`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-348** `匿名回调@43` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:43](../../cloud/cleanup.js#L43)。
+  - 原实现：`event=>{ const button=event.target.closest('button');if(!button)return; const match=/^(preview¦confirm)(Draft¦Audio¦Production)CleanupButton$/.exec(button.id),pending=button.id==='emptyPendingDeleteButton'; if(!match&&!pending){if(/(Draft¦Audio¦Production)ManagerButton$/.test(button.id))void capability();return;} event.preventDefault();event.stopImmediatePropagation();if(button.disabled¦¦!window.opsCloudCanWrite(button))return`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-349** `匿名回调@49` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:49](../../cloud/cleanup.js#L49)。
+  - 原实现：`error=>show(kind,error.message)`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-350** `匿名回调@49` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:49](../../cloud/cleanup.js#L49)。
+  - 原实现：`()=>{button.disabled=false;window.dispatchEvent(new Event('ops-cloud-write-state'));}`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-351** `匿名回调@52` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
+  - 原实现：`()=>{const button=document.createElement('button');button.type='button';button.textContent='检查清理通道';button.id='checkCleanupCapabilityButton';button.addEventListener('click',()=>void capability());document.getElementById('pendingDeleteStatus')?.after(button);setInterval(()=>{if(document.querySelector('#draftManagerDialog[open],#audioManagerDialog[open],#productionManagerDialog[open]'))void capability();},30000);}`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-352** `匿名回调@52` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
+  - 原实现：`()=>void capability()`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **FN-353** `匿名回调@52` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
+  - 原实现：`()=>{if(document.querySelector('#draftManagerDialog[open],#audioManagerDialog[open],#productionManagerDialog[open]'))void capability();}`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 - [ ] **FN-354** `匿名回调@2` — 云端；计划 **V2-1**；来源 [cloud/backups.js:2](../../cloud/backups.js#L2)。
   - 原实现：`() => { const api = async (path, method = 'GET') => { const headers = {}; if (method !== 'GET') { const session = await fetch('/auth/session').then(r => r.json()); headers['X-CSRF-Token'] = session.csrf; } const response = await fetch(path, {method, headers}); if (!response.ok) throw new Error(ˋ请求失败 (${response.status})ˋ); return response.json(); }; const element = (tag, text) => { const node = document.createElement(tag); if `；实现/测试证据：待补。
 - [ ] **FN-355** `api` — 云端；计划 **V2-1**；来源 [cloud/backups.js:3](../../cloud/backups.js#L3)。
@@ -860,12 +860,12 @@
   - 原实现：`network('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}})`；实现/测试证据：待补。
 - [ ] **NET-042** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
   - 原实现：`network('/console/commands')`；实现/测试证据：待补。
-- [ ] **NET-043** `fetch` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:8](../../cloud/cleanup.js#L8)。
-  - 原实现：`fetch(endpoint+'capabilities')`；实现/测试证据：待补。
-- [ ] **NET-044** `send` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:14](../../cloud/cleanup.js#L14)。
-  - 原实现：`send('preview',{kind,ids,includeUnknown})`；实现/测试证据：待补。
-- [ ] **NET-045** `send` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:36](../../cloud/cleanup.js#L36)。
-  - 原实现：`send('execute',{kind,ids:p.ids,includeUnknown:p.includeUnknown,snapshotToken:p.snapshotToken,ticket:p.ticket,expiresAt:p.expiresAt,confirm:item.confirm})`；实现/测试证据：待补。
+- [x] **NET-043** `fetch` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:8](../../cloud/cleanup.js#L8)。
+  - 原实现：`fetch(endpoint+'capabilities')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **NET-044** `send` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:14](../../cloud/cleanup.js#L14)。
+  - 原实现：`send('preview',{kind,ids,includeUnknown})`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **NET-045** `send` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:36](../../cloud/cleanup.js#L36)。
+  - 原实现：`send('execute',{kind,ids:p.ids,includeUnknown:p.includeUnknown,snapshotToken:p.snapshotToken,ticket:p.ticket,expiresAt:p.expiresAt,confirm:item.confirm})`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 - [ ] **NET-046** `fetch` — 云端；计划 **V2-2F**；来源 [cloud/backups.js:6](../../cloud/backups.js#L6)。
   - 原实现：`fetch('/auth/session')`；实现/测试证据：待补。
 - [ ] **NET-047** `fetch` — 云端；计划 **V2-2F**；来源 [cloud/backups.js:9](../../cloud/backups.js#L9)。
@@ -943,18 +943,18 @@
   - 原实现：`alert('发送前撤销已记录；晚到收件也会被拒绝。请让递交器重新查询。')`；实现/测试证据：待补。
 - [ ] **CONF-030** `alert` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
   - 原实现：`alert(error.message)`；实现/测试证据：待补。
-- [ ] **CONF-031** `confirm` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:13](../../cloud/cleanup.js#L13)。
-  - 原实现：`confirm('本次选择是否包含人工或来源不明草稿？选“取消”将保护这类草稿。')`；实现/测试证据：待补。
-- [ ] **CONF-032** `confirm` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:29](../../cloud/cleanup.js#L29)。
-  - 原实现：`confirm('包含人工或来源不明草稿，请再次确认所选对象。')`；实现/测试证据：待补。
-- [ ] **CONF-033** `confirm` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:30](../../cloud/cleanup.js#L30)。
-  - 原实现：`confirm('包含测试文件，请再次确认所选对象。')`；实现/测试证据：待补。
-- [ ] **CONF-034** `confirm` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:32](../../cloud/cleanup.js#L32)。
-  - 原实现：`confirm(question)`；实现/测试证据：待补。
-- [ ] **CONF-035** `prompt` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:33](../../cloud/cleanup.js#L33)。
-  - 原实现：`prompt('请输入 '+item.confirm+' 确认本次操作')`；实现/测试证据：待补。
-- [ ] **CONF-036** `prompt` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:34](../../cloud/cleanup.js#L34)。
-  - 原实现：`prompt('再次输入 EMPTY_PENDING_DELETE_NOW 确认永久清除')`；实现/测试证据：待补。
+- [x] **CONF-031** `confirm` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:13](../../cloud/cleanup.js#L13)。
+  - 原实现：`confirm('本次选择是否包含人工或来源不明草稿？选“取消”将保护这类草稿。')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **CONF-032** `confirm` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:29](../../cloud/cleanup.js#L29)。
+  - 原实现：`confirm('包含人工或来源不明草稿，请再次确认所选对象。')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **CONF-033** `confirm` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:30](../../cloud/cleanup.js#L30)。
+  - 原实现：`confirm('包含测试文件，请再次确认所选对象。')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **CONF-034** `confirm` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:32](../../cloud/cleanup.js#L32)。
+  - 原实现：`confirm(question)`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **CONF-035** `prompt` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:33](../../cloud/cleanup.js#L33)。
+  - 原实现：`prompt('请输入 '+item.confirm+' 确认本次操作')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **CONF-036** `prompt` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:34](../../cloud/cleanup.js#L34)。
+  - 原实现：`prompt('再次输入 EMPTY_PENDING_DELETE_NOW 确认永久清除')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 
 ## guards（167 项）
 
@@ -1232,54 +1232,54 @@
   - 原实现：`!button.disabled&&window.opsCloudCanWrite(button)`；实现/测试证据：待补。
 - [ ] **GUARD-137** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:125](../../cloud/commands.js#L125)。
   - 原实现：`!button.disabled&&window.opsCloudCanWrite(button)`；实现/测试证据：待补。
-- [ ] **GUARD-138** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:9](../../cloud/cleanup.js#L9)。
-  - 原实现：`document.getElementById(spec[kind]?.prefix+'CleanupPreview')¦¦document.getElementById('pendingDeleteStatus')`；实现/测试证据：待补。
-- [ ] **GUARD-139** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:12](../../cloud/cleanup.js#L12)。
-  - 原实现：`kind!=='pending'&&!ids.length`；实现/测试证据：待补。
-- [ ] **GUARD-140** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:12](../../cloud/cleanup.js#L12)。
-  - 原实现：`kind!=='pending'&&!ids.length`；实现/测试证据：待补。
-- [ ] **GUARD-141** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:15](../../cloud/cleanup.js#L15)。
-  - 原实现：`value.kind!==kind¦¦!Array.isArray(value.ids)¦¦JSON.stringify(value.ids)!==JSON.stringify(ids)¦¦typeof value.ticket!=='string'¦¦typeof value.expiresAt!=='number'`；实现/测试证据：待补。
-- [ ] **GUARD-142** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:15](../../cloud/cleanup.js#L15)。
-  - 原实现：`value.kind!==kind¦¦!Array.isArray(value.ids)¦¦JSON.stringify(value.ids)!==JSON.stringify(ids)¦¦typeof value.ticket!=='string'¦¦typeof value.expiresAt!=='number'`；实现/测试证据：待补。
-- [ ] **GUARD-143** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:15](../../cloud/cleanup.js#L15)。
-  - 原实现：`typeof value.ticket!=='string'`；实现/测试证据：待补。
-- [ ] **GUARD-144** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:15](../../cloud/cleanup.js#L15)。
-  - 原实现：`typeof value.expiresAt!=='number'`；实现/测试证据：待补。
-- [ ] **GUARD-145** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:17](../../cloud/cleanup.js#L17)。
-  - 原实现：`kind!=='pending'`；实现/测试证据：待补。
-- [ ] **GUARD-146** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:18](../../cloud/cleanup.js#L18)。
-  - 原实现：`state[item.prefix+'Preview']=value`；实现/测试证据：待补。
-- [ ] **GUARD-147** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:22](../../cloud/cleanup.js#L22)。
-  - 原实现：`(value.message¦¦'预览完成')+'；可处理 '+value.deletableCount+'，阻止 '+value.blockedCount+'。预览有效期至 '+new Date(value.expiresAt*1000).toLocaleTimeString()+'。'+(value.blocked¦¦[]).map(x=>x.name+'：'+x.reason).join('；')`；实现/测试证据：待补。
-- [ ] **GUARD-148** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:22](../../cloud/cleanup.js#L22)。
-  - 原实现：`(value.message¦¦'预览完成')+'；可处理 '+value.deletableCount+'，阻止 '+value.blockedCount+'。预览有效期至 '+new Date(value.expiresAt*1000).toLocaleTimeString()+'。'`；实现/测试证据：待补。
-- [ ] **GUARD-149** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:22](../../cloud/cleanup.js#L22)。
-  - 原实现：`value.expiresAt*1000`；实现/测试证据：待补。
-- [ ] **GUARD-150** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:28](../../cloud/cleanup.js#L28)。
-  - 原实现：`kind!=='pending'&&JSON.stringify([...state[item.selection]])!==JSON.stringify(p.ids)`；实现/测试证据：待补。
-- [ ] **GUARD-151** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:28](../../cloud/cleanup.js#L28)。
-  - 原实现：`kind!=='pending'&&JSON.stringify([...state[item.selection]])!==JSON.stringify(p.ids)`；实现/测试证据：待补。
-- [ ] **GUARD-152** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:34](../../cloud/cleanup.js#L34)。
-  - 原实现：`kind==='pending'&&prompt('再次输入 EMPTY_PENDING_DELETE_NOW 确认永久清除')!==item.confirm`；实现/测试证据：待补。
-- [ ] **GUARD-153** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:34](../../cloud/cleanup.js#L34)。
-  - 原实现：`kind==='pending'&&prompt('再次输入 EMPTY_PENDING_DELETE_NOW 确认永久清除')!==item.confirm`；实现/测试证据：待补。
-- [ ] **GUARD-154** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:38](../../cloud/cleanup.js#L38)。
-  - 原实现：`kind==='pending'`；实现/测试证据：待补。
-- [ ] **GUARD-155** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:39](../../cloud/cleanup.js#L39)。
-  - 原实现：`kind!=='pending'&&typeof renderActionResult==='function'`；实现/测试证据：待补。
-- [ ] **GUARD-156** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:39](../../cloud/cleanup.js#L39)。
-  - 原实现：`kind!=='pending'&&typeof renderActionResult==='function'`；实现/测试证据：待补。
-- [ ] **GUARD-157** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:46](../../cloud/cleanup.js#L46)。
-  - 原实现：`!match&&!pending`；实现/测试证据：待补。
-- [ ] **GUARD-158** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:47](../../cloud/cleanup.js#L47)。
-  - 原实现：`button.disabled¦¦!window.opsCloudCanWrite(button)`；实现/测试证据：待补。
-- [ ] **GUARD-159** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:47](../../cloud/cleanup.js#L47)。
-  - 原实现：`button.disabled¦¦!window.opsCloudCanWrite(button)`；实现/测试证据：待补。
-- [ ] **GUARD-160** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:48](../../cloud/cleanup.js#L48)。
-  - 原实现：`button.disabled=true`；实现/测试证据：待补。
-- [ ] **GUARD-161** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:49](../../cloud/cleanup.js#L49)。
-  - 原实现：`button.disabled=false`；实现/测试证据：待补。
+- [x] **GUARD-138** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:9](../../cloud/cleanup.js#L9)。
+  - 原实现：`document.getElementById(spec[kind]?.prefix+'CleanupPreview')¦¦document.getElementById('pendingDeleteStatus')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-139** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:12](../../cloud/cleanup.js#L12)。
+  - 原实现：`kind!=='pending'&&!ids.length`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-140** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:12](../../cloud/cleanup.js#L12)。
+  - 原实现：`kind!=='pending'&&!ids.length`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-141** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:15](../../cloud/cleanup.js#L15)。
+  - 原实现：`value.kind!==kind¦¦!Array.isArray(value.ids)¦¦JSON.stringify(value.ids)!==JSON.stringify(ids)¦¦typeof value.ticket!=='string'¦¦typeof value.expiresAt!=='number'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-142** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:15](../../cloud/cleanup.js#L15)。
+  - 原实现：`value.kind!==kind¦¦!Array.isArray(value.ids)¦¦JSON.stringify(value.ids)!==JSON.stringify(ids)¦¦typeof value.ticket!=='string'¦¦typeof value.expiresAt!=='number'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-143** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:15](../../cloud/cleanup.js#L15)。
+  - 原实现：`typeof value.ticket!=='string'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-144** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:15](../../cloud/cleanup.js#L15)。
+  - 原实现：`typeof value.expiresAt!=='number'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-145** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:17](../../cloud/cleanup.js#L17)。
+  - 原实现：`kind!=='pending'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-146** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:18](../../cloud/cleanup.js#L18)。
+  - 原实现：`state[item.prefix+'Preview']=value`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-147** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:22](../../cloud/cleanup.js#L22)。
+  - 原实现：`(value.message¦¦'预览完成')+'；可处理 '+value.deletableCount+'，阻止 '+value.blockedCount+'。预览有效期至 '+new Date(value.expiresAt*1000).toLocaleTimeString()+'。'+(value.blocked¦¦[]).map(x=>x.name+'：'+x.reason).join('；')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-148** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:22](../../cloud/cleanup.js#L22)。
+  - 原实现：`(value.message¦¦'预览完成')+'；可处理 '+value.deletableCount+'，阻止 '+value.blockedCount+'。预览有效期至 '+new Date(value.expiresAt*1000).toLocaleTimeString()+'。'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-149** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:22](../../cloud/cleanup.js#L22)。
+  - 原实现：`value.expiresAt*1000`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-150** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:28](../../cloud/cleanup.js#L28)。
+  - 原实现：`kind!=='pending'&&JSON.stringify([...state[item.selection]])!==JSON.stringify(p.ids)`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-151** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:28](../../cloud/cleanup.js#L28)。
+  - 原实现：`kind!=='pending'&&JSON.stringify([...state[item.selection]])!==JSON.stringify(p.ids)`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-152** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:34](../../cloud/cleanup.js#L34)。
+  - 原实现：`kind==='pending'&&prompt('再次输入 EMPTY_PENDING_DELETE_NOW 确认永久清除')!==item.confirm`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-153** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:34](../../cloud/cleanup.js#L34)。
+  - 原实现：`kind==='pending'&&prompt('再次输入 EMPTY_PENDING_DELETE_NOW 确认永久清除')!==item.confirm`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-154** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:38](../../cloud/cleanup.js#L38)。
+  - 原实现：`kind==='pending'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-155** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:39](../../cloud/cleanup.js#L39)。
+  - 原实现：`kind!=='pending'&&typeof renderActionResult==='function'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-156** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:39](../../cloud/cleanup.js#L39)。
+  - 原实现：`kind!=='pending'&&typeof renderActionResult==='function'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-157** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:46](../../cloud/cleanup.js#L46)。
+  - 原实现：`!match&&!pending`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-158** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:47](../../cloud/cleanup.js#L47)。
+  - 原实现：`button.disabled¦¦!window.opsCloudCanWrite(button)`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-159** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:47](../../cloud/cleanup.js#L47)。
+  - 原实现：`button.disabled¦¦!window.opsCloudCanWrite(button)`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-160** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:48](../../cloud/cleanup.js#L48)。
+  - 原实现：`button.disabled=true`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **GUARD-161** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:49](../../cloud/cleanup.js#L49)。
+  - 原实现：`button.disabled=false`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 - [ ] **GUARD-162** `状态/防重复约束` — 云端；计划 **V2-2F**；来源 [cloud/backups.js:40](../../cloud/backups.js#L40)。
   - 原实现：`verify.disabled = true`；实现/测试证据：待补。
 - [ ] **GUARD-163** `状态/防重复约束` — 云端；计划 **V2-2F**；来源 [cloud/backups.js:43](../../cloud/backups.js#L43)。
@@ -1989,8 +1989,8 @@
   - 原实现：`document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}},true)`；实现/测试证据：待补。
 - [ ] **EVENT-069** `setInterval` — 云端；计划 **V2-1**；来源 [cloud/commands.js:138](../../cloud/commands.js#L138)。
   - 原实现：`setInterval(poll,3000)`；实现/测试证据：待补。
-- [ ] **EVENT-070** `(() => {
- const endpoint='/api/controls/cloud-cleanup/',previews=new Map();
+- [x] **EVENT-070** `(() => {
+ const endpoint='/api/controls/cloud-cleanup/',previews=new Map(); 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
  const kinds={Draft:'drafts',Audio:'audio',Production:'production'};
  const spec={drafts:{prefix:'draft',selection:'selectedDraftIds',confirm:'RECYCLE_SELECTED_CAPCUT_DRAFTS'},audio:{prefix:'audio',selection:'selectedAudioIds',confirm:'RECYCLE_SELECTED_AUDIO_FILES'},production:{prefix:'production',selection:'selectedProductionIds',confirm:'RECYCLE_SELECTED_PRODUCTION_FILES'},pending:{confirm:'EMPTY_PENDING_DELETE_NOW'}};
  async function send(action,payload){const r=await window.opsCloudDispatch(endpoint+action,payload),body=await r.json();if(!r.ok)throw new Error(body.detail||'家里拒绝清理');return body;}
@@ -2041,14 +2041,14 @@
  document.addEventListener('DOMContentLoaded',()=>{const button=document.createElement('button');button.type='button';button.textContent='检查清理通道';button.id='checkCleanupCapabilityButton';button.addEventListener('click',()=>void capability());document.getElementById('pendingDeleteStatus')?.after(button);setInterval(()=>{if(document.querySelector('#draftManagerDialog[open],#audioManagerDialog[open],#productionManagerDialog[open]'))void capability();},30000);});
 })` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:3](../../cloud/cleanup.js#L3)。
   - 原实现：`(() => { const endpoint='/api/controls/cloud-cleanup/',previews=new Map(); const kinds={Draft:'drafts',Audio:'audio',Production:'production'}; const spec={drafts:{prefix:'draft',selection:'selectedDraftIds',confirm:'RECYCLE_SELECTED_CAPCUT_DRAFTS'},audio:{prefix:'audio',selection:'selectedAudioIds',confirm:'RECYCLE_SELECTED_AUDIO_FILES'},production:{prefix:'production',selection:'selectedProductionIds',confirm:'RECYCLE_SELECTE`；实现/测试证据：待补。
-- [ ] **EVENT-071** `document.addEventListener` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:43](../../cloud/cleanup.js#L43)。
-  - 原实现：`document.addEventListener('click',event=>{ const button=event.target.closest('button');if(!button)return; const match=/^(preview¦confirm)(Draft¦Audio¦Production)CleanupButton$/.exec(button.id),pending=button.id==='emptyPendingDeleteButton'; if(!match&&!pending){if(/(Draft¦Audio¦Production)ManagerButton$/.test(button.id))void capability();return;} event.preventDefault();event.stopImmediatePropagation();if(button.disabled¦¦!wind`；实现/测试证据：待补。
-- [ ] **EVENT-072** `document.addEventListener` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
-  - 原实现：`document.addEventListener('DOMContentLoaded',()=>{const button=document.createElement('button');button.type='button';button.textContent='检查清理通道';button.id='checkCleanupCapabilityButton';button.addEventListener('click',()=>void capability());document.getElementById('pendingDeleteStatus')?.after(button);setInterval(()=>{if(document.querySelector('#draftManagerDialog[open],#audioManagerDialog[open],#productionManagerDialog[open]'`；实现/测试证据：待补。
-- [ ] **EVENT-073** `button.addEventListener` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
-  - 原实现：`button.addEventListener('click',()=>void capability())`；实现/测试证据：待补。
-- [ ] **EVENT-074** `setInterval` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
-  - 原实现：`setInterval(()=>{if(document.querySelector('#draftManagerDialog[open],#audioManagerDialog[open],#productionManagerDialog[open]'))void capability();},30000)`；实现/测试证据：待补。
+- [x] **EVENT-071** `document.addEventListener` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:43](../../cloud/cleanup.js#L43)。
+  - 原实现：`document.addEventListener('click',event=>{ const button=event.target.closest('button');if(!button)return; const match=/^(preview¦confirm)(Draft¦Audio¦Production)CleanupButton$/.exec(button.id),pending=button.id==='emptyPendingDeleteButton'; if(!match&&!pending){if(/(Draft¦Audio¦Production)ManagerButton$/.test(button.id))void capability();return;} event.preventDefault();event.stopImmediatePropagation();if(button.disabled¦¦!wind`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **EVENT-072** `document.addEventListener` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
+  - 原实现：`document.addEventListener('DOMContentLoaded',()=>{const button=document.createElement('button');button.type='button';button.textContent='检查清理通道';button.id='checkCleanupCapabilityButton';button.addEventListener('click',()=>void capability());document.getElementById('pendingDeleteStatus')?.after(button);setInterval(()=>{if(document.querySelector('#draftManagerDialog[open],#audioManagerDialog[open],#productionManagerDialog[open]'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **EVENT-073** `button.addEventListener` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
+  - 原实现：`button.addEventListener('click',()=>void capability())`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
+- [x] **EVENT-074** `setInterval` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:52](../../cloud/cleanup.js#L52)。
+  - 原实现：`setInterval(()=>{if(document.querySelector('#draftManagerDialog[open],#audioManagerDialog[open],#productionManagerDialog[open]'))void capability();},30000)`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 - [ ] **EVENT-075** `(() => {
   const api = async (path, method = 'GET') => {
     const headers = {};
@@ -2252,8 +2252,8 @@
   - 原实现：`'/console/status'`；实现/测试证据：待补。
 - [ ] **PATH-063** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
   - 原实现：`'/console/commands'`；实现/测试证据：待补。
-- [ ] **PATH-064** `接口/动态路径` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:4](../../cloud/cleanup.js#L4)。
-  - 原实现：`'/api/controls/cloud-cleanup/'`；实现/测试证据：待补。
+- [x] **PATH-064** `接口/动态路径` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:4](../../cloud/cleanup.js#L4)。
+  - 原实现：`'/api/controls/cloud-cleanup/'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 - [ ] **PATH-065** `接口/动态路径` — 云端；计划 **V2-2F**；来源 [cloud/backups.js:6](../../cloud/backups.js#L6)。
   - 原实现：`'/auth/session'`；实现/测试证据：待补。
 - [ ] **PATH-066** `接口/动态路径` — 云端；计划 **V2-2F**；来源 [cloud/backups.js:20](../../cloud/backups.js#L20)。

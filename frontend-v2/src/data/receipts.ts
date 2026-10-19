@@ -67,3 +67,20 @@ export function captureReceipt(record: Row, answer: Row) {
   }
   return next
 }
+
+/** Apply async poll answers only if the writer has not changed/deleted that receipt. */
+export function mergePolledReceipts(
+  before: Row[],
+  polled: Row[],
+  current = localReceipts(),
+): Row[] {
+  return current.map((row) => {
+    const original = before.find((item) => item.requestId === row.requestId)
+    const answer = polled.find((item) => item.requestId === row.requestId)
+    return original &&
+      answer &&
+      JSON.stringify(original) === JSON.stringify(row)
+      ? answer
+      : row
+  })
+}

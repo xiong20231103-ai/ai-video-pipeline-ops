@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { cloudCleanupFor } from "@/data/cloud-cleanup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +37,7 @@ export default function FileManagers({
   reader: ReadClient | null;
   refresh: () => void;
 }) {
+  const [capabilityNote, setCapabilityNote] = useState("");
   const [kind, setKind] = useState<CleanupKind | null>(null),
     [payload, setPayload] = useState<Row>({}),
     [selection, setSelection] = useState<string[]>([]),
@@ -52,6 +54,30 @@ export default function FileManagers({
   const inFlight = useRef(false),
     generation = useRef(0),
     service = reader ? new HomeCleanup(reader) : null;
+  const cloudService =
+    reader && snapshot.mode === "cloud"
+      ? cloudCleanupFor(reader, () => snapshot.status)
+      : null;
+  const canWrite =
+    snapshot.mode === "home" || Boolean(cloudService?.available());
+  useEffect(() => {
+    if (!reader || snapshot.mode !== "cloud" || !kind) return;
+    let cancelled = false;
+    const check = () => {
+      void reader
+        .read("/api/controls/cloud-cleanup/capabilities", 0)
+        .catch(() => {
+          if (!cancelled)
+            setCapabilityNote("暂未取得清理通道状态；等待云端状态刷新");
+        });
+    };
+    check();
+    const timer = setInterval(check, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [kind, reader, snapshot.mode]);
   const pending =
     pendingReply?.source === snapshot.pendingDelete
       ? pendingReply.value
@@ -62,12 +88,14 @@ export default function FileManagers({
     categories = object(object(payload.counts).categories);
   function invalidate() {
     setPreview(null);
+    cloudService?.invalidate();
   }
   async function load(next: CleanupKind, defaults = false) {
     if (!service || inFlight.current) return;
     const id = ++generation.current;
     inFlight.current = true;
     setBusy("load");
+    cloudService?.invalidate();
     setKind(next);
     setError("");
     setPreview(null);
@@ -116,14 +144,15 @@ export default function FileManagers({
     }
   }
   async function makePreview() {
-    if (!kind || !service || inFlight.current || snapshot.mode !== "home")
-      return;
+    if (!kind || !service || inFlight.current || !canWrite) return;
     inFlight.current = true;
     setBusy("preview");
     setPreview(null);
     setError("");
     try {
-      const value = await service.preview(kind, selection);
+      const value = cloudService
+        ? await cloudService.preview(kind, selection)
+        : await service.preview(kind, selection);
       setPreview(value);
       if (number(value.blockedCount) && kind === "audio")
         window.alert(
@@ -143,19 +172,14 @@ export default function FileManagers({
     }
   }
   async function execute() {
-    if (
-      !kind ||
-      !preview ||
-      !service ||
-      inFlight.current ||
-      snapshot.mode !== "home"
-    )
-      return;
+    if (!kind || !preview || !service || inFlight.current || !canWrite) return;
     inFlight.current = true;
     setBusy("execute");
     setError("");
     try {
-      const value = await service.execute(kind, preview);
+      const value = cloudService
+        ? await cloudService.execute(kind, selection)
+        : await service.execute(kind, preview);
       if (!value) return;
       setResult(value);
       setSelection([]);
@@ -181,12 +205,17 @@ export default function FileManagers({
     }
   }
   async function empty() {
-    if (!service || inFlight.current || snapshot.mode !== "home") return;
+    if (!service || inFlight.current || !canWrite) return;
     inFlight.current = true;
     setBusy("pending");
     try {
-      const value = await service.emptyPending(pending);
-      if (value) window.alert(text(value.message, "待删区已清空"));
+      const value = cloudService
+        ? await cloudService.execute("pending", [])
+        : await service.emptyPending(pending);
+      if (value) {
+        setResult(value);
+        window.alert(text(value.message, "待删区已清空"));
+      }
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "清空待删区失败");
     } finally {
@@ -258,7 +287,12 @@ export default function FileManagers({
           ))}
         </div>
         {snapshot.mode === "cloud" && (
-          <p>当前阶段云端仅查看清单，清理写操作尚未接入。</p>
+          <p>
+            云端清理通过命令队列，家里执行后返回逐项回执。
+            {canWrite
+              ? "清理通道已就绪。"
+              : "清理开关未开启、家里未就绪或有命令待核对，操作已锁定。"}
+          </p>
         )}
       </Panel>
       <PendingDelete
@@ -267,7 +301,7 @@ export default function FileManagers({
           number(pending.count) > 0 && (
             <Button
               variant="outline"
-              disabled={snapshot.mode !== "home" || !!busy}
+              disabled={!canWrite || !!busy}
               onClick={() => void empty()}
             >
               立即清空待删区（{number(pending.count)} 项，约{" "}
@@ -276,6 +310,29 @@ export default function FileManagers({
           )
         }
       />
+      {snapshot.mode === "cloud" && (
+        <>
+          <Button
+            variant="outline"
+            disabled={!!busy}
+            onClick={() => {
+              void cloudService
+                ?.capability()
+                .then(() =>
+                  setCapabilityNote("已请求清理通道状态，等待云端状态刷新"),
+                )
+                .catch((error) =>
+                  setCapabilityNote(
+                    error instanceof Error ? error.message : "检查失败",
+                  ),
+                );
+            }}
+          >
+            检查清理通道
+          </Button>
+          {capabilityNote && <p role="status">{capabilityNote}</p>}
+        </>
+      )}
       {result && (
         <p role="status">
           {text(result.state)} · {text(result.message)}
@@ -589,6 +646,13 @@ export default function FileManagers({
             {preview && (
               <Panel title="清理预览">
                 <p>{text(preview.message)}</p>
+                {snapshot.mode === "cloud" && (
+                  <p>
+                    预览有效期至{" "}
+                    {formatDateTime(Number(preview.expiresAt) * 1000)}
+                    ；页面重载后需重新预览。
+                  </p>
+                )}
                 <p>
                   可处理 {number(preview.deletableCount)}，阻止{" "}
                   {number(preview.blockedCount)} · 约{" "}
@@ -619,9 +683,7 @@ export default function FileManagers({
             )}
             <div className="data-actions">
               <Button
-                disabled={
-                  !!busy || !selection.length || snapshot.mode !== "home"
-                }
+                disabled={!!busy || !selection.length || !canWrite}
                 onClick={() => void makePreview()}
               >
                 {busy === "preview"
@@ -633,7 +695,7 @@ export default function FileManagers({
               {Boolean(number(preview?.deletableCount)) && (
                 <Button
                   variant="destructive"
-                  disabled={!!busy || snapshot.mode !== "home"}
+                  disabled={!!busy || !canWrite}
                   onClick={() => void execute()}
                 >
                   {busy === "execute" ? "正在移入待删区…" : "确认移入待删区"}
