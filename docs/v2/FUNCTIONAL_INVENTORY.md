@@ -37,8 +37,8 @@
 
 ## functions（368 项）
 
-- [ ] **FN-001** `currentLocalDateLabel` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1](../../static/app.js#L1)。
-  - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。
+- [x] **FN-001** `currentLocalDateLabel` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1](../../static/app.js#L1)。
+  - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **FN-002** `$` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:20](../../static/app.js#L20)。
   - 原实现：`const $ = (id) => document.getElementById(id);`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-003** `escapeHtml` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:21](../../static/app.js#L21)。
@@ -357,36 +357,36 @@
   - 原实现：`{ const bar = $("gapQuickBar"); const title = $("gapQuickTitle"); const summary = $("gapQuickSummary"); const actions = $("gapQuickActions"); if (!bar ¦¦ !title ¦¦ !summary ¦¦ !actions) return; const active = items.filter(item => Boolean(item.gapActive) && String(item.taskId ¦¦ "")); if (!active.length) { bar.classList.add("hidden"); actions.innerHTML = ""; return; } const missingFor = item => Number(item.missingCount ?? Math.`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-160** `匿名回调@1009` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1009](../../static/app.js#L1009)。
   - 原实现：`const totalMissing = active.reduce((total, item) => total + missingFor(item), 0);`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
-- [ ] **FN-161** `匿名回调@1012` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1012](../../static/app.js#L1012)。
-  - 原实现：`actions.innerHTML = active.map(item => ˋ <button type="button" data-task-id="${escapeHtml(String(item.taskId ¦¦ ""))}" onclick="openReplenishment(this.dataset.taskId)"> ${escapeHtml(item.project ¦¦ "未分类")} / ${escapeHtml(item.material ¦¦ "--")} · 缺 ${missingFor(item)} 条 </button>ˋ).join("")`；实现/测试证据：待补。
+- [x] **FN-161** `匿名回调@1012` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1012](../../static/app.js#L1012)。
+  - 原实现：`actions.innerHTML = active.map(item => ˋ <button type="button" data-task-id="${escapeHtml(String(item.taskId ¦¦ ""))}" onclick="openReplenishment(this.dataset.taskId)"> ${escapeHtml(item.project ¦¦ "未分类")} / ${escapeHtml(item.material ¦¦ "--")} · 缺 ${missingFor(item)} 条 </button>ˋ).join("")`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **FN-162** `renderProjectGaps` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1019](../../static/app.js#L1019)。
   - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-163** `匿名回调@1028` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1028](../../static/app.js#L1028)。
   - 原实现：`node.innerHTML = items.map(item => { const expected = Number(item.expectedCount ¦¦ 0); const completed = Number(item.completed ¦¦ 0); const storedMissing = item.missingCount; const missing = Number(storedMissing !== undefined && storedMissing !== null && storedMissing !== "" ? storedMissing : Math.max(0, expected - completed)); const notStarted = Boolean(item.notStarted); const blocked = Boolean(item.gapActive); const historic`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-164** `匿名回调@1043` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1043](../../static/app.js#L1043)。
   - 原实现：`videos.map(video => ˋ<li><span>${escapeHtml(video.url ¦¦ "--")}</span><b>${escapeHtml(video.stage ¦¦ "waiting")}</b><em>${escapeHtml(video.error ¦¦ video.message ¦¦ video.status ¦¦ "等待")}</em></li>ˋ ).join("")}</ul></details>ˋ`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
-- [ ] **FN-165** `renderTemplates` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1058](../../static/app.js#L1058)。
-  - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。
-- [ ] **FN-166** `匿名回调@1067` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1067](../../static/app.js#L1067)。
-  - 原实现：`state.templates.map(item => ˋ<option value="${escapeHtml(item.id)}">${escapeHtml(item.label ¦¦ ˋ${item.project} / ${item.material}ˋ)}</option>ˋ ).join("")}ˋ`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。
-- [ ] **FN-167** `匿名回调@1070` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1070](../../static/app.js#L1070)。
-  - 原实现：`{ const nextTemplates = Array.isArray(items) ? items : []; const signature = JSON.stringify(nextTemplates); const select = $("createTemplate"); if (!select) return; if (signature === state.templateSignature && select.options.length > 1) return; state.templates = nextTemplates; state.templateSignature = signature; const previous = select.value; select.innerHTML = ˋ<option value="">请选择项目</option>${state.templates.map(item => ˋ<o`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。
-- [ ] **FN-168** `updateMaterialOptions` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1074](../../static/app.js#L1074)。
-  - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。
-- [ ] **FN-169** `匿名回调@1075` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1075](../../static/app.js#L1075)。
-  - 原实现：`const template = state.templates.find(item => String(item.id) === String($("createTemplate")?.value ¦¦ ""));`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。
-- [ ] **FN-170** `匿名回调@1080` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1080](../../static/app.js#L1080)。
-  - 原实现：`select.innerHTML = materials.map(item => ˋ<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>ˋ).join("")`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。
+- [x] **FN-165** `renderTemplates` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1058](../../static/app.js#L1058)。
+  - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **FN-166** `匿名回调@1067` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1067](../../static/app.js#L1067)。
+  - 原实现：`state.templates.map(item => ˋ<option value="${escapeHtml(item.id)}">${escapeHtml(item.label ¦¦ ˋ${item.project} / ${item.material}ˋ)}</option>ˋ ).join("")}ˋ`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **FN-167** `匿名回调@1070` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1070](../../static/app.js#L1070)。
+  - 原实现：`{ const nextTemplates = Array.isArray(items) ? items : []; const signature = JSON.stringify(nextTemplates); const select = $("createTemplate"); if (!select) return; if (signature === state.templateSignature && select.options.length > 1) return; state.templates = nextTemplates; state.templateSignature = signature; const previous = select.value; select.innerHTML = ˋ<option value="">请选择项目</option>${state.templates.map(item => ˋ<o`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **FN-168** `updateMaterialOptions` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1074](../../static/app.js#L1074)。
+  - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **FN-169** `匿名回调@1075` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1075](../../static/app.js#L1075)。
+  - 原实现：`const template = state.templates.find(item => String(item.id) === String($("createTemplate")?.value ¦¦ ""));`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **FN-170** `匿名回调@1080` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1080](../../static/app.js#L1080)。
+  - 原实现：`select.innerHTML = materials.map(item => ˋ<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>ˋ).join("")`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。 任务表单相关行为留待 V2-2B，不记为只读完成。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [ ] **FN-171** `postJson` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1087](../../static/app.js#L1087)。
   - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现/测试证据：待补。
 - [ ] **FN-172** `匿名回调@1093` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1093](../../static/app.js#L1093)。
   - 原实现：`const timer = window.setTimeout(() => controller.abort(), timeoutMs);`；实现/测试证据：待补。
-- [ ] **FN-173** `openReplenishment` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1117](../../static/app.js#L1117)。
-  - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现/测试证据：待补。
-- [ ] **FN-174** `匿名回调@1131` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1131](../../static/app.js#L1131)。
-  - 原实现：`function openReplenishment(taskId) { const item = state.gaps[String(taskId)]; const panel = $("replenishPanel"); const dialog = $("replenishDialog"); if (!item ¦¦ !panel) return; const expected = Number(item.expectedCount ¦¦ 0); const completed = Number(item.completed ¦¦ 0); const missing = Number(item.missingCount ?? Math.max(0, expected - completed)); panel.innerHTML = ˋ<header><div><strong>补链：${escapeHtml(item.project)} / $`；实现/测试证据：待补。
-- [ ] **FN-175** `匿名回调@1132` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1132](../../static/app.js#L1132)。
-  - 原实现：`function openReplenishment(taskId) { const item = state.gaps[String(taskId)]; const panel = $("replenishPanel"); const dialog = $("replenishDialog"); if (!item ¦¦ !panel) return; const expected = Number(item.expectedCount ¦¦ 0); const completed = Number(item.completed ¦¦ 0); const missing = Number(item.missingCount ?? Math.max(0, expected - completed)); panel.innerHTML = ˋ<header><div><strong>补链：${escapeHtml(item.project)} / $`；实现/测试证据：待补。
+- [x] **FN-173** `openReplenishment` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1117](../../static/app.js#L1117)。
+  - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **FN-174** `匿名回调@1131` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1131](../../static/app.js#L1131)。
+  - 原实现：`function openReplenishment(taskId) { const item = state.gaps[String(taskId)]; const panel = $("replenishPanel"); const dialog = $("replenishDialog"); if (!item ¦¦ !panel) return; const expected = Number(item.expectedCount ¦¦ 0); const completed = Number(item.completed ¦¦ 0); const missing = Number(item.missingCount ?? Math.max(0, expected - completed)); panel.innerHTML = ˋ<header><div><strong>补链：${escapeHtml(item.project)} / $`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **FN-175** `匿名回调@1132` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1132](../../static/app.js#L1132)。
+  - 原实现：`function openReplenishment(taskId) { const item = state.gaps[String(taskId)]; const panel = $("replenishPanel"); const dialog = $("replenishDialog"); if (!item ¦¦ !panel) return; const expected = Number(item.expectedCount ¦¦ 0); const completed = Number(item.completed ¦¦ 0); const missing = Number(item.missingCount ?? Math.max(0, expected - completed)); panel.innerHTML = ˋ<header><div><strong>补链：${escapeHtml(item.project)} / $`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **FN-176** `renderReceiverQueue` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1162](../../static/app.js#L1162)。
   - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-177** `isRecent` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1172](../../static/app.js#L1172)。
@@ -465,8 +465,8 @@
   - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现/测试证据：待补。
 - [ ] **FN-214** `renderHistoricalCloudVerification` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1556](../../static/app.js#L1556)。
   - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现/测试证据：待补。
-- [ ] **FN-215** `controlTask` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1578](../../static/app.js#L1578)。
-  - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现/测试证据：待补。
+- [x] **FN-215** `controlTask` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1578](../../static/app.js#L1578)。
+  - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **FN-216** `getJson` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1612](../../static/app.js#L1612)。
   - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-217** `匿名回调@1616` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1616](../../static/app.js#L1616)。
@@ -575,8 +575,8 @@
   - 原实现：`$("historicalCloudVerifyButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。")) return; button.disabled = true; button.textContent = "正在提交历史核验…"; try { const result = await postJson("/api/controls/upload/verify-history", {}); renderHistoricalCloudVerification(result); await refresh(); } catch (error`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **FN-269** `匿名回调@2124` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2124](../../static/app.js#L2124)。
   - 原实现：`$("resetTestRecordsButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。")) return; if (!window.confirm("再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。")) return; button.disabled = true; button.textContent = "正在备份并重置…"; try { const result = await postJson("/api/controls/testing/reset", { confirm: "RESET_TEST_RECORDS" }); state.da`；实现/测试证据：待补。
-- [ ] **FN-270** `匿名回调@2153` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2153](../../static/app.js#L2153)。
-  - 原实现：`$("createTaskForm").addEventListener("submit", async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector("button[type='submit']"); button.disabled = true; try { const result = await postJson("/api/controls/tasks/create", { date: $("createDate").value.trim(), templateId: $("createTemplate").value, material: $("createMaterial").value, audioBatch: $("createAudioBatch").value.tr`；实现/测试证据：待补。
+- [x] **FN-270** `匿名回调@2153` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2153](../../static/app.js#L2153)。
+  - 原实现：`$("createTaskForm").addEventListener("submit", async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector("button[type='submit']"); button.disabled = true; try { const result = await postJson("/api/controls/tasks/create", { date: $("createDate").value.trim(), templateId: $("createTemplate").value, material: $("createMaterial").value, audioBatch: $("createAudioBatch").value.tr`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **FN-271** `refreshLoop` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:2187](../../static/app.js#L2187)。
   - 原实现：`function currentLocalDateLabel() { const value = new Date(); return ˋ${value.getMonth() + 1}.${value.getDate()}ˋ; } const state = { date: "", batchId: "", overview: null, templates: [], templateSignature: "", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: "", drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: "", selectedAudioIds: `；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-272** `refreshContinueLoop` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:2192](../../static/app.js#L2192)。
@@ -786,12 +786,12 @@
   - 原实现：`getJson("/api/controls/production-files", 1, 60000)`；实现/测试证据：待补。
 - [ ] **NET-005** `fetch` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1095](../../static/app.js#L1095)。
   - 原实现：`fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal, })`；实现/测试证据：待补。
-- [ ] **NET-006** `postJson` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1137](../../static/app.js#L1137)。
-  - 原实现：`postJson(ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/replenishˋ, { urls: $("replenishUrls").value, startNow: $("replenishStartNow").checked, })`；实现/测试证据：待补。
+- [x] **NET-006** `postJson` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1137](../../static/app.js#L1137)。
+  - 原实现：`postJson(ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/replenishˋ, { urls: $("replenishUrls").value, startNow: $("replenishStartNow").checked, })`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [ ] **NET-007** `getJson` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1520](../../static/app.js#L1520)。
   - 原实现：`getJson(target)`；实现/测试证据：待补。
-- [ ] **NET-008** `fetch` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1589](../../static/app.js#L1589)。
-  - 原实现：`fetch(ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/${action}ˋ, { method: "POST" })`；实现/测试证据：待补。
+- [x] **NET-008** `fetch` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1589](../../static/app.js#L1589)。
+  - 原实现：`fetch(ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/${action}ˋ, { method: "POST" })`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **NET-009** `fetch` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1620](../../static/app.js#L1620)。
   - 原实现：`fetch(url, { cache: "no-cache", headers, signal: controller.signal })`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **NET-010** `getJson` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1647](../../static/app.js#L1647)。
@@ -822,8 +822,8 @@
   - 原实现：`postJson("/api/controls/upload/verify-history", {})`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **NET-023** `postJson` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2131](../../static/app.js#L2131)。
   - 原实现：`postJson("/api/controls/testing/reset", { confirm: "RESET_TEST_RECORDS" })`；实现/测试证据：待补。
-- [ ] **NET-024** `postJson` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2159](../../static/app.js#L2159)。
-  - 原实现：`postJson("/api/controls/tasks/create", { date: $("createDate").value.trim(), templateId: $("createTemplate").value, material: $("createMaterial").value, audioBatch: $("createAudioBatch").value.trim(), voicePlan: $("createVoicePlan").value, expectedCount: $("createExpectedCount").value, urls: $("createUrls").value, startNow: $("createStartNow").checked, })`；实现/测试证据：待补。
+- [x] **NET-024** `postJson` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2159](../../static/app.js#L2159)。
+  - 原实现：`postJson("/api/controls/tasks/create", { date: $("createDate").value.trim(), templateId: $("createTemplate").value, material: $("createMaterial").value, audioBatch: $("createAudioBatch").value.trim(), voicePlan: $("createVoicePlan").value, expectedCount: $("createExpectedCount").value, urls: $("createUrls").value, startNow: $("createStartNow").checked, })`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **NET-025** `original` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:38](../../cloud/readonly.js#L38)。
   - 原实现：`original(key,{headers:{'X-Ops-Page-Visible':'true'}})`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **NET-026** `original` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:50](../../cloud/readonly.js#L50)。
@@ -883,8 +883,8 @@
 
 ## confirmations（36 项）
 
-- [ ] **CONF-001** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1585](../../static/app.js#L1585)。
-  - 原实现：`window.confirm(question)`；实现/测试证据：待补。
+- [x] **CONF-001** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1585](../../static/app.js#L1585)。
+  - 原实现：`window.confirm(question)`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [ ] **CONF-002** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2C**；来源 [static/app.js:1787](../../static/app.js#L1787)。
   - 原实现：`window.confirm(ˋ确认将 ${preview.deletableCount} 个草稿移入待删区吗？保留 3 天后自动清除，期间可恢复；不会删除视频、音频、成片或生产任务。ˋ)`；实现/测试证据：待补。
 - [ ] **CONF-003** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2C**；来源 [static/app.js:1788](../../static/app.js#L1788)。
@@ -1026,10 +1026,10 @@
   - 原实现：`!active.length`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **GUARD-034** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1010](../../static/app.js#L1010)。
   - 原实现：`active.length === 1`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
-- [ ] **GUARD-035** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1135](../../static/app.js#L1135)。
-  - 原实现：`button.disabled = true`；实现/测试证据：待补。
-- [ ] **GUARD-036** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1155](../../static/app.js#L1155)。
-  - 原实现：`button.disabled = false`；实现/测试证据：待补。
+- [x] **GUARD-035** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1135](../../static/app.js#L1135)。
+  - 原实现：`button.disabled = true`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **GUARD-036** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1155](../../static/app.js#L1155)。
+  - 原实现：`button.disabled = false`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **GUARD-037** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1172](../../static/app.js#L1172)。
   - 原实现：`String(item.status ¦¦ "") === "pending_confirmation" ¦¦ Date.now() - Date.parse(item.importedAt ¦¦ item.createdAt ¦¦ "") < recentMs`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **GUARD-038** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1179](../../static/app.js#L1179)。
@@ -1062,10 +1062,10 @@
   - 原实现：`state.continueStatusBusy = false`；实现/测试证据：待补。
 - [ ] **GUARD-052** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1572](../../static/app.js#L1572)。
   - 原实现：`button.disabled = running`；实现/测试证据：待补。
-- [ ] **GUARD-053** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1586](../../static/app.js#L1586)。
-  - 原实现：`button.disabled = true`；实现/测试证据：待补。
-- [ ] **GUARD-054** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1604](../../static/app.js#L1604)。
-  - 原实现：`button.disabled = false`；实现/测试证据：待补。
+- [x] **GUARD-053** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1586](../../static/app.js#L1586)。
+  - 原实现：`button.disabled = true`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **GUARD-054** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1604](../../static/app.js#L1604)。
+  - 原实现：`button.disabled = false`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **GUARD-055** `条件门禁` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1639](../../static/app.js#L1639)。
   - 原实现：`state.refreshBusy`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **GUARD-056** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1640](../../static/app.js#L1640)。
@@ -1162,10 +1162,10 @@
   - 原实现：`button.disabled = true`；实现/测试证据：待补。
 - [ ] **GUARD-102** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2147](../../static/app.js#L2147)。
   - 原实现：`button.disabled = false`；实现/测试证据：待补。
-- [ ] **GUARD-103** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2157](../../static/app.js#L2157)。
-  - 原实现：`button.disabled = true`；实现/测试证据：待补。
-- [ ] **GUARD-104** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2184](../../static/app.js#L2184)。
-  - 原实现：`button.disabled = false`；实现/测试证据：待补。
+- [x] **GUARD-103** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2157](../../static/app.js#L2157)。
+  - 原实现：`button.disabled = true`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **GUARD-104** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2184](../../static/app.js#L2184)。
+  - 原实现：`button.disabled = false`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **GUARD-105** `条件门禁` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:2193](../../static/app.js#L2193)。
   - 原实现：`state.continueInFlight`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **GUARD-106** `条件门禁` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:41](../../cloud/readonly.js#L41)。
@@ -1301,8 +1301,8 @@
   - 原实现：`id="runtimeGuidance" class="runtime-guidance hidden" aria-live="polite" ¦ 当前项目需要补链<`；实现/测试证据：待补。
 - [ ] **DOM-003** `section nextAction` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:26](../../static/index.html#L26)。
   - 原实现：`id="nextAction" class="runtime-guidance needs-action hidden" aria-live="polite" ¦ 当前项目需要补链 -- <div id="gapQuickActions" class="gap-quick-acti`；实现/测试证据：待补。
-- [ ] **DOM-004** `section gapQuickBar` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:28](../../static/index.html#L28)。
-  - 原实现：`id="gapQuickBar" class="gap-quick-bar hidden" aria-live="polite" ¦ 当前项目需要补链 --`；实现/测试证据：待补。
+- [x] **DOM-004** `section gapQuickBar` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:28](../../static/index.html#L28)。
+  - 原实现：`id="gapQuickBar" class="gap-quick-bar hidden" aria-live="polite" ¦ 当前项目需要补链 --`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [ ] **DOM-005** `section (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:34](../../static/index.html#L34)。
   - 原实现：`class="hero panel" ¦ 当前生产状态 正在读取生产线 请稍候，Dashboard 正在汇总全部环节状态。 远程总控 可确`；实现/测试证据：待补。
 - [ ] **DOM-006** `section (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:43](../../static/index.html#L43)。
@@ -1399,26 +1399,26 @@
   - 原实现：`id="resetTestRecordsButton" class="danger wide" type="button" ¦ 重置全部测试记录 仅把工作台、接收器、Dashboard 与 CapCut 的任务记录备份后归零；不会删除媒体、素材、配置或校准。 尚未重置测试记录 <details class="web-task`；实现/测试证据：待补。
 - [ ] **DOM-052** `details (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:229](../../static/index.html#L229)。
   - 原实现：`class="web-task-form" ¦ 新建项目任务 日期 项目<select id="createTemplate" name="templateId" requi`；实现/测试证据：待补。
-- [ ] **DOM-053** `form createTaskForm` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/index.html:230](../../static/index.html#L230)。
-  - 原实现：`id="createTaskForm" ¦ 日期 项目 材料<select id="createM`；实现/测试证据：待补。
-- [ ] **DOM-054** `input createDate` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:231](../../static/index.html#L231)。
-  - 原实现：`id="createDate" name="date" placeholder="例如 7.21" required ¦ 项目 材料 音频批次<input id="createAudio`；实现/测试证据：待补。
-- [ ] **DOM-055** `select createTemplate` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:232](../../static/index.html#L232)。
-  - 原实现：`id="createTemplate" name="templateId" required ¦ 材料 音频批次 语音策略<select`；实现/测试证据：待补。
-- [ ] **DOM-056** `select createMaterial` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:233](../../static/index.html#L233)。
-  - 原实现：`id="createMaterial" name="material" ¦ 音频批次 语音策略 按项目默认 <option value="r`；实现/测试证据：待补。
-- [ ] **DOM-057** `input createAudioBatch` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:234](../../static/index.html#L234)。
-  - 原实现：`id="createAudioBatch" name="audioBatch" placeholder="默认使用日期" ¦ 语音策略 按项目默认 复用已有语音 新建语音 计划`；实现/测试证据：待补。
-- [ ] **DOM-058** `select createVoicePlan` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:235](../../static/index.html#L235)。
-  - 原实现：`id="createVoicePlan" name="voicePlan" ¦ 按项目默认 复用已有语音 新建语音 计划视频数 </l`；实现/测试证据：待补。
-- [ ] **DOM-059** `input createExpectedCount` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:236](../../static/index.html#L236)。
-  - 原实现：`id="createExpectedCount" name="expectedCount" type="number" min="1" ¦ 视频链接（每行一条） 提交并启动首项`；实现/测试证据：待补。
-- [ ] **DOM-060** `textarea createUrls` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:237](../../static/index.html#L237)。
-  - 原实现：`id="createUrls" name="urls" rows="4" required ¦ 提交并启动首项 提交任务`；实现/测试证据：待补。
-- [ ] **DOM-061** `input createStartNow` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:238](../../static/index.html#L238)。
-  - 原实现：`id="createStartNow" type="checkbox" ¦ 提交并启动首项 提交任务 正在读取接收器队列… </se`；实现/测试证据：待补。
-- [ ] **DOM-062** `button (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:239](../../static/index.html#L239)。
-  - 原实现：`class="primary wide" type="submit" ¦ 提交任务 正在读取接收器队列… <div class="secti`；实现/测试证据：待补。
+- [x] **DOM-053** `form createTaskForm` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/index.html:230](../../static/index.html#L230)。
+  - 原实现：`id="createTaskForm" ¦ 日期 项目 材料<select id="createM`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **DOM-054** `input createDate` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:231](../../static/index.html#L231)。
+  - 原实现：`id="createDate" name="date" placeholder="例如 7.21" required ¦ 项目 材料 音频批次<input id="createAudio`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **DOM-055** `select createTemplate` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:232](../../static/index.html#L232)。
+  - 原实现：`id="createTemplate" name="templateId" required ¦ 材料 音频批次 语音策略<select`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **DOM-056** `select createMaterial` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:233](../../static/index.html#L233)。
+  - 原实现：`id="createMaterial" name="material" ¦ 音频批次 语音策略 按项目默认 <option value="r`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **DOM-057** `input createAudioBatch` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:234](../../static/index.html#L234)。
+  - 原实现：`id="createAudioBatch" name="audioBatch" placeholder="默认使用日期" ¦ 语音策略 按项目默认 复用已有语音 新建语音 计划`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **DOM-058** `select createVoicePlan` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:235](../../static/index.html#L235)。
+  - 原实现：`id="createVoicePlan" name="voicePlan" ¦ 按项目默认 复用已有语音 新建语音 计划视频数 </l`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **DOM-059** `input createExpectedCount` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:236](../../static/index.html#L236)。
+  - 原实现：`id="createExpectedCount" name="expectedCount" type="number" min="1" ¦ 视频链接（每行一条） 提交并启动首项`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **DOM-060** `textarea createUrls` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:237](../../static/index.html#L237)。
+  - 原实现：`id="createUrls" name="urls" rows="4" required ¦ 提交并启动首项 提交任务`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **DOM-061** `input createStartNow` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:238](../../static/index.html#L238)。
+  - 原实现：`id="createStartNow" type="checkbox" ¦ 提交并启动首项 提交任务 正在读取接收器队列… </se`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **DOM-062** `button (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:239](../../static/index.html#L239)。
+  - 原实现：`class="primary wide" type="submit" ¦ 提交任务 正在读取接收器队列… <div class="secti`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [ ] **DOM-063** `section (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:244](../../static/index.html#L244)。
   - 原实现：`class="panel project-gaps-card" ¦ PROJECT STATUS 项目状态 正在读取项目状态… <section`；实现/测试证据：待补。
 - [ ] **DOM-064** `section (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:245](../../static/index.html#L245)。
@@ -1523,8 +1523,8 @@
   - 原实现：`id="productionProtectionDialog" class="audio-protection-dialog" ¦ FILE PROTECTED 当前文件禁止清理 文件 -- 所属任务 -- <`；实现/测试证据：待补。
 - [ ] **DOM-114** `button closeProductionProtectionButton` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:394](../../static/index.html#L394)。
   - 原实现：`id="closeProductionProtectionButton" class="primary" type="button" ¦ 我知道了 AI视频生产线 OPS · Tailscale安全控制 <span id="footerMa`；实现/测试证据：待补。
-- [ ] **DOM-115** `dialog replenishDialog` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:397](../../static/index.html#L397)。
-  - 原实现：`id="replenishDialog" class="replenish-dialog" ¦ AI视频生产线 OPS · Tailscale安全控制 -- <`；实现/测试证据：待补。
+- [x] **DOM-115** `dialog replenishDialog` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:397](../../static/index.html#L397)。
+  - 原实现：`id="replenishDialog" class="replenish-dialog" ¦ AI视频生产线 OPS · Tailscale安全控制 -- <`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [ ] **DOM-116** `footer (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:400](../../static/index.html#L400)。
   - 原实现：` ¦ AI视频生产线 OPS · Tailscale安全控制 --`；实现/测试证据：待补。
 - [ ] **DOM-117** `form loginForm` — 云端；计划 **V2-2F**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
@@ -1564,10 +1564,10 @@
   - 原实现：`row.addEventListener("click", event => { const item = state.productionFiles.find(value => value.fileId === row.dataset.productionRowId); if (!item?.protected ¦¦ event.target.matches("input:not(:disabled)")) return; event.preventDefault(); showProductionProtection(item); })`；实现/测试证据：待补。
 - [ ] **EVENT-007** `window.setTimeout` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1093](../../static/app.js#L1093)。
   - 原实现：`window.setTimeout(() => controller.abort(), timeoutMs)`；实现/测试证据：待补。
-- [ ] **EVENT-008** `$("closeReplenishDialog")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1131](../../static/app.js#L1131)。
-  - 原实现：`$("closeReplenishDialog")?.addEventListener("click", () => dialog?.close())`；实现/测试证据：待补。
-- [ ] **EVENT-009** `$("replenishForm").addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1132](../../static/app.js#L1132)。
-  - 原实现：`$("replenishForm").addEventListener("submit", async (event) => { event.preventDefault(); const button = event.currentTarget.querySelector("button"); button.disabled = true; try { const result = await postJson(ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/replenishˋ, { urls: $("replenishUrls").value, startNow: $("replenishStartNow").checked, }); renderActionResult("queueActionResult", { state: "completed", message: result.`；实现/测试证据：待补。
+- [x] **EVENT-008** `$("closeReplenishDialog")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1131](../../static/app.js#L1131)。
+  - 原实现：`$("closeReplenishDialog")?.addEventListener("click", () => dialog?.close())`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **EVENT-009** `$("replenishForm").addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1132](../../static/app.js#L1132)。
+  - 原实现：`$("replenishForm").addEventListener("submit", async (event) => { event.preventDefault(); const button = event.currentTarget.querySelector("button"); button.disabled = true; try { const result = await postJson(ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/replenishˋ, { urls: $("replenishUrls").value, startNow: $("replenishStartNow").checked, }); renderActionResult("queueActionResult", { state: "completed", message: result.`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **EVENT-010** `window.setTimeout` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1616](../../static/app.js#L1616)。
   - 原实现：`window.setTimeout(() => controller.abort(), timeoutMs)`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **EVENT-011** `window.setTimeout` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1630](../../static/app.js#L1630)。
@@ -1642,10 +1642,10 @@
   - 原实现：`$("historicalCloudVerifyButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认核验历史百度云文件吗？系统只会查询云端文件是否存在，并核对云端路径和文件大小；不会补传、不会删除本地或云端文件，也不会改变项目完成状态。")) return; button.disabled = true; button.textContent = "正在提交历史核验…"; try { const result = await postJson("/api/controls/upload/verify-history", {}); renderHistoricalCloudVerification(result); await refresh(); } catch (error`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **EVENT-046** `$("resetTestRecordsButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2124](../../static/app.js#L2124)。
   - 原实现：`$("resetTestRecordsButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。")) return; if (!window.confirm("再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。")) return; button.disabled = true; button.textContent = "正在备份并重置…"; try { const result = await postJson("/api/controls/testing/reset", { confirm: "RESET_TEST_RECORDS" }); state.da`；实现/测试证据：待补。
-- [ ] **EVENT-047** `$("createTemplate").addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2152](../../static/app.js#L2152)。
-  - 原实现：`$("createTemplate").addEventListener("change", updateMaterialOptions)`；实现/测试证据：待补。
-- [ ] **EVENT-048** `$("createTaskForm").addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2153](../../static/app.js#L2153)。
-  - 原实现：`$("createTaskForm").addEventListener("submit", async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector("button[type='submit']"); button.disabled = true; try { const result = await postJson("/api/controls/tasks/create", { date: $("createDate").value.trim(), templateId: $("createTemplate").value, material: $("createMaterial").value, audioBatch: $("createAudioBatch").value.tr`；实现/测试证据：待补。
+- [x] **EVENT-047** `$("createTemplate").addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2152](../../static/app.js#L2152)。
+  - 原实现：`$("createTemplate").addEventListener("change", updateMaterialOptions)`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+- [x] **EVENT-048** `$("createTaskForm").addEventListener` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2153](../../static/app.js#L2153)。
+  - 原实现：`$("createTaskForm").addEventListener("submit", async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector("button[type='submit']"); button.disabled = true; try { const result = await postJson("/api/controls/tasks/create", { date: $("createDate").value.trim(), templateId: $("createTemplate").value, material: $("createMaterial").value, audioBatch: $("createAudioBatch").value.tr`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **EVENT-049** `window.setTimeout` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:2189](../../static/app.js#L2189)。
   - 原实现：`window.setTimeout(refreshLoop, document.hidden ? 20000 : 5000)`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **EVENT-050** `window.setTimeout` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:2194](../../static/app.js#L2194)。
@@ -2134,12 +2134,12 @@
   - 原实现：`"/api/controls/audio-files"`；实现/测试证据：待补。
 - [ ] **PATH-004** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:586](../../static/app.js#L586)。
   - 原实现：`"/api/controls/production-files"`；实现/测试证据：待补。
-- [ ] **PATH-005** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1137](../../static/app.js#L1137)。
-  - 原实现：`ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/replenishˋ`；实现/测试证据：待补。
+- [x] **PATH-005** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1137](../../static/app.js#L1137)。
+  - 原实现：`ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/replenishˋ`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [ ] **PATH-006** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:1518](../../static/app.js#L1518)。
   - 原实现：`"/api/control-commands/current"`；实现/测试证据：待补。
-- [ ] **PATH-007** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1589](../../static/app.js#L1589)。
-  - 原实现：`ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/${action}ˋ`；实现/测试证据：待补。
+- [x] **PATH-007** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1589](../../static/app.js#L1589)。
+  - 原实现：`ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/${action}ˋ`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **PATH-008** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1646](../../static/app.js#L1646)。
   - 原实现：`"/api/dashboard/summary"`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **PATH-009** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1646](../../static/app.js#L1646)。
@@ -2170,8 +2170,8 @@
   - 原实现：`"/api/controls/upload/verify-history"`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [ ] **PATH-022** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2131](../../static/app.js#L2131)。
   - 原实现：`"/api/controls/testing/reset"`；实现/测试证据：待补。
-- [ ] **PATH-023** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2159](../../static/app.js#L2159)。
-  - 原实现：`"/api/controls/tasks/create"`；实现/测试证据：待补。
+- [x] **PATH-023** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:2159](../../static/app.js#L2159)。
+  - 原实现：`"/api/controls/tasks/create"`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **PATH-024** `接口/动态路径` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:25](../../cloud/readonly.js#L25)。
   - 原实现：`'/api/dashboard'`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **PATH-025** `接口/动态路径` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:25](../../cloud/readonly.js#L25)。

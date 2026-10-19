@@ -37,6 +37,9 @@ jobs:
       - run: node scripts/upload-browser-check.cjs
         env:
           V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
+      - run: node scripts/task-browser-check.cjs
+        env:
+          V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
       - uses: actions/upload-artifact@v4
         if: always()
         with:
