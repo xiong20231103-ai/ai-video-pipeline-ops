@@ -62,6 +62,17 @@ PRODUCTION_VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
 SAFETY_CACHE_TTL_SECONDS = 20.0
 SAFETY_CACHE_LOCK = threading.Lock()
 SAFETY_CACHE: dict[str, Any] = {"payload": None, "expiresAt": 0.0}
+# tasks columns written by Store.upsert_task (except updated_at), used to skip
+# rewriting a row that has not changed.
+TASK_REQUIRED_COLUMNS = (
+    "batch_id", "date_label", "project", "material", "language", "number", "sequence",
+    "video_path", "audio_path", "output_path", "state", "state_text", "error",
+    "source_file", "source_timestamp", "remote_pipeline_task_id", "expected_task_count",
+)
+TASK_OPTIONAL_COLUMNS = (
+    "phase", "phase_text", "manifest_id", "attempt_id", "heartbeat_at",
+    "draft_cleanup_status", "draft_cleanup_warning", "draft_cleanup_updated_at",
+)
 # Serialises "resolve the current target, compare, enqueue" so two clicks (or a
 # cloud retry racing a local click) cannot both pass the target check.
 CONTROL_COMMAND_LOCK = threading.Lock()
@@ -3053,6 +3064,11 @@ class Store:
         with self.lock, self.connection() as db:
             old = db.execute("SELECT * FROM source_health WHERE path=?", (key,)).fetchone()
             changed = not old or old["status"] != new_status or old["signature"] != signature
+            # Every scan re-reads ~1,500 sources and they rarely change; an
+            # identical row is left alone (no write, no commit). updated_at
+            # therefore means "last change", which is what readers sort by.
+            if not changed and old["error"] == error:
+                return
             db.execute(
                 """INSERT INTO source_health(path,status,signature,error,updated_at)
                    VALUES(?,?,?,?,?)
@@ -3096,6 +3112,15 @@ class Store:
                 or old["error"] != task["error"]
                 or old["state_text"] != task["state_text"]
             )
+            # A scan re-reads every task (~2,500) and almost all are unchanged;
+            # committing each identical row cost ~70 s per scan. Skip the write
+            # when every stored column already matches (updated_at = last change).
+            if old and not state_changed and all(
+                old[column] == task[column] for column in TASK_REQUIRED_COLUMNS
+            ) and all(
+                old[column] == task.get(column, "") for column in TASK_OPTIONAL_COLUMNS
+            ):
+                return
             db.execute(
                 """INSERT INTO tasks(
                     task_id,batch_id,date_label,project,material,language,number,sequence,
