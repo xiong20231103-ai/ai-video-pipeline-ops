@@ -794,6 +794,22 @@ td { height: 44px; }
 .draft-manager-toolbar strong, .taskbox-sequence, .project-task-details summary,
 .web-task-form summary { color: var(--blue-text); }
 .health-panel.needs-action { border-color: var(--red-line); }
+/* Cloud inserts these panels at runtime with legacy inline light colors. */
+body > details[data-cloud-commands],
+body > details:has(> details[data-cloud-account]) {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel) !important;
+  color: var(--text) !important;
+}
+body > details:has(> details[data-cloud-account])[style*="255, 240, 238"] { border-color: var(--red-line); }
+body > details:has(> details[data-cloud-account]) > ul > li[style*="180, 35, 24"] { color: var(--red) !important; }
+body > details:has(> details[data-cloud-account]) > ul > li[style*="138, 92, 0"] { color: var(--amber) !important; }
+body > details:has(> details[data-cloud-account]) > ul > li[style*="56, 83, 58"] { color: var(--green) !important; }
+[data-cloud-commands] ul { padding-left: 20px; }
+[data-cloud-account] input { max-width: 100%; padding: 8px; }
+[data-cloud-commands] button, [data-cloud-account] button { padding: 8px 12px; margin: 4px; }
+.replenish-panel .checkbox { display: flex; align-items: center; gap: 8px; }
 @supports not (backdrop-filter: blur(1px)) {
   .topbar { background: var(--topbar); }
   .gap-quick-bar, .draft-manager-dialog, .audio-protection-dialog, .replenish-dialog { background: var(--panel); }
