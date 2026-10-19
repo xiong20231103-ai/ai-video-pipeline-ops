@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   Activity,
   ArrowUpRight,
@@ -16,25 +16,25 @@ import {
   Sun,
   Upload,
   Workflow,
-} from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet'
-import { Skeleton } from '@/components/ui/skeleton'
+} from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
+} from "@/components/ui/tooltip";
 import {
   applyTheme,
   currentView,
@@ -42,48 +42,48 @@ import {
   readPreference,
   writePreference,
   type View,
-} from '@/lib/preferences'
-import { cn } from '@/lib/utils'
+} from "@/lib/preferences";
+import { cn } from "@/lib/utils";
 
-const Dashboard = lazy(() => import('@/components/views/Dashboard'))
+const Dashboard = lazy(() => import("@/components/views/Dashboard"));
 const sections = [
   {
-    id: 'overview',
-    label: '总览',
+    id: "overview",
+    label: "总览",
     icon: Grid2X2,
-    description: '从这里，掌握每一个创作环节。',
+    description: "从这里，掌握每一个创作环节。",
   },
   {
-    id: 'tasks',
-    label: '任务与流程',
+    id: "tasks",
+    label: "任务与流程",
     icon: Workflow,
-    description: '任务箱、五个生产步骤与项目状态。',
+    description: "任务箱、五个生产步骤与项目状态。",
   },
   {
-    id: 'uploads',
-    label: '上传',
+    id: "uploads",
+    label: "上传",
     icon: Upload,
-    description: '成片上传、云端核验与安全清理状态。',
+    description: "成片上传、云端核验与安全清理状态。",
   },
   {
-    id: 'files',
-    label: '文件管理',
+    id: "files",
+    label: "文件管理",
     icon: FolderClosed,
-    description: '草稿、音频、生产文件与待删区。',
+    description: "草稿、音频、生产文件与待删区。",
   },
   {
-    id: 'commands',
-    label: '安全继续与命令',
+    id: "commands",
+    label: "安全继续与命令",
     icon: ShieldCheck,
-    description: 'HTTP 回执与业务进度分别呈现。',
+    description: "HTTP 回执与业务进度分别呈现。",
   },
   {
-    id: 'health',
-    label: '健康与事件',
+    id: "health",
+    label: "健康与事件",
     icon: Activity,
-    description: '系统服务、确定性安全检查与最近事件。',
+    description: "系统服务、确定性安全检查与最近事件。",
   },
-] as const
+] as const;
 
 function Brand() {
   return (
@@ -96,7 +96,7 @@ function Brand() {
         <span>WORKSPACE / V2</span>
       </span>
     </a>
-  )
+  );
 }
 
 function Navigation({
@@ -104,9 +104,9 @@ function Navigation({
   collapsed,
   onNavigate,
 }: {
-  view: View
-  collapsed: boolean
-  onNavigate?: () => void
+  view: View;
+  collapsed: boolean;
+  onNavigate?: () => void;
 }) {
   return (
     <nav aria-label="控制台分区" className="navigation">
@@ -115,8 +115,8 @@ function Navigation({
         const link = (
           <a
             href={`#${id}`}
-            className={cn('nav-item', view === id && 'is-active')}
-            aria-current={view === id ? 'page' : undefined}
+            className={cn("nav-item", view === id && "is-active")}
+            aria-current={view === id ? "page" : undefined}
             aria-label={collapsed ? label : undefined}
             onClick={onNavigate}
           >
@@ -124,7 +124,7 @@ function Navigation({
             <span className="nav-label">{label}</span>
             <span className="nav-active-mark" aria-hidden="true" />
           </a>
-        )
+        );
         return collapsed ? (
           <Tooltip key={id}>
             <TooltipTrigger asChild>{link}</TooltipTrigger>
@@ -132,10 +132,10 @@ function Navigation({
           </Tooltip>
         ) : (
           <div key={id}>{link}</div>
-        )
+        );
       })}
     </nav>
-  )
+  );
 }
 
 function SidebarFooter() {
@@ -145,39 +145,39 @@ function SidebarFooter() {
       <div className="sidebar-note">
         <Box size={16} />
         <span>独立预览空间</span>
-        <Badge variant="outline">V2-1</Badge>
+        <Badge variant="outline">V2-2A</Badge>
       </div>
       <p>专注创作，让流程井然有序。</p>
     </div>
-  )
+  );
 }
 
 export default function App() {
-  const [theme, setTheme] = useState(initialTheme)
-  const [view, setView] = useState(currentView)
+  const [theme, setTheme] = useState(initialTheme);
+  const [view, setView] = useState(currentView);
   const [collapsed, setCollapsed] = useState(
-    () => readPreference('sidebar') === 'collapsed',
-  )
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const current = sections.find((section) => section.id === view)!
-  const CurrentIcon = current.icon
+    () => readPreference("sidebar") === "collapsed",
+  );
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const current = sections.find((section) => section.id === view)!;
+  const CurrentIcon = current.icon;
 
   useEffect(() => {
-    const onHashChange = () => setView(currentView())
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
+    const onHashChange = () => setView(currentView());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   function toggleTheme() {
-    const next = theme === 'dark' ? 'light' : 'dark'
-    applyTheme(next)
-    writePreference('theme', next)
-    setTheme(next)
+    const next = theme === "dark" ? "light" : "dark";
+    applyTheme(next);
+    writePreference("theme", next);
+    setTheme(next);
   }
 
   function toggleSidebar() {
-    writePreference('sidebar', !collapsed ? 'collapsed' : 'expanded')
-    setCollapsed(!collapsed)
+    writePreference("sidebar", !collapsed ? "collapsed" : "expanded");
+    setCollapsed(!collapsed);
   }
 
   return (
@@ -186,13 +186,13 @@ export default function App() {
         className="skip-link"
         href="#main-content"
         onClick={(event) => {
-          event.preventDefault()
-          document.getElementById('main-content')?.focus()
+          event.preventDefault();
+          document.getElementById("main-content")?.focus();
         }}
       >
         跳到内容
       </a>
-      <div className={cn('app-shell', collapsed && 'sidebar-collapsed')}>
+      <div className={cn("app-shell", collapsed && "sidebar-collapsed")}>
         <aside className="desktop-sidebar" aria-label="侧栏">
           <Brand />
           <Navigation view={view} collapsed={collapsed} />
@@ -202,7 +202,7 @@ export default function App() {
               variant="ghost"
               className="collapse-button"
               onClick={toggleSidebar}
-              aria-label={collapsed ? '展开侧栏' : '收起侧栏'}
+              aria-label={collapsed ? "展开侧栏" : "收起侧栏"}
               aria-expanded={!collapsed}
             >
               {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
@@ -235,7 +235,7 @@ export default function App() {
                     id="mobile-navigation-description"
                     className="sr-only"
                   >
-                    选择一个控制台分区。当前为只读预览，业务操作请用旧页面。
+                    选择一个控制台分区。当前仅开放上传重扫与历史核验，其余操作请用旧页面。
                   </SheetDescription>
                   <Brand />
                   <Navigation
@@ -252,7 +252,7 @@ export default function App() {
             </div>
             <div className="topbar-actions">
               <Badge variant="outline" className="preview-badge">
-                V2 只读预览
+                V2 功能预览
               </Badge>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -261,10 +261,10 @@ export default function App() {
                     size="icon"
                     onClick={toggleTheme}
                     aria-label={
-                      theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'
+                      theme === "dark" ? "切换到浅色主题" : "切换到深色主题"
                     }
                   >
-                    {theme === 'dark' ? <Sun /> : <Moon />}
+                    {theme === "dark" ? <Sun /> : <Moon />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>切换外观</TooltipContent>
@@ -325,11 +325,11 @@ export default function App() {
               <span>
                 自动剪辑 <span className="footer-dot">·</span> 控制台 V2
               </span>
-              <span>V2 只读预览 / 操作请用旧页面</span>
+              <span>V2 预览 / 仅开放上传类操作</span>
             </footer>
           </main>
         </div>
       </div>
     </TooltipProvider>
-  )
+  );
 }
