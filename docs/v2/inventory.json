@@ -42,8 +42,8 @@
         "line": 1,
         "name": "currentLocalDateLabel",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": true,
+        "planned": "V2-2B",
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -54,7 +54,7 @@
         ],
         "detail": "function currentLocalDateLabel() { const value = new Date(); return `${value.getMonth() + 1}.${value.getDate()}`; } const state = { date: \"\", batchId: \"\", overview: null, templates: [], templateSignature: \"\", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: \"\", drafts: [], draftSnapshot: \"\", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: \"\", selectedAudioIds: ",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
       },
       {
         "id": "FN-002",
@@ -2584,8 +2584,8 @@
         "line": 1058,
         "name": "renderTemplates",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": true,
+        "planned": "V2-2B",
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -2596,7 +2596,7 @@
         ],
         "detail": "function currentLocalDateLabel() { const value = new Date(); return `${value.getMonth() + 1}.${value.getDate()}`; } const state = { date: \"\", batchId: \"\", overview: null, templates: [], templateSignature: \"\", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: \"\", drafts: [], draftSnapshot: \"\", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: \"\", selectedAudioIds: ",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
       },
       {
         "id": "FN-166",
@@ -2604,8 +2604,8 @@
         "line": 1067,
         "name": "匿名回调@1067",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": true,
+        "planned": "V2-2B",
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -2616,7 +2616,7 @@
         ],
         "detail": "state.templates.map(item => `<option value=\"${escapeHtml(item.id)}\">${escapeHtml(item.label || `${item.project} / ${item.material}`)}</option>` ).join(\"\")}`",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
       },
       {
         "id": "FN-167",
@@ -2624,8 +2624,8 @@
         "line": 1070,
         "name": "匿名回调@1070",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": true,
+        "planned": "V2-2B",
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -2636,7 +2636,7 @@
         ],
         "detail": "{ const nextTemplates = Array.isArray(items) ? items : []; const signature = JSON.stringify(nextTemplates); const select = $(\"createTemplate\"); if (!select) return; if (signature === state.templateSignature && select.options.length > 1) return; state.templates = nextTemplates; state.templateSignature = signature; const previous = select.value; select.innerHTML = `<option value=\"\">请选择项目</option>${state.templates.map(item => `<o",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
       },
       {
         "id": "FN-168",
@@ -2644,8 +2644,8 @@
         "line": 1074,
         "name": "updateMaterialOptions",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": true,
+        "planned": "V2-2B",
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -2656,7 +2656,7 @@
         ],
         "detail": "function currentLocalDateLabel() { const value = new Date(); return `${value.getMonth() + 1}.${value.getDate()}`; } const state = { date: \"\", batchId: \"\", overview: null, templates: [], templateSignature: \"\", gaps: {}, lastGoodDashboard: null, refreshBusy: false, step5Items: [], step5Filter: \"\", drafts: [], draftSnapshot: \"\", selectedDraftIds: new Set(), draftPreview: null, audioFiles: [], audioSnapshot: \"\", selectedAudioIds: ",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
       },
       {
         "id": "FN-169",
@@ -2664,8 +2664,8 @@
         "line": 1075,
         "name": "匿名回调@1075",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": true,
+        "planned": "V2-2B",
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -2676,7 +2676,7 @@
         ],
         "detail": "const template = state.templates.find(item => String(item.id) === String($(\"createTemplate\")?.value || \"\"));",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
       },
       {
         "id": "FN-170",
@@ -2684,8 +2684,8 @@
         "line": 1080,
         "name": "匿名回调@1080",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": true,
+        "planned": "V2-2B",
+        "implemented": false,
         "evidence": [
           "frontend-v2/src/data/client.ts",
           "frontend-v2/src/data/useDashboard.ts",
@@ -2696,7 +2696,7 @@
         ],
         "detail": "select.innerHTML = materials.map(item => `<option value=\"${escapeHtml(item)}\">${escapeHtml(item)}</option>`).join(\"\")",
         "pr": 30,
-        "verification": "isolated only; full production/shadow/switch not tested"
+        "verification": "task-form behavior deferred to V2-2B; not part of read-only coverage"
       },
       {
         "id": "FN-171",
