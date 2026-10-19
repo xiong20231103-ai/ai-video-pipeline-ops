@@ -34,6 +34,8 @@ RULES=(
         'handoff/download/download_batch_state.json','handoff/download/project_status.json',
         'handoff/upload/upload_status.json','handoff/upload/historical_cloud_verify_request.json',
         'handoff/upload/historical_cloud_verify_status.json')],
+    Rule('WB','task_submitter_pending.json'),
+    Rule('WB','task_submitter_last_receipt.json'),
     Rule('WB','task_receiver_config.json',True,True),
     Rule('WB','baidu_upload_config.json',True,True),
     *[Rule('WB','handoff/'+name+'/*.json') for name in (
@@ -57,6 +59,8 @@ RULES=(
     *[Rule('CAP','data/'+name+'/*.json') for name in (
         'capcut-transactions','placement-commands','draft-root-lease-history')],
     Rule('GEN','*/*/generation_records_*.json'),
+    Rule('AGENT','execution.db',sqlite=True,maximum=512*1024*1024),
+    Rule('AGENT','command-settings.json',secret=True),
     Rule('AGENT','config.json',True,True),
     Rule('AGENT','backup-settings.json',True,True),
     Rule('AGENT','backup-recipient.pem',True,True),

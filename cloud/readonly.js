@@ -1,13 +1,14 @@
 'use strict';
 (() => {
   const original = window.fetch.bind(window);
+  window.opsCloudNetwork=original;
   const samples = new Map();
   const inflight = new Map();
   let sourcePanel, dashboardSample;
   const refreshWatchers = new Map();
-  const writeIds=['continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupButton','confirmAudioCleanupButton','previewProductionCleanupButton','confirmProductionCleanupButton'];
+  const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupButton','confirmAudioCleanupButton','previewProductionCleanupButton','confirmProductionCleanupButton'];
   document.addEventListener('submit', event => {
-    if (!event.target.closest('[data-cloud-account]')) { event.preventDefault(); event.stopImmediatePropagation(); }
+    if (!event.target.closest('[data-cloud-account]') && !window.opsCloudAcceptForm?.(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); }
   }, true);
   const wait = (ms, signal) => new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
@@ -48,7 +49,7 @@
     const url = new URL(input instanceof Request ? input.url : input, location.href);
     if (url.origin !== location.origin || !url.pathname.startsWith('/api/')) return original(input, init);
     const method = (init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
-    if (method !== 'GET') throw new Error('当前里程碑只读，写命令尚未启用');
+    if (method !== 'GET') {if(window.opsCloudWriteFetch)return window.opsCloudWriteFetch(url.href,init);throw new Error('写命令尚未启用');}
     init={...init,headers:new Headers(init.headers || (input instanceof Request ? input.headers : undefined))};
     init.headers.set('X-Ops-Page-Visible',String(document.visibilityState==='visible'));
     const key = url.pathname + url.search;
@@ -114,12 +115,19 @@
       account.append(form);
     };
     account.append(password,logout); sourcePanel.append(account);
+    const forced=new WeakSet();
     const disableWrites=()=>{
-      const buttons=[...document.querySelectorAll('button[onclick], #createTaskForm button, #replenishForm button[type="submit"]'),...writeIds.map(id=>document.getElementById(id)).filter(Boolean)];
+      const buttons=[...document.querySelectorAll('button[onclick], button[data-cloud-control], #createTaskForm button, #replenishForm button[type="submit"]'),...writeIds.map(id=>document.getElementById(id)).filter(Boolean)];
       for(const button of buttons) {
-        if(!button.disabled)button.disabled=true; button.title='当前云端只读，写命令尚未启用';
+        const action=/^controlTask\(this, '(start|cancel)'\)$/.exec(button.getAttribute('onclick')||'');
+        if(action){button.dataset.cloudControl=action[1];button.removeAttribute('onclick');}
+        if(button.getAttribute('onclick')==='openReplenishment(this.dataset.taskId)'){button.dataset.cloudControl='replenish-open';button.removeAttribute('onclick');}
+        const allowed=window.opsCloudCanWrite?.(button)===true;
+        if(!allowed){if(!button.disabled){forced.add(button);button.disabled=true;}button.title='云端执行通道未就绪、数据过期或有待对账命令；清理功能尚未开放';}
+        else if(forced.has(button)){forced.delete(button);button.disabled=false;button.title='';}
       }
     };
+    window.addEventListener('ops-cloud-write-state',disableWrites);
     disableWrites(); new MutationObserver(disableWrites).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
     async function pollHealth() {
       try {
@@ -128,7 +136,7 @@
         if(!response.ok)throw new Error();
         const health=await response.json();
         const text=health.heartbeatAgeSeconds===null?'等待家里代理部署/连接':!health.agentOnline?'家里离线，距心跳 '+Math.floor(health.heartbeatAgeSeconds)+' 秒':health.engineState==='healthy'?'家里在线':health.engineState==='busy'?'引擎忙，保留已有数据':'代理在线，旧引擎状态不可用/尚待确认';
-        summary.textContent='云端只读 · '+text+' · 写命令尚未启用';
+        summary.textContent='云端缓存 · '+text+' · '+(health.executorAvailable?(health.commandsPaused?'命令下发已暂停':'命令通道已部署'):'等待 Claude 部署命令代理');
         sourcePanel.style.background=health.agentOnline&&health.engineState==='healthy'?'#e8f5e9':'#fff0ee';
       } catch {summary.textContent='云端连接暂不可用，已有数据可能过期';sourcePanel.style.background='#fff0ee';}
     }

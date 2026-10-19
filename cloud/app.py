@@ -1,4 +1,4 @@
-"""M1a authenticated read-only cache. No home write-command route exists."""
+"""Authenticated cache and durable M2a queue; old agents cannot enable writes."""
 import hashlib
 import ipaddress
 import json
@@ -18,6 +18,8 @@ from cloud.store import Store
 from cloud.backups import BackupVault,BackupError
 from cloud.backup_routes import mount_backups
 from cloud.backup_runtime import CloudBackupWorker
+from cloud.commands import CommandQueue,CommandError
+from cloud.command_routes import mount_commands
 
 HASHER=PasswordHasher(time_cost=2,memory_cost=19456,parallelism=1)
 COOKIE='ops_console_session'
@@ -63,6 +65,7 @@ def create_app(config=None,store=None,static_root=None):
     static_root=Path(static_root or Path(__file__).parents[1]/'static')
     vault=BackupVault(Path(store.path).parent/'backups',clock=store.clock)
     backup_worker=CloudBackupWorker(vault,store.path,config)
+    commands=CommandQueue(store,enabled=config.get('command_queue_enabled') is True,h3=config.get('h3_target_contract') is True)
     @asynccontextmanager
     async def lifespan(app):
         thread=threading.Thread(target=backup_worker.run,daemon=True,name='cloud-backup')
@@ -70,6 +73,7 @@ def create_app(config=None,store=None,static_root=None):
         try:yield
         finally:backup_worker.stop.set();thread.join(timeout=2)
     application=FastAPI(docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
+    application.state.commands=commands
     application.state.store=store
     application.state.backups=vault
     application.state.backup_worker=backup_worker
@@ -89,6 +93,7 @@ def create_app(config=None,store=None,static_root=None):
     def rate(request,kind,maximum):
         if store.limited(kind+':'+rate_identity(request),maximum): raise HTTPException(429,'rate_limited')
     mount_backups(application,vault,agent,session,csrf,bounded_json)
+    enqueue_command=mount_commands(application,commands,agent,session,csrf,bounded_json,rate,rate_identity,config['origin'])
     @application.middleware('http')
     async def security(request,call_next):
         if request.method=='POST' and request.headers.get('content-length','').isdigit() and int(request.headers['content-length'])>MAX_BODY:
@@ -117,7 +122,7 @@ def create_app(config=None,store=None,static_root=None):
         if not store.session(request.cookies.get(COOKIE,'')): return RedirectResponse('/login',status_code=303)
         page=(static_root/'index.html').read_text(encoding='utf-8')
         # Insert before app.js executes, while leaving the home static files intact.
-        page=page.replace('<head>','<head><script src="/cloud-readonly.js"></script><script defer src="/cloud-backups.js"></script>',1)
+        page=page.replace('<head>','<head><script src="/cloud-readonly.js"></script><script src="/cloud-commands.js"></script><script defer src="/cloud-backups.js"></script>',1)
         return HTMLResponse(page)
     @application.get('/cloud-readonly.js')
     def readonly_script(request:Request):
@@ -127,6 +132,10 @@ def create_app(config=None,store=None,static_root=None):
     def backup_script(request:Request):
         session(request)
         return Response((Path(__file__).parent/'backups.js').read_bytes(),media_type='application/javascript')
+    @application.get('/cloud-commands.js')
+    def command_script(request:Request):
+        session(request)
+        return Response((Path(__file__).parent/'commands.js').read_bytes(),media_type='application/javascript')
     @application.get('/auth/options')
     def options(): return {'registrationOpen':store.user_count()<int(config.get('max_accounts',2))}
     @application.post('/auth/register')
@@ -165,12 +174,12 @@ def create_app(config=None,store=None,static_root=None):
         if not isinstance(old,str) or len(old)>256 or not isinstance(new,str) or not 12<=len(new)<=256 or not verify(user['password_hash'],old): raise HTTPException(400,'password_change_rejected')
         store.change_password(user['id'],HASHER.hash(new)); result=JSONResponse({'changed':True,'loginRequired':True}); result.delete_cookie(COOKIE,path='/'); return result
     @application.get('/console/status')
-    def console_status(request:Request): session(request); return store.health()
+    def console_status(request:Request): session(request); return {**store.health(),**commands.health()}
     @application.get('/ready')
     def ready(request:Request):
         if not request.client or request.client.host not in {'127.0.0.1','::1'} or request.headers.get('host') not in {'127.0.0.1:8000','localhost:8000'}:
             raise HTTPException(403,'local_probe_only')
-        return {'ready':True,'mode':'read-only','schema':1}
+        return {'ready':True,'mode':'command-queue' if commands.enabled else 'read-only','schema':1}
     @application.post('/agent/heartbeat')
     async def heartbeat(request:Request):
         agent(request); data=await bounded_json(request); state=data.get('engineState','unknown')
@@ -183,7 +192,13 @@ def create_app(config=None,store=None,static_root=None):
         if backup_state is not None:
             try:vault.note_agent_state(backup_state)
             except BackupError as error:raise HTTPException(error.status,error.code) from None
-        store.heartbeat(state,storage); return {'received':True,**store.viewer_state(),'backupRequest':vault.pending_request()}
+        accepted=True
+        try:commands.advertise(data.get('execution'))
+        except CommandError as error:
+            if error.status==400:raise HTTPException(400,error.code) from None
+            commands.set_paused(True);accepted=False
+        store.heartbeat(state,storage)
+        return {'received':True,**store.viewer_state(),'backupRequest':vault.pending_request(),'executionAccepted':accepted}
     @application.get('/agent/fetch-requests')
     def fetch_requests(request:Request,wait:int=0):
         agent(request)
@@ -208,7 +223,13 @@ def create_app(config=None,store=None,static_root=None):
         if age<0: age=1000000000  # Future persisted clocks are not freshness proof.
         frozen=store.frozen(row) if urlsplit(target).path=='/api/dashboard' and urlsplit(target).query else False
         visible=request.headers.get('x-ops-page-visible','true')=='true' and store.viewer_state()['viewerActive']
-        if visible and age>(86400 if frozen else 60):
+        refresh_after=86400 if frozen else 60
+        path=urlsplit(target).path
+        if visible and not frozen and (path.startswith('/api/control-commands/') or path in {'/api/controls/continue-current/status','/api/controls/upload/verify-history/status'}):
+            status_body=json.loads(row['body'])
+            if isinstance(status_body,dict) and not status_body.get('stale') and status_body.get('state') in {'requested','persisted','receiver_acknowledged','workbench_acknowledged','accepted','running','recovering','executing'}:
+                refresh_after=5
+        if visible and age>refresh_after:
             try: store.enqueue_read(key)
             except ValueError: pass
         tag='W/"'+hashlib.sha256(row['body'].encode()).hexdigest()+'"'
@@ -216,7 +237,7 @@ def create_app(config=None,store=None,static_root=None):
                  'X-Source-Scanned-At':row['source_scanned_at'],'X-Source-Health':row['source_health'].encode('ascii','backslashreplace').decode(),
                  'X-Last-Success-At':str(row['last_success']),'X-Last-Changed-At':str(row['last_changed'])}
         headers['X-Cache-Frozen']='true' if frozen else 'false'
-        headers['X-Cache-Refresh-Pending']='true' if visible and age>(86400 if frozen else 60) else 'false'
+        headers['X-Cache-Refresh-Pending']='true' if visible and age>refresh_after else 'false'
         if request.headers.get('if-none-match')==tag: return Response(status_code=304,headers=headers)
         return Response(row['body'],status_code=row['status'],media_type='application/json',headers=headers)
     @application.get('/api/health')
@@ -236,7 +257,6 @@ def create_app(config=None,store=None,static_root=None):
         session(request); rate(request,'reads',600)
         return cached(request,request.url.path+('?' + request.url.query if request.url.query else ''))
     @application.post('/api/{rest:path}')
-    def no_writes(rest:str,request:Request):
-        row=session(request); csrf(request,row)
-        raise HTTPException(403,'read_only_milestone; commands_not_enabled')
+    async def writes(rest:str,request:Request):
+        return await enqueue_command(request)
     return application

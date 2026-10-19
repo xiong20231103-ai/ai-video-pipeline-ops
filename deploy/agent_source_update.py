@@ -16,7 +16,9 @@ LEGACY_FILES=tuple('agent/'+name for name in ('__init__.py','configure.py','laun
     'contracts/__init__.py','contracts/cache.py','contracts/endpoints.json','deploy/agent-run.ps1','deploy/agent-task.ps1')
 PREVIOUS_FILES=LEGACY_FILES+('agent/lifecycle.py','deploy/AgentJobRunner.cs')
 CURRENT_FILES=PREVIOUS_FILES+('contracts/state_files.py','deploy/agent-json.ps1')
-FILES=CURRENT_FILES+tuple('agent/'+name for name in ('backup_crypto.py','backup_policy.py','backup_setup.py','backup_snapshot.py','backup_runtime.py','backup_pack.py','backup_restore.py'))+('contracts/backup_crypto.py',)
+BACKUP_FILES=CURRENT_FILES+tuple('agent/'+name for name in ('backup_crypto.py','backup_policy.py','backup_setup.py','backup_snapshot.py','backup_runtime.py','backup_pack.py','backup_restore.py'))+('contracts/backup_crypto.py',)
+
+FILES=BACKUP_FILES+('agent/execution.py','contracts/commands.py')
 
 class UpdateError(ValueError):
     def __init__(self,code): self.code=code;super().__init__(code)
@@ -35,7 +37,7 @@ def validate(root,expected=None):
     if len(commit)!=40 or any(char not in '0123456789abcdef' for char in commit): raise UpdateError('invalid_commit')
     if expected and commit!=expected: raise UpdateError('unexpected_commit')
     names=set(manifest.get('sha256',{}))
-    if names not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(FILES)): raise UpdateError('unexpected_source_whitelist')
+    if names not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(BACKUP_FILES),set(FILES)): raise UpdateError('unexpected_source_whitelist')
     for name in names:
         path=root/name;reject_link(path)
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=manifest['sha256'][name]:
@@ -109,6 +111,9 @@ def exclusive_agent_lock(state):
 def begin_stop(state,request_id):
     state=Path(state);reject_link(state)
     if not state.is_dir(): raise UpdateError('private_state_directory_missing')
+    runtime=state/'execution-runtime.json'
+    if runtime.exists() and read_json(runtime).get('phase') in {'sending','awaiting_ack','unknown'}:
+        raise UpdateError('pause_cloud_and_drain_commands_before_update')
     path=state/'maintenance.json'
     if path.exists():
         if read_json(path).get('requestId')!=request_id: raise UpdateError('another_maintenance_request_exists')

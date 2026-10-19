@@ -79,3 +79,23 @@ class AgentSourceUpdateTests(unittest.TestCase):
             apply(new,old,backup,'b'*40);restore(backup,old)
             self.assertEqual(set(PREVIOUS_FILES),set(validate(old)['sha256']))
             for name in set(FILES)-set(PREVIOUS_FILES):self.assertFalse((old/name).exists())
+
+    def test_m1b_twenty_three_file_upgrade_and_rollback_keep_execution_receipts(self):
+        from deploy.agent_source_update import BACKUP_FILES
+        with TemporaryDirectory() as folder:
+            root=Path(folder);old=root/'old';new=root/'new';backup=root/'backup'
+            package(old,'a'*40);package(new,'b'*40)
+            manifest=json.loads((old/'deployment-manifest.json').read_text())
+            for name in set(FILES)-set(BACKUP_FILES):(old/name).unlink();del manifest['sha256'][name]
+            (old/'deployment-manifest.json').write_text(json.dumps(manifest))
+            receipt=old/'execution.db';receipt.write_text('inert receipt fixture, not runtime source')
+            prepare(new,old,backup,'b'*40);apply(new,old,backup,'b'*40);restore(backup,old)
+            self.assertEqual(set(BACKUP_FILES),set(validate(old)['sha256']));self.assertEqual('inert receipt fixture, not runtime source',receipt.read_text())
+    def test_update_refuses_inflight_before_creating_maintenance(self):
+        from deploy.agent_source_update import begin_stop,UpdateError
+        with TemporaryDirectory() as folder:
+            state=Path(folder)
+            for phase in ('sending','awaiting_ack','unknown'):
+                (state/'execution-runtime.json').write_text(json.dumps({'schema':1,'phase':phase}))
+                with self.assertRaisesRegex(UpdateError,'pause_cloud_and_drain'):begin_stop(state,'abc123')
+                self.assertFalse((state/'maintenance.json').exists());self.assertFalse((state/'stop-request.json').exists())

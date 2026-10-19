@@ -23,6 +23,21 @@ jobs:
           node --check cloud/readonly.js
           node --check cloud/login.js
           node --check cloud/backups.js
+          node --check cloud/commands.js
+          node --check static/app.js
+          node --check tests/command_ui_fixture.cjs
+      - name: Headless cloud command UI with all network intercepted
+        shell: powershell
+        run: |
+          $deps=Join-Path $env:RUNNER_TEMP 'ops-ui-deps'
+          npm install --prefix $deps --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org playwright@1.62.1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $env:OPS_UI_PLAYWRIGHT=Join-Path $deps 'node_modules/playwright'
+          $edge='C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+          if (-not (Test-Path -LiteralPath $edge)) { $edge='C:\Program Files\Microsoft\Edge\Application\msedge.exe' }
+          $env:OPS_UI_BROWSER_PATH=$edge
+          node tests/command_ui_fixture.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Check deployment shell syntax without executing it
         shell: bash
         run: |
@@ -31,6 +46,7 @@ jobs:
           bash -n deploy/m1a-upgrade.sh
           bash -n deploy/m1b-repair-sources.sh
           bash -n deploy/m1b-upgrade.sh
+          bash -n deploy/m2a-upgrade.sh
       - name: Actual encrypted synthetic snapshots and inert restore
         shell: powershell
         run: |
@@ -47,6 +63,9 @@ jobs:
           ./tests/test_agent_acceptance.ps1
           ./tests/test_state_files.ps1
           ./tests/test_hidden_updater.ps1
+          ./tests/test_m2a_deploy.ps1
+      - name: Real loopback command HTTP with durable fixture databases
+        run: python -B tests/command_transport_integration.py
       - name: Real Windows job lifecycle with synthetic services and no home HTTP
         shell: powershell
         run: |
