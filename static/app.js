@@ -1103,7 +1103,7 @@ async function postJson(url, payload, options = {}) {
     return result;
   } catch (error) {
     if (error?.name === "AbortError") {
-      const timeoutError = new Error(`操作仍在后台处理（已等待 ${Math.ceil(timeoutMs / 60000)} 分钟），请刷新状态后再继续`);
+      const timeoutError = new Error(`操作仍在后台处理（已等待 ${timeoutMs < 60000 ? `${Math.round(timeoutMs / 1000)} 秒` : `${Math.round(timeoutMs / 60000)} 分钟`}），请刷新状态后再继续`);
       timeoutError.code = "CONTROL_REQUEST_TIMEOUT";
       timeoutError.cause = error;
       throw timeoutError;
