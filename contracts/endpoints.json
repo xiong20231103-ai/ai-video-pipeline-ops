@@ -596,5 +596,42 @@
     "offline": "not-applicable",
     "mayWriteSourceState": true,
     "timeoutSeconds": 45
+  },
+  {
+    "method": "GET",
+    "path": "/api/controls/cloud-cleanup/capabilities",
+    "query": [],
+    "handler": "cloud_cleanup_capabilities",
+    "source": "dashboard",
+    "coverage": "on-demand",
+    "offline": "cached-key-only",
+    "mayWriteSourceState": false,
+    "periodSeconds": 0,
+    "timeoutSeconds": 15,
+    "requiresCapability": "cleanupProtocol:1"
+  },
+  {
+    "method": "POST",
+    "path": "/api/controls/cloud-cleanup/preview",
+    "query": [],
+    "handler": "cloud_cleanup_preview",
+    "source": "dashboard",
+    "coverage": "write-command",
+    "offline": "not-applicable",
+    "mayWriteSourceState": true,
+    "timeoutSeconds": 90,
+    "requiresCapability": "cleanupProtocol:1"
+  },
+  {
+    "method": "POST",
+    "path": "/api/controls/cloud-cleanup/execute",
+    "query": [],
+    "handler": "cloud_cleanup_execute",
+    "source": "dashboard",
+    "coverage": "write-command",
+    "offline": "not-applicable",
+    "mayWriteSourceState": true,
+    "timeoutSeconds": 900,
+    "requiresCapability": "cleanupProtocol:1"
   }
 ]

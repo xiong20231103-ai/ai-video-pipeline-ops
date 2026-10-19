@@ -8,6 +8,7 @@ all verified moves when the user explicitly empties the area).
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import shutil
 import stat
@@ -21,6 +22,77 @@ DIRNAME = ".ops-pending-delete"
 RECORD_NAME = "pending-delete.json"
 DEFAULT_RETENTION_DAYS = 3
 LOCK = threading.RLock()
+
+
+def _walk_error(error: OSError) -> None:
+    raise error
+
+
+def forbidden_source(path: Path) -> bool:
+    from pathlib import PureWindowsPath
+    value = PureWindowsPath(str(path).replace('/', '\\'))
+    root = PureWindowsPath(r'E:\JianyingPro Drafts')
+    return value == root or root in value.parents
+
+
+def linked_path(path: Path) -> bool:
+    path = Path(path)
+    return any(_is_link(item) for item in (path, *path.parents))
+
+
+def _validated_slot(record_path: Path, record: dict[str, Any]) -> Path:
+    """Never let a modified receipt authorize deleting unrelated contents."""
+    slot = record_path.parent
+    if not isinstance(record, dict) or record.get('schemaVersion') != 1:
+        raise OSError('待删记录格式不可确认')
+    source = Path(record.get('source', ''))
+    target = Path(record.get('target', ''))
+    if not source.is_absolute() or forbidden_source(source) or forbidden_source(source.resolve()):
+        raise OSError('待删来源不可确认或永久保护')
+    if not target.is_absolute() or not target.exists() or target.parent.resolve() != slot.resolve():
+        raise OSError('待删目标越界')
+    if any(_is_link(item) for item in [slot, target, *slot.parents]):
+        raise OSError('待删路径含重解析点')
+    if set(slot.iterdir()) != {record_path, target}:
+        raise OSError('待删区混入未登记内容')
+    expected = record.get('files')
+    if not isinstance(expected, list) or any(not isinstance(item, dict) or not isinstance(item.get('relative'), str)
+            or type(item.get('size')) is not int or type(item.get('fileId')) is not int for item in expected):
+        raise OSError('待删文件清单格式不可确认')
+    if type(record.get('sizeBytes')) is not int or record['sizeBytes'] != sum(item['size'] for item in expected):
+        raise OSError('待删容量记录不可确认')
+    if sorted(_inventory(target), key=lambda item: item['relative']) != sorted(expected, key=lambda item: item['relative']):
+        raise OSError('待删文件身份或内容清单已变化')
+    return slot
+
+
+def snapshot(roots: Iterable[Path]) -> str:
+    """Bind an explicit empty operation to every record and contained object."""
+    digest = hashlib.sha256()
+    with LOCK:
+        for root in sorted(roots, key=str):
+            digest.update(str(root.resolve()).encode())
+            if not root.exists():
+                continue
+            if _is_link(root):
+                raise OSError('待删区存在链接，拒绝清空')
+            for record_path in root.glob(f'*/*/{RECORD_NAME}'):
+                try:
+                    record = json.loads(record_path.read_text(encoding='utf-8'))
+                    if not isinstance(record, dict) or not isinstance(record.get('state'), str):
+                        raise ValueError('record')
+                    if record.get('state') == 'moved':
+                        _validated_slot(record_path, record)
+                except (ValueError, TypeError, OSError) as exc:
+                    raise OSError('待删区记录不可确认，拒绝清空') from exc
+            for current, dirs, names in os.walk(root, onerror=_walk_error):
+                for name in sorted(dirs + names):
+                    item = Path(current) / name
+                    if _is_link(item):
+                        raise OSError('待删区存在链接，拒绝清空')
+                    info = item.stat()
+                    digest.update(f'{item.relative_to(root)}\0{info.st_size}\0{info.st_mtime_ns}\0{info.st_ino}\0'.encode())
+    return digest.hexdigest()
 
 
 def _now() -> datetime:
@@ -55,7 +127,7 @@ def _inventory(path: Path) -> list[dict[str, Any]]:
         info = path.stat()
         return [{"relative": "", "size": info.st_size, "fileId": info.st_ino}]
     files: list[dict[str, Any]] = []
-    for current, directories, names in os.walk(path):
+    for current, directories, names in os.walk(path, onerror=_walk_error):
         for name in directories:
             if _is_link(Path(current) / name):
                 raise OSError("目录内含链接或重解析点，拒绝移动")
@@ -64,6 +136,8 @@ def _inventory(path: Path) -> list[dict[str, Any]]:
             if _is_link(item):
                 raise OSError("目录内含链接或重解析点，拒绝移动")
             info = item.stat()
+            if not stat.S_ISREG(info.st_mode):
+                raise OSError('目录内含未知文件类型，拒绝操作')
             files.append({
                 "relative": item.relative_to(path).as_posix(),
                 "size": info.st_size,
@@ -104,6 +178,8 @@ def move(
     be verified. The record next to the moved item keeps the evidence.
     """
     source = Path(path)
+    if forbidden_source(source) or forbidden_source(source.resolve()):
+        raise OSError('用户永久保护的草稿目录，禁止清理')
     if not source.is_absolute():
         raise OSError("只接受绝对路径")
     if not source.exists():
@@ -196,8 +272,8 @@ def purge(roots: Iterable[Path], *, everything: bool = False, now: datetime | No
                 continue
             if not everything and due > current:
                 continue
-            slot = record_path.parent
             try:
+                slot = _validated_slot(record_path, record)
                 shutil.rmtree(slot)
             except OSError as exc:
                 failed.append(f"{record.get('source')}: {exc}")
