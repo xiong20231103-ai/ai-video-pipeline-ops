@@ -80,7 +80,13 @@ class CommandQueue:
         if not row or not 0<=self.store.clock()-row['last_success']<=60:raise CommandError('continue_source_stale')
         health=json.loads(row['source_health']);age=health.get('scanAgeSeconds') if isinstance(health,dict) else None
         if type(age) not in (int,float) or not 0<=age+self.store.clock()-row['last_success']<=60:raise CommandError('continue_scan_stale')
-        current=target_from_summary(json.loads(row['body']))
+        snapshot=json.loads(row['body'])
+        automatic=snapshot.get('autoRecovery')
+        if not isinstance(automatic,dict) or automatic.get('enabled') is not False:
+            raise CommandError('home_auto_recovery_must_be_disabled')
+        if automatic.get('state') in {'requested','accepted','running','recovering','persisted','receiver_acknowledged','workbench_acknowledged','executing'}:
+            raise CommandError('home_auto_recovery_still_in_flight')
+        current=target_from_summary(snapshot)
         if not current or any(body['expectedTarget'].get(k)!=v for k,v in current.items()):raise CommandError('continue_target_changed')
     def enqueue(self,actor,request_id,target,body,ttl=300,public=False):
         identity(request_id);job=command(target,body)

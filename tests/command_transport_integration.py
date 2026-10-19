@@ -54,7 +54,7 @@ class TransportIntegration(unittest.TestCase):
     if target.endswith('/validate'):self.assertEqual('{"detail":"合成合同校验错误"}\n'.encode(),base64.b64decode(receipt['result']['bodyBase64']))
   self.assertEqual(len(routes),len(self.server.received))
   expected={'batchId':'fixture-b','taskId':'fixture-t','attemptId':'fixture-a'}
-  self.store.push({'target':'/api/dashboard/summary','version':1,'status':200,'body':{'currentTaskBox':{'batchId':expected['batchId'],'current':{'taskId':expected['taskId'],'attemptId':expected['attemptId']}}},'sourceHealth':{'scanAgeSeconds':0}})
+  self.store.push({'target':'/api/dashboard/summary','version':1,'status':200,'body':{'autoRecovery':{'enabled':False,'state':'paused'},'currentTaskBox':{'batchId':expected['batchId'],'current':{'taskId':expected['taskId'],'attemptId':expected['attemptId']}}},'sourceHealth':{'scanAgeSeconds':0}})
   self.run_job('/api/control-commands',{'clientRequestId':'fixture-safe-continue','expectedTarget':expected});self.assertEqual(expected,self.server.received[-1][1]['expectedTarget'])
  def test_truncated_real_response_becomes_unknown_and_restart_never_reposts(self):
   self.server.truncate=True;receipt=self.run_job('/api/controls/upload/rescan',{})

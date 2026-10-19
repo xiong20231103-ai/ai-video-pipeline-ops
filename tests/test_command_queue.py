@@ -62,10 +62,33 @@ class QueueTests(unittest.TestCase):
     def test_continue_requires_complete_fresh_matching_target_and_h3(self):
         body={'clientRequestId':'continue-request-123456','expectedTarget':{'batchId':'fixture-b','taskId':'fixture-t','attemptId':'fixture-a'}}
         with self.assertRaises(CommandError):self.enqueue(target='/api/control-commands',body=body)
-        self.store.push({'target':'/api/dashboard/summary','version':1,'status':200,'body':{'currentTaskBox':{'batchId':'fixture-b','current':{'taskId':'fixture-t','attemptId':'fixture-a'}}},'sourceHealth':{'scanAgeSeconds':5}})
+        self.store.push({'target':'/api/dashboard/summary','version':1,'status':200,'body':{'autoRecovery':{'enabled':False,'state':'paused'},'currentTaskBox':{'batchId':'fixture-b','current':{'taskId':'fixture-t','attemptId':'fixture-a'}}},'sourceHealth':{'scanAgeSeconds':5}})
         row=self.enqueue(target='/api/control-commands',body=body);job=self.claim();self.now[0]+=56;self.store.heartbeat('healthy')
         with self.assertRaises(CommandError):self.start(job)
         self.assertEqual('leased',self.queue.get(row['cloudCommandId'])['state'])
+
+    def test_continue_refuses_local_automatic_recovery_at_enqueue_and_send(self):
+        body={'clientRequestId':'continue-request-123456','expectedTarget':{'batchId':'fixture-b','taskId':'fixture-t','attemptId':'fixture-a'}}
+        snapshot={'currentTaskBox':{'batchId':'fixture-b','current':{'taskId':'fixture-t','attemptId':'fixture-a'}}}
+        version=0
+        def push(auto):
+            nonlocal version
+            version+=1
+            value={**snapshot}
+            if auto is not None:value['autoRecovery']=auto
+            self.store.push({'target':'/api/dashboard/summary','version':version,'status':200,'body':value,'sourceHealth':{'scanAgeSeconds':0}})
+        for auto in (None,{'enabled':True,'state':'idle'},{'enabled':False,'state':'recovering'}):
+            push(auto)
+            self.assertFalse(self.queue.health()['canContinue'])
+            with self.assertRaisesRegex(CommandError,'home_auto_recovery'):
+                self.enqueue(target='/api/control-commands',body=body)
+        push({'enabled':False,'state':'paused'})
+        row=self.enqueue(target='/api/control-commands',body=body);job=self.claim()
+        push({'enabled':True,'state':'running'})
+        with self.assertRaisesRegex(CommandError,'home_auto_recovery'):self.start(job)
+        self.assertEqual('leased',self.queue.get(row['cloudCommandId'])['state'])
+        with self.store.db() as db:self.assertEqual(0,db.execute("SELECT count(*) FROM commands WHERE state='sent'").fetchone()[0])
+
     def test_closed_command_contract_blocks_reset_cleanup_legacy_continue_and_ssrf(self):
         for path in ['/api/controls/testing/reset','/api/controls/pending-delete/empty','/api/controls/continue-current','http://evil.invalid/x','/api/controls/upload/rescan?x=1','/api/controls/tasks/%2e%2e/start']:
             with self.subTest(path=path),self.assertRaises(ValueError):command(path,{})
