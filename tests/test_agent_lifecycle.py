@@ -33,20 +33,35 @@ class AgentLifecycleTests(unittest.TestCase):
     def test_running_stop_ack_and_lock_release_with_no_network(self):
         with TemporaryDirectory() as folder:
             state=Path(folder);instance=ReadOnlyAgent('https://fixture.ts.net','inert-fixture-value',state)
-            instance.heartbeat_loop=lambda:instance.stop.wait(10)
-            instance.collection_loop=lambda:instance.stop.wait(10)
-            instance.upload_loop=lambda:instance.stop.wait(10)
-            instance.demand_loop=lambda:instance.stop.wait(10)
-            with patch.object(instance,'home',side_effect=AssertionError('No home request allowed')):
-                runner=threading.Thread(target=instance.run);runner.start()
-                deadline=time.monotonic()+5
-                while not (state/STATUS_FILE).exists():
-                    self.assertLess(time.monotonic(),deadline);time.sleep(.01)
-                began=time.monotonic();begin_stop(state,'abc123');result=wait_stopped(state,'abc123')
-                runner.join(3);self.assertFalse(runner.is_alive())
-                self.assertLess(time.monotonic()-began,3)
-                self.assertTrue(result['lockFree']);self.assertTrue(result['cooperativeAck'])
-                with SingleInstance(state/'agent.lock'): pass
+            # This test measures cooperative stop, not cold SQLite migration or
+            # unrelated worker behavior. Signal readiness after real publish,
+            # and always reap the fixture even when a startup assertion fails.
+            instance.ledger
+            for name in ('heartbeat_loop','collection_loop','upload_loop','demand_loop','foreground_loop'):
+                setattr(instance,name,lambda:instance.stop.wait())
+            instance.backup.loop=lambda:instance.stop.wait()
+            instance.execution.loop=lambda:instance.stop.wait()
+            published=threading.Event();failures=[];original=instance.lifecycle.publish
+            def publish(phase,*args,**kwargs):
+                original(phase,*args,**kwargs)
+                if phase=='starting':published.set()
+            def run():
+                try:instance.run()
+                except BaseException as error:failures.append(error);published.set()
+            with patch.object(instance,'home',side_effect=AssertionError('No home request allowed')),patch.object(instance.lifecycle,'publish',side_effect=publish):
+                runner=threading.Thread(target=run,daemon=True);runner.start()
+                try:
+                    self.assertTrue(published.wait(15),'Fixture startup did not publish status')
+                    self.assertEqual([],failures)
+                    began=time.monotonic();begin_stop(state,'abc123');result=wait_stopped(state,'abc123')
+                    runner.join(3);self.assertFalse(runner.is_alive())
+                    self.assertLess(time.monotonic()-began,3)
+                    self.assertTrue(result['lockFree']);self.assertTrue(result['cooperativeAck'])
+                    with SingleInstance(state/'agent.lock'): pass
+                finally:
+                    instance.stop.set();runner.join(15)
+                self.assertFalse(runner.is_alive(),'Fixture must release its lock/database on every path')
+                self.assertEqual([],failures)
             status=json.loads((state/STATUS_FILE).read_text())
             self.assertNotIn('token',json.dumps(status).lower());self.assertNotIn('cloud_origin',status)
             finish(state,'abc123');self.assertFalse((state/STOP_FILE).exists());self.assertFalse((state/MAINTENANCE_FILE).exists())

@@ -43,6 +43,14 @@ class CloudBackupWorker:
         with closing(sqlite3.connect(source.absolute().as_uri()+'?mode=ro',uri=True,timeout=5)) as incoming,closing(sqlite3.connect(target)) as outgoing:
             incoming.execute('PRAGMA query_only=ON');incoming.backup(outgoing,pages=128,progress=progress,sleep=.05)
             if outgoing.execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:raise BackupError('cloud_snapshot_integrity_failure')
+    def recovery_configuration(self):
+        # This member already belongs to the encrypted archive and restore
+        # evidence whitelist. Never put the private bot settings in manifests.
+        from cloud.notification_settings import load
+        value=dict(self.config)
+        settings=load()
+        if settings is not None:value['_notificationRecoveryEvidence']=settings
+        return value
     def run_once(self):
         recipient=self.vault.recipient()
         if not recipient:self.status('waiting_recipient');return None
@@ -60,7 +68,7 @@ class CloudBackupWorker:
                     size=snapshot.stat().st_size;total+=size
                     output.write(snapshot,'CLOUD/'+name)
                     manifest.append({'path':'CLOUD/'+name,'bytes':size,'sha256':digest_file(snapshot),'sqliteOnlineSnapshot':True})
-                configuration=json.dumps(self.config,ensure_ascii=False,separators=(',',':')).encode()
+                configuration=json.dumps(self.recovery_configuration(),ensure_ascii=False,separators=(',',':')).encode()
                 total+=len(configuration);output.writestr('CLOUD/config.json',configuration)
                 manifest.append({'path':'CLOUD/config.json','bytes':len(configuration),'sha256':hashlib.sha256(configuration).hexdigest()})
                 output.writestr('RESTORE_EVIDENCE_ONLY.json',json.dumps({'schema':1,'packageId':package_id,'restoreMode':'isolated-evidence-only',
