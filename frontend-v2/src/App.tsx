@@ -145,7 +145,7 @@ function SidebarFooter() {
       <div className="sidebar-note">
         <Box size={16} />
         <span>独立预览空间</span>
-        <Badge variant="outline">V2-2C</Badge>
+        <Badge variant="outline">V2-2E</Badge>
       </div>
       <p>专注创作，让流程井然有序。</p>
     </div>
@@ -235,7 +235,7 @@ export default function App() {
                     id="mobile-navigation-description"
                     className="sr-only"
                   >
-                    选择一个控制台分区。当前开放上传、任务与家里清理；云端清理尚未开放。
+                    选择一个控制台分区。操作资格由当前模式与服务状态决定。
                   </SheetDescription>
                   <Brand />
                   <Navigation
@@ -325,7 +325,7 @@ export default function App() {
               <span>
                 自动剪辑 <span className="footer-dot">·</span> 控制台 V2
               </span>
-              <span>V2 预览 / 上传与任务操作预览</span>
+              <span>V2 独立预览 / 业务进度以家里状态为准</span>
             </footer>
           </main>
         </div>

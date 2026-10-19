@@ -455,12 +455,12 @@
   - 原实现：`message => messages.push(message)`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-209** `匿名回调@1419` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1419](../../static/app.js#L1419)。
   - 原实现：`message => ˋ<li>${escapeHtml(message)}</li>ˋ`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
-- [ ] **FN-210** `renderContinueResult` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1423](../../static/app.js#L1423)。
-  - 原实现：`function renderContinueResult(result = {}) { if (window.opsCloudContinueResult) result = window.opsCloudContinueResult(result); state.lastContinueResult = result; const node = $("continueResult"); const stateName = String(result.state ¦¦ "idle"); state.continueCommandId = String(result.commandId ¦¦ state.continueCommandId ¦¦ ""); // A continue command is durable on the receiver. Keep the button locked for // every non-terminal`；实现/测试证据：待补。
-- [ ] **FN-211** `匿名回调@1472` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1472](../../static/app.js#L1472)。
-  - 原实现：`item => ˋ<div><span>${item.step}. ${escapeHtml(item.name)}</span><b>${Number(item.actual ¦¦ 0)} / ${Number(item.expected ¦¦ 0)}</b></div>ˋ`；实现/测试证据：待补。
-- [ ] **FN-212** `refreshContinueStatus` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1514](../../static/app.js#L1514)。
-  - 原实现：`async function refreshContinueStatus() { if (state.continueStatusBusy) return; state.continueStatusBusy = true; try { const target = window.opsCloudContinueTarget ? window.opsCloudContinueTarget() : "/api/control-commands/current"; if (!target) return; const result = await getJson(target); state.continueStatusFailures = 0; renderContinueResult(result ¦¦ {}); } catch (error) { state.continueStatusFailures += 1; // Never leave a`；实现/测试证据：待补。
+- [x] **FN-210** `renderContinueResult` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1423](../../static/app.js#L1423)。
+  - 原实现：`function renderContinueResult(result = {}) { if (window.opsCloudContinueResult) result = window.opsCloudContinueResult(result); state.lastContinueResult = result; const node = $("continueResult"); const stateName = String(result.state ¦¦ "idle"); state.continueCommandId = String(result.commandId ¦¦ state.continueCommandId ¦¦ ""); // A continue command is durable on the receiver. Keep the button locked for // every non-terminal`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-211** `匿名回调@1472` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1472](../../static/app.js#L1472)。
+  - 原实现：`item => ˋ<div><span>${item.step}. ${escapeHtml(item.name)}</span><b>${Number(item.actual ¦¦ 0)} / ${Number(item.expected ¦¦ 0)}</b></div>ˋ`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-212** `refreshContinueStatus` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1514](../../static/app.js#L1514)。
+  - 原实现：`async function refreshContinueStatus() { if (state.continueStatusBusy) return; state.continueStatusBusy = true; try { const target = window.opsCloudContinueTarget ? window.opsCloudContinueTarget() : "/api/control-commands/current"; if (!target) return; const result = await getJson(target); state.continueStatusFailures = 0; renderContinueResult(result ¦¦ {}); } catch (error) { state.continueStatusFailures += 1; // Never leave a`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [ ] **FN-213** `renderActionResult` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1549](../../static/app.js#L1549)。
   - 原实现：`function renderActionResult(id, result = {}) { const node = $(id); const stateName = String(result.state ¦¦ "idle"); node.className = ˋaction-result ${stateName === "completed" ? "completed" : stateName === "failed" ? "failed" : "neutral"}ˋ; node.textContent = ˋ${result.message ¦¦ "尚无操作记录"}${result.updatedAt ? ˋ · ${formatDateTime(result.updatedAt)}ˋ : ""}ˋ; }`；实现/测试证据：待补。
 - [ ] **FN-214** `renderHistoricalCloudVerification` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1556](../../static/app.js#L1556)。
@@ -565,10 +565,10 @@
   - 原实现：`async function refreshPendingDelete() { const node = $("pendingDeleteStatus"); const button = $("emptyPendingDeleteButton"); if (!node ¦¦ !button) return; try { const result = await getJson("/api/controls/pending-delete"); state.pendingDelete = result; const count = Number(result.count ¦¦ 0); const review = Number(result.needsReview ¦¦ 0); node.textContent = count ? ˋ待删区：${count} 项，约 ${formatBytes(result.sizeBytes)}；${result.n`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
 - [x] **FN-264** `匿名回调@2035` — 两者（写操作按模式分流）；计划 **V2-2C**；来源 [static/app.js:2035](../../static/app.js#L2035)。
   - 原实现：`async (event) => { const button = event.currentTarget; const info = state.pendingDelete ¦¦ {}; if (!window.confirm(ˋ确认立即永久清除待删区的 ${Number(info.count ¦¦ 0)} 项（约 ${formatBytes(info.sizeBytes)}）吗？清除后无法恢复。ˋ)) return; if (!window.confirm("再次确认：这一步会永久删除，不进入回收站。")) return; button.disabled = true; try { const result = await postJson("/api/controls/pending-delete/empty", { confirm: "EMPTY_PENDING_DELETE_NOW" }, { timeoutMs: 600000 }); `；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
-- [ ] **FN-265** `匿名回调@2051` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2051](../../static/app.js#L2051)。
-  - 原实现：`async (event) => { const button = event.currentTarget; if (button.dataset.allowed === "false") return; if (!window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")) return; button.disabled = true; button.textContent = "正在发送继续指令…"; try { const clientRequestId = (window.crypto?.randomUUID?.() ¦¦ ˋdashboard-${Date.now()}-${Math.random()}ˋ); // Name the project this page showed when the user confirmed, so a stale // page cann`；实现/测试证据：待补。 安全继续留独立2E，用户亲自确认后才可合并。
-- [ ] **FN-266** `匿名回调@2066` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2066](../../static/app.js#L2066)。
-  - 原实现：`([, value]) => typeof value === "string" && value`；实现/测试证据：待补。
+- [x] **FN-265** `匿名回调@2051` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2051](../../static/app.js#L2051)。
+  - 原实现：`async (event) => { const button = event.currentTarget; if (button.dataset.allowed === "false") return; if (!window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")) return; button.disabled = true; button.textContent = "正在发送继续指令…"; try { const clientRequestId = (window.crypto?.randomUUID?.() ¦¦ ˋdashboard-${Date.now()}-${Math.random()}ˋ); // Name the project this page showed when the user confirmed, so a stale // page cann`；实现/测试证据：待补。 安全继续留独立2E，用户亲自确认后才可合并。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-266** `匿名回调@2066` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2066](../../static/app.js#L2066)。
+  - 原实现：`([, value]) => typeof value === "string" && value`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **FN-267** `匿名回调@2083` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2083](../../static/app.js#L2083)。
   - 原实现：`async (event) => { const button = event.currentTarget; if (!window.confirm("确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。")) return; button.disabled = true; button.textContent = "正在检查上传缺口…"; try { const result = await postJson("/api/controls/upload/rescan", {}); renderActionResult("uploadActionResult", { state: window.opsCloudPostJson ? (result.state ¦¦ "requested") : "completed", message: result.m`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [x] **FN-268** `匿名回调@2107` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2107](../../static/app.js#L2107)。
@@ -629,92 +629,92 @@
   - 原实现：`()=>{ if(typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'){ state.fullDashboardLoaded=false;void refresh(); } }`；实现/测试证据：待补。
 - [ ] **FN-296** `匿名回调@152` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:152](../../cloud/readonly.js#L152)。
   - 原实现：`() => { const list=sourcePanel.querySelector('ul'); list.replaceChildren(); for (const [key,sample] of samples) { const age=Math.floor(sample.age+(performance.now()-sample.received)/1000); const row=document.createElement('li'); const parsed=new URL(key,location.origin); const names={'/api/health':'递交健康','/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/history':'历史任务箱',`；实现/测试证据：待补。
-- [ ] **FN-297** `匿名回调@3` — 云端；计划 **V2-1**；来源 [cloud/commands.js:3](../../cloud/commands.js#L3)。
-  - 原实现：`() => { const network=window.opsCloudNetwork¦¦window.fetch.bind(window), key='ops-command-receipts-v1'; const active=new Map();let health={},panel,list,specificResult;const eligibility=new Map(); const pending=new Set(['submitting','queued','leased','sent','unknown']); const labels={submitting:'收件结果待查询',queued:'云端排队',leased:'代理已领取，尚未发送',sent:'已发家里，等待 HTTP 回执',unknown:'结果不明，必须在家里对账',completed:'已收到家里 HTTP 回执（业务进度请看原状态）',not_sent`；实现/测试证据：待补。
-- [ ] **FN-298** `匿名回调@9` — 云端；计划 **V2-1**；来源 [cloud/commands.js:9](../../cloud/commands.js#L9)。
-  - 原实现：`r=>r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'&&typeof r.path==='string'`；实现/测试证据：待补。
-- [ ] **FN-299** `save` — 云端；计划 **V2-1**；来源 [cloud/commands.js:10](../../cloud/commands.js#L10)。
-  - 原实现：`()=>localStorage.setItem(key,JSON.stringify(records.slice(-100)))`；实现/测试证据：待补。
-- [ ] **FN-300** `delay` — 云端；计划 **V2-1**；来源 [cloud/commands.js:11](../../cloud/commands.js#L11)。
-  - 原实现：`ms=>new Promise(resolve=>setTimeout(resolve,ms))`；实现/测试证据：待补。
-- [ ] **FN-301** `匿名回调@11` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:11](../../cloud/commands.js#L11)。
-  - 原实现：`resolve=>setTimeout(resolve,ms)`；实现/测试证据：待补。
-- [ ] **FN-302** `stable` — 云端；计划 **V2-1**；来源 [cloud/commands.js:12](../../cloud/commands.js#L12)。
-  - 原实现：`value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,stable(value[k])])):value`；实现/测试证据：待补。
-- [ ] **FN-303** `匿名回调@12` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:12](../../cloud/commands.js#L12)。
-  - 原实现：`k=>[k,stable(value[k])]`；实现/测试证据：待补。
-- [ ] **FN-304** `allowedPath` — 云端；计划 **V2-1**；来源 [cloud/commands.js:13](../../cloud/commands.js#L13)。
-  - 原实现：`path=>/^\/api\/controls\/tasks\/(create¦[^/]+\/(start¦cancel¦replenish))$/.test(path)¦¦/^\/api\/controls\/upload\/(rescan¦verify-history)$/.test(path)¦¦path==='/api/control-commands'¦¦/^\/api\/controls\/cloud-cleanup\/(preview¦execute)$/.test(path)`；实现/测试证据：待补。
-- [ ] **FN-305** `unfinished` — 云端；计划 **V2-1**；来源 [cloud/commands.js:14](../../cloud/commands.js#L14)。
-  - 原实现：`()=>records.some(r=>pending.has(r.state))`；实现/测试证据：待补。
-- [ ] **FN-306** `匿名回调@14` — 云端；计划 **V2-1**；来源 [cloud/commands.js:14](../../cloud/commands.js#L14)。
-  - 原实现：`r=>pending.has(r.state)`；实现/测试证据：待补。
-- [ ] **FN-307** `匿名回调@15` — 云端；计划 **V2-1**；来源 [cloud/commands.js:15](../../cloud/commands.js#L15)。
-  - 原实现：`button=>{ if(!health.executorAvailable¦¦!health.homeReady¦¦health.commandBlocker¦¦unfinished()¦¦active.size)return false; if(/^(preview¦confirm)(Draft¦Audio¦Production)CleanupButton$/.test(button?.id¦¦'')¦¦button?.id==='emptyPendingDeleteButton')return health.canCleanup===true; if(button?.id==='continueCurrentButton')return health.canContinue===true&&button.dataset.allowed==='true'; if(['uploadRescanButton','historicalCloudVer`；实现/测试证据：待补。
-- [ ] **FN-308** `匿名回调@22` — 云端；计划 **V2-1**；来源 [cloud/commands.js:22](../../cloud/commands.js#L22)。
-  - 原实现：`form=>Boolean(form.closest('#createTaskForm,#replenishForm'))&&health.executorAvailable&&health.homeReady&&!health.commandBlocker&&!unfinished()`；实现/测试证据：待补。
-- [ ] **FN-309** `匿名回调@23` — 云端；计划 **V2-1**；来源 [cloud/commands.js:23](../../cloud/commands.js#L23)。
-  - 原实现：`result=>{ const record=[...records].reverse().find(r=>r.path==='/api/control-commands'); if(record&&pending.has(record.state))return {...result,state:record.state,allowed:false,continueCanRetry:false,message:labels[record.state],cloudCommandId:record.cloudCommandId}; let observedEligibility=true; if(record?.homeCommandId&&result.commandId!==record.homeCommandId){ observedEligibility=false; result=specificResult?.commandId===re`；实现/测试证据：待补。
-- [ ] **FN-310** `匿名回调@24` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:24](../../cloud/commands.js#L24)。
-  - 原实现：`r=>r.path==='/api/control-commands'`；实现/测试证据：待补。
-- [ ] **FN-311** `匿名回调@36` — 云端；计划 **V2-1**；来源 [cloud/commands.js:36](../../cloud/commands.js#L36)。
-  - 原实现：`()=>{ const record=[...records].reverse().find(r=>r.path==='/api/control-commands'); if(record&&pending.has(record.state))return null; return record?.homeCommandId?'/api/control-commands/'+encodeURIComponent(record.homeCommandId):'/api/control-commands/current'; }`；实现/测试证据：待补。
-- [ ] **FN-312** `匿名回调@37` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:37](../../cloud/commands.js#L37)。
-  - 原实现：`r=>r.path==='/api/control-commands'`；实现/测试证据：待补。
-- [ ] **FN-313** `credentials` — 云端；计划 **V2-1**；来源 [cloud/commands.js:41](../../cloud/commands.js#L41)。
-  - 原实现：`async function credentials(){const r=await network('/auth/session');if(!r.ok)throw new Error('请重新登录');return r.json();}`；实现/测试证据：待补。
-- [ ] **FN-314** `postControl` — 云端；计划 **V2-1**；来源 [cloud/commands.js:42](../../cloud/commands.js#L42)。
-  - 原实现：`async function postControl(url,body={}){ const info=await credentials();const r=await network(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(body)}); const value=await r.json();if(!r.ok)throw new Error(value.detail¦¦'操作失败');return value; }`；实现/测试证据：待补。
-- [ ] **FN-315** `capture` — 云端；计划 **V2-1**；来源 [cloud/commands.js:46](../../cloud/commands.js#L46)。
-  - 原实现：`function capture(record,value){ record.state=value.state;record.cloudCommandId=value.cloudCommandId;record.updatedAt=Date.now(); if(record.path==='/api/control-commands'&&value.result?.kind==='http'){ try{const body=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(value.result.bodyBase64),c=>c.charCodeAt(0))));if(typeof body.commandId==='string')record.homeCommandId=body.commandId;}catch{} } save();paint();return value`；实现/测试证据：待补。
-- [ ] **FN-316** `匿名回调@49` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:49](../../cloud/commands.js#L49)。
-  - 原实现：`c=>c.charCodeAt(0)`；实现/测试证据：待补。
-- [ ] **FN-317** `query` — 云端；计划 **V2-1**；来源 [cloud/commands.js:53](../../cloud/commands.js#L53)。
-  - 原实现：`async function query(record){ const url=record.cloudCommandId?'/console/commands/'+record.cloudCommandId:'/console/commands/request/'+record.requestId; const response=await network(url);if(response.status===404)return null; if(response.status===401)throw new Error('请重新登录');if(!response.ok)throw new Error('命令状态暂不可用'); return capture(record,await response.json()); }`；实现/测试证据：待补。
-- [ ] **FN-318** `finalResponse` — 云端；计划 **V2-1**；来源 [cloud/commands.js:59](../../cloud/commands.js#L59)。
-  - 原实现：`function finalResponse(value){ if(value?.state==='completed'&&value.result?.kind==='http'){ const r=value.result,bytes=Uint8Array.from(atob(r.bodyBase64),c=>c.charCodeAt(0)); return new Response([204,205,304].includes(r.httpStatus)?null:bytes,{status:r.httpStatus,headers:{'Content-Type':r.contentType}}); } throw new Error(labels[value?.state]¦¦'尚未得到家里回执；请看云端命令面板，不要重复提交'); }`；实现/测试证据：待补。
-- [ ] **FN-319** `匿名回调@61` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:61](../../cloud/commands.js#L61)。
-  - 原实现：`c=>c.charCodeAt(0)`；实现/测试证据：待补。
-- [ ] **FN-320** `dispatch` — 云端；计划 **V2-1**；来源 [cloud/commands.js:66](../../cloud/commands.js#L66)。
-  - 原实现：`async function dispatch(path,payload){ if(!allowedPath(path))throw new Error('此操作尚未开放云端执行'); if(path==='/api/controls/cloud-cleanup/preview'){records=records.filter(r=>r.path!==path¦¦pending.has(r.state));save();} const comparable={...payload};if(path==='/api/control-commands')delete comparable.clientRequestId; const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(path+'\n'+J`；实现/测试证据：待补。
-- [ ] **FN-321** `匿名回调@68` — 云端；计划 **V2-1**；来源 [cloud/commands.js:68](../../cloud/commands.js#L68)。
-  - 原实现：`r=>r.path!==path¦¦pending.has(r.state)`；实现/测试证据：待补。
-- [ ] **FN-322** `匿名回调@70` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:70](../../cloud/commands.js#L70)。
-  - 原实现：`v=>v.toString(16).padStart(2,'0')`；实现/测试证据：待补。
-- [ ] **FN-323** `匿名回调@72` — 云端；计划 **V2-1**；来源 [cloud/commands.js:72](../../cloud/commands.js#L72)。
-  - 原实现：`async()=>{ let record=records.find(r=>r.fingerprint===fingerprint),value; if(!record){ if(!health.executorAvailable¦¦!health.homeReady¦¦health.commandBlocker¦¦unfinished())throw new Error('家里未就绪，或有待对账命令；尚未提交'); record={path,fingerprint,requestId:crypto.randomUUID(),state:'submitting',updatedAt:Date.now()};records.push(record);save();paint(); const body={...payload};if(path==='/api/control-commands')body.clientRequestId=record.`；实现/测试证据：待补。
-- [ ] **FN-324** `匿名回调@73` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:73](../../cloud/commands.js#L73)。
-  - 原实现：`r=>r.fingerprint===fingerprint`；实现/测试证据：待补。
-- [ ] **FN-325** `匿名回调@97` — 云端；计划 **V2-1**；来源 [cloud/commands.js:97](../../cloud/commands.js#L97)。
-  - 原实现：`(url,init={})=>{ if((init.method¦¦'GET').toUpperCase()!=='POST')throw new Error('仅支持已声明的 POST 命令'); const path=new URL(url,location.origin).pathname;return dispatch(path,init.body?JSON.parse(init.body):{}); }`；实现/测试证据：待补。
-- [ ] **FN-326** `匿名回调@101` — 云端；计划 **V2-1**；来源 [cloud/commands.js:101](../../cloud/commands.js#L101)。
-  - 原实现：`async(url,body)=>{const r=await dispatch(new URL(url,location.origin).pathname,body);const result=await r.json();if(!r.ok)throw new Error(result.detail¦¦'家里拒绝该操作');return result;}`；实现/测试证据：待补。
-- [ ] **FN-327** `paint` — 云端；计划 **V2-1**；来源 [cloud/commands.js:102](../../cloud/commands.js#L102)。
-  - 原实现：`function paint(){ if(!list)return;list.replaceChildren(); for(const record of [...records].reverse().concat(remoteRecords).slice(0,50)){ const item=document.createElement('li'),text=document.createElement('span'); text.textContent=record.path+' · '+(labels[record.state]¦¦record.state)+' · '+(record.cloudCommandId¦¦record.requestId);item.append(text); if(['submitting','queued','leased'].includes(record.state)){ const button=doc`；实现/测试证据：待补。
-- [ ] **FN-328** `匿名回调@108` — 云端；计划 **V2-1**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
-  - 原实现：`async()=>{button.disabled=true;try{await postControl(record.remote?'/console/commands/'+record.cloudCommandId+'/cancel':'/console/commands/request/'+record.requestId+'/cancel');record.state='cancelled';save();paint();}catch(error){alert(error.message);}}`；实现/测试证据：待补。
-- [ ] **FN-329** `匿名回调@111` — 云端；计划 **V2-1**；来源 [cloud/commands.js:111](../../cloud/commands.js#L111)。
-  - 原实现：`async()=>{ const note=prompt('先在家里核实原请求已停止及业务实际结果，再填写对账依据（至少10字）。此操作不会重试原命令。');if(!note)return; if(prompt('输入 CONFIRMED_HOME_REQUEST_STOPPED 确认原请求已停止')!=='CONFIRMED_HOME_REQUEST_STOPPED')return; try{capture(record,await postControl('/console/commands/'+record.cloudCommandId+'/resolve',{note,confirmation:'CONFIRMED_HOME_REQUEST_STOPPED'}));}catch(error){alert(error.message);} }`；实现/测试证据：待补。
-- [ ] **FN-330** `匿名回调@118` — 云端；计划 **V2-1**；来源 [cloud/commands.js:118](../../cloud/commands.js#L118)。
-  - 原实现：`()=>{if(!confirm('结束本次回执后，相同输入的下一次点击将创建新命令。确认？'))return;records=records.filter(r=>r!==record);save();paint();}`；实现/测试证据：待补。
-- [ ] **FN-331** `匿名回调@118` — 云端；计划 **V2-1**；来源 [cloud/commands.js:118](../../cloud/commands.js#L118)。
-  - 原实现：`r=>r!==record`；实现/测试证据：待补。
-- [ ] **FN-332** `匿名回调@124` — 云端；计划 **V2-1**；来源 [cloud/commands.js:124](../../cloud/commands.js#L124)。
-  - 原实现：`()=>{ document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}},true); panel=document.createElement('d`；实现/测试证据：待补。
-- [ ] **FN-333** `匿名回调@125` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:125](../../cloud/commands.js#L125)。
-  - 原实现：`event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}}`；实现/测试证据：待补。
-- [ ] **FN-334** `匿名回调@128` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
-  - 原实现：`async event=>{event.preventDefault();try{await postControl('/console/submission-requests/'+encodeURIComponent(input.value.trim())+'/cancel');alert('发送前撤销已记录；晚到收件也会被拒绝。请让递交器重新查询。');}catch(error){alert(error.message);}}`；实现/测试证据：待补。
-- [ ] **FN-335** `poll` — 云端；计划 **V2-1**；来源 [cloud/commands.js:131](../../cloud/commands.js#L131)。
-  - 原实现：`async function poll(){if(polling)return;polling=true;try{ const response=await network('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}}); if(response.ok)health=await response.json();else health={}; for(const record of records.filter(r=>pending.has(r.state)))await query(record); const all=await network('/console/commands');if(all.ok){const body=await all.json();remoteRecords=(body.`；实现/测试证据：待补。
-- [ ] **FN-336** `匿名回调@134` — 云端；计划 **V2-1**；来源 [cloud/commands.js:134](../../cloud/commands.js#L134)。
-  - 原实现：`r=>pending.has(r.state)`；实现/测试证据：待补。
-- [ ] **FN-337** `匿名回调@135` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
-  - 原实现：`r=>!records.some(local=>local.cloudCommandId===r.cloudCommandId)`；实现/测试证据：待补。
-- [ ] **FN-338** `匿名回调@135` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
-  - 原实现：`local=>local.cloudCommandId===r.cloudCommandId`；实现/测试证据：待补。
-- [ ] **FN-339** `匿名回调@135` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
-  - 原实现：`r=>({...r,path:r.target,remote:true})`；实现/测试证据：待补。
+- [x] **FN-297** `匿名回调@3` — 云端；计划 **V2-1**；来源 [cloud/commands.js:3](../../cloud/commands.js#L3)。
+  - 原实现：`() => { const network=window.opsCloudNetwork¦¦window.fetch.bind(window), key='ops-command-receipts-v1'; const active=new Map();let health={},panel,list,specificResult;const eligibility=new Map(); const pending=new Set(['submitting','queued','leased','sent','unknown']); const labels={submitting:'收件结果待查询',queued:'云端排队',leased:'代理已领取，尚未发送',sent:'已发家里，等待 HTTP 回执',unknown:'结果不明，必须在家里对账',completed:'已收到家里 HTTP 回执（业务进度请看原状态）',not_sent`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-298** `匿名回调@9` — 云端；计划 **V2-1**；来源 [cloud/commands.js:9](../../cloud/commands.js#L9)。
+  - 原实现：`r=>r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'&&typeof r.path==='string'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-299** `save` — 云端；计划 **V2-1**；来源 [cloud/commands.js:10](../../cloud/commands.js#L10)。
+  - 原实现：`()=>localStorage.setItem(key,JSON.stringify(records.slice(-100)))`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-300** `delay` — 云端；计划 **V2-1**；来源 [cloud/commands.js:11](../../cloud/commands.js#L11)。
+  - 原实现：`ms=>new Promise(resolve=>setTimeout(resolve,ms))`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-301** `匿名回调@11` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:11](../../cloud/commands.js#L11)。
+  - 原实现：`resolve=>setTimeout(resolve,ms)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-302** `stable` — 云端；计划 **V2-1**；来源 [cloud/commands.js:12](../../cloud/commands.js#L12)。
+  - 原实现：`value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,stable(value[k])])):value`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-303** `匿名回调@12` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:12](../../cloud/commands.js#L12)。
+  - 原实现：`k=>[k,stable(value[k])]`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-304** `allowedPath` — 云端；计划 **V2-1**；来源 [cloud/commands.js:13](../../cloud/commands.js#L13)。
+  - 原实现：`path=>/^\/api\/controls\/tasks\/(create¦[^/]+\/(start¦cancel¦replenish))$/.test(path)¦¦/^\/api\/controls\/upload\/(rescan¦verify-history)$/.test(path)¦¦path==='/api/control-commands'¦¦/^\/api\/controls\/cloud-cleanup\/(preview¦execute)$/.test(path)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-305** `unfinished` — 云端；计划 **V2-1**；来源 [cloud/commands.js:14](../../cloud/commands.js#L14)。
+  - 原实现：`()=>records.some(r=>pending.has(r.state))`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-306** `匿名回调@14` — 云端；计划 **V2-1**；来源 [cloud/commands.js:14](../../cloud/commands.js#L14)。
+  - 原实现：`r=>pending.has(r.state)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-307** `匿名回调@15` — 云端；计划 **V2-1**；来源 [cloud/commands.js:15](../../cloud/commands.js#L15)。
+  - 原实现：`button=>{ if(!health.executorAvailable¦¦!health.homeReady¦¦health.commandBlocker¦¦unfinished()¦¦active.size)return false; if(/^(preview¦confirm)(Draft¦Audio¦Production)CleanupButton$/.test(button?.id¦¦'')¦¦button?.id==='emptyPendingDeleteButton')return health.canCleanup===true; if(button?.id==='continueCurrentButton')return health.canContinue===true&&button.dataset.allowed==='true'; if(['uploadRescanButton','historicalCloudVer`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-308** `匿名回调@22` — 云端；计划 **V2-1**；来源 [cloud/commands.js:22](../../cloud/commands.js#L22)。
+  - 原实现：`form=>Boolean(form.closest('#createTaskForm,#replenishForm'))&&health.executorAvailable&&health.homeReady&&!health.commandBlocker&&!unfinished()`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-309** `匿名回调@23` — 云端；计划 **V2-1**；来源 [cloud/commands.js:23](../../cloud/commands.js#L23)。
+  - 原实现：`result=>{ const record=[...records].reverse().find(r=>r.path==='/api/control-commands'); if(record&&pending.has(record.state))return {...result,state:record.state,allowed:false,continueCanRetry:false,message:labels[record.state],cloudCommandId:record.cloudCommandId}; let observedEligibility=true; if(record?.homeCommandId&&result.commandId!==record.homeCommandId){ observedEligibility=false; result=specificResult?.commandId===re`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-310** `匿名回调@24` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:24](../../cloud/commands.js#L24)。
+  - 原实现：`r=>r.path==='/api/control-commands'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-311** `匿名回调@36` — 云端；计划 **V2-1**；来源 [cloud/commands.js:36](../../cloud/commands.js#L36)。
+  - 原实现：`()=>{ const record=[...records].reverse().find(r=>r.path==='/api/control-commands'); if(record&&pending.has(record.state))return null; return record?.homeCommandId?'/api/control-commands/'+encodeURIComponent(record.homeCommandId):'/api/control-commands/current'; }`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-312** `匿名回调@37` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:37](../../cloud/commands.js#L37)。
+  - 原实现：`r=>r.path==='/api/control-commands'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-313** `credentials` — 云端；计划 **V2-1**；来源 [cloud/commands.js:41](../../cloud/commands.js#L41)。
+  - 原实现：`async function credentials(){const r=await network('/auth/session');if(!r.ok)throw new Error('请重新登录');return r.json();}`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-314** `postControl` — 云端；计划 **V2-1**；来源 [cloud/commands.js:42](../../cloud/commands.js#L42)。
+  - 原实现：`async function postControl(url,body={}){ const info=await credentials();const r=await network(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(body)}); const value=await r.json();if(!r.ok)throw new Error(value.detail¦¦'操作失败');return value; }`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-315** `capture` — 云端；计划 **V2-1**；来源 [cloud/commands.js:46](../../cloud/commands.js#L46)。
+  - 原实现：`function capture(record,value){ record.state=value.state;record.cloudCommandId=value.cloudCommandId;record.updatedAt=Date.now(); if(record.path==='/api/control-commands'&&value.result?.kind==='http'){ try{const body=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(value.result.bodyBase64),c=>c.charCodeAt(0))));if(typeof body.commandId==='string')record.homeCommandId=body.commandId;}catch{} } save();paint();return value`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-316** `匿名回调@49` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:49](../../cloud/commands.js#L49)。
+  - 原实现：`c=>c.charCodeAt(0)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-317** `query` — 云端；计划 **V2-1**；来源 [cloud/commands.js:53](../../cloud/commands.js#L53)。
+  - 原实现：`async function query(record){ const url=record.cloudCommandId?'/console/commands/'+record.cloudCommandId:'/console/commands/request/'+record.requestId; const response=await network(url);if(response.status===404)return null; if(response.status===401)throw new Error('请重新登录');if(!response.ok)throw new Error('命令状态暂不可用'); return capture(record,await response.json()); }`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-318** `finalResponse` — 云端；计划 **V2-1**；来源 [cloud/commands.js:59](../../cloud/commands.js#L59)。
+  - 原实现：`function finalResponse(value){ if(value?.state==='completed'&&value.result?.kind==='http'){ const r=value.result,bytes=Uint8Array.from(atob(r.bodyBase64),c=>c.charCodeAt(0)); return new Response([204,205,304].includes(r.httpStatus)?null:bytes,{status:r.httpStatus,headers:{'Content-Type':r.contentType}}); } throw new Error(labels[value?.state]¦¦'尚未得到家里回执；请看云端命令面板，不要重复提交'); }`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-319** `匿名回调@61` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:61](../../cloud/commands.js#L61)。
+  - 原实现：`c=>c.charCodeAt(0)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-320** `dispatch` — 云端；计划 **V2-1**；来源 [cloud/commands.js:66](../../cloud/commands.js#L66)。
+  - 原实现：`async function dispatch(path,payload){ if(!allowedPath(path))throw new Error('此操作尚未开放云端执行'); if(path==='/api/controls/cloud-cleanup/preview'){records=records.filter(r=>r.path!==path¦¦pending.has(r.state));save();} const comparable={...payload};if(path==='/api/control-commands')delete comparable.clientRequestId; const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(path+'\n'+J`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-321** `匿名回调@68` — 云端；计划 **V2-1**；来源 [cloud/commands.js:68](../../cloud/commands.js#L68)。
+  - 原实现：`r=>r.path!==path¦¦pending.has(r.state)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-322** `匿名回调@70` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:70](../../cloud/commands.js#L70)。
+  - 原实现：`v=>v.toString(16).padStart(2,'0')`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-323** `匿名回调@72` — 云端；计划 **V2-1**；来源 [cloud/commands.js:72](../../cloud/commands.js#L72)。
+  - 原实现：`async()=>{ let record=records.find(r=>r.fingerprint===fingerprint),value; if(!record){ if(!health.executorAvailable¦¦!health.homeReady¦¦health.commandBlocker¦¦unfinished())throw new Error('家里未就绪，或有待对账命令；尚未提交'); record={path,fingerprint,requestId:crypto.randomUUID(),state:'submitting',updatedAt:Date.now()};records.push(record);save();paint(); const body={...payload};if(path==='/api/control-commands')body.clientRequestId=record.`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-324** `匿名回调@73` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:73](../../cloud/commands.js#L73)。
+  - 原实现：`r=>r.fingerprint===fingerprint`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-325** `匿名回调@97` — 云端；计划 **V2-1**；来源 [cloud/commands.js:97](../../cloud/commands.js#L97)。
+  - 原实现：`(url,init={})=>{ if((init.method¦¦'GET').toUpperCase()!=='POST')throw new Error('仅支持已声明的 POST 命令'); const path=new URL(url,location.origin).pathname;return dispatch(path,init.body?JSON.parse(init.body):{}); }`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-326** `匿名回调@101` — 云端；计划 **V2-1**；来源 [cloud/commands.js:101](../../cloud/commands.js#L101)。
+  - 原实现：`async(url,body)=>{const r=await dispatch(new URL(url,location.origin).pathname,body);const result=await r.json();if(!r.ok)throw new Error(result.detail¦¦'家里拒绝该操作');return result;}`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-327** `paint` — 云端；计划 **V2-1**；来源 [cloud/commands.js:102](../../cloud/commands.js#L102)。
+  - 原实现：`function paint(){ if(!list)return;list.replaceChildren(); for(const record of [...records].reverse().concat(remoteRecords).slice(0,50)){ const item=document.createElement('li'),text=document.createElement('span'); text.textContent=record.path+' · '+(labels[record.state]¦¦record.state)+' · '+(record.cloudCommandId¦¦record.requestId);item.append(text); if(['submitting','queued','leased'].includes(record.state)){ const button=doc`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-328** `匿名回调@108` — 云端；计划 **V2-1**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
+  - 原实现：`async()=>{button.disabled=true;try{await postControl(record.remote?'/console/commands/'+record.cloudCommandId+'/cancel':'/console/commands/request/'+record.requestId+'/cancel');record.state='cancelled';save();paint();}catch(error){alert(error.message);}}`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-329** `匿名回调@111` — 云端；计划 **V2-1**；来源 [cloud/commands.js:111](../../cloud/commands.js#L111)。
+  - 原实现：`async()=>{ const note=prompt('先在家里核实原请求已停止及业务实际结果，再填写对账依据（至少10字）。此操作不会重试原命令。');if(!note)return; if(prompt('输入 CONFIRMED_HOME_REQUEST_STOPPED 确认原请求已停止')!=='CONFIRMED_HOME_REQUEST_STOPPED')return; try{capture(record,await postControl('/console/commands/'+record.cloudCommandId+'/resolve',{note,confirmation:'CONFIRMED_HOME_REQUEST_STOPPED'}));}catch(error){alert(error.message);} }`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-330** `匿名回调@118` — 云端；计划 **V2-1**；来源 [cloud/commands.js:118](../../cloud/commands.js#L118)。
+  - 原实现：`()=>{if(!confirm('结束本次回执后，相同输入的下一次点击将创建新命令。确认？'))return;records=records.filter(r=>r!==record);save();paint();}`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-331** `匿名回调@118` — 云端；计划 **V2-1**；来源 [cloud/commands.js:118](../../cloud/commands.js#L118)。
+  - 原实现：`r=>r!==record`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-332** `匿名回调@124` — 云端；计划 **V2-1**；来源 [cloud/commands.js:124](../../cloud/commands.js#L124)。
+  - 原实现：`()=>{ document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}},true); panel=document.createElement('d`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-333** `匿名回调@125` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:125](../../cloud/commands.js#L125)。
+  - 原实现：`event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}}`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-334** `匿名回调@128` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
+  - 原实现：`async event=>{event.preventDefault();try{await postControl('/console/submission-requests/'+encodeURIComponent(input.value.trim())+'/cancel');alert('发送前撤销已记录；晚到收件也会被拒绝。请让递交器重新查询。');}catch(error){alert(error.message);}}`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-335** `poll` — 云端；计划 **V2-1**；来源 [cloud/commands.js:131](../../cloud/commands.js#L131)。
+  - 原实现：`async function poll(){if(polling)return;polling=true;try{ const response=await network('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}}); if(response.ok)health=await response.json();else health={}; for(const record of records.filter(r=>pending.has(r.state)))await query(record); const all=await network('/console/commands');if(all.ok){const body=await all.json();remoteRecords=(body.`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-336** `匿名回调@134` — 云端；计划 **V2-1**；来源 [cloud/commands.js:134](../../cloud/commands.js#L134)。
+  - 原实现：`r=>pending.has(r.state)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-337** `匿名回调@135` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
+  - 原实现：`r=>!records.some(local=>local.cloudCommandId===r.cloudCommandId)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-338** `匿名回调@135` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
+  - 原实现：`local=>local.cloudCommandId===r.cloudCommandId`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **FN-339** `匿名回调@135` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
+  - 原实现：`r=>({...r,path:r.target,remote:true})`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **FN-340** `匿名回调@3` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:3](../../cloud/cleanup.js#L3)。
   - 原实现：`() => { const endpoint='/api/controls/cloud-cleanup/',previews=new Map(); const kinds={Draft:'drafts',Audio:'audio',Production:'production'}; const spec={drafts:{prefix:'draft',selection:'selectedDraftIds',confirm:'RECYCLE_SELECTED_CAPCUT_DRAFTS'},audio:{prefix:'audio',selection:'selectedAudioIds',confirm:'RECYCLE_SELECTED_AUDIO_FILES'},production:{prefix:'production',selection:'selectedProductionIds',confirm:'RECYCLE_SELECTED`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 - [x] **FN-341** `send` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:7](../../cloud/cleanup.js#L7)。
@@ -788,8 +788,8 @@
   - 原实现：`fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal, })`；实现/测试证据：待补。
 - [x] **NET-006** `postJson` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1137](../../static/app.js#L1137)。
   - 原实现：`postJson(ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/replenishˋ, { urls: $("replenishUrls").value, startNow: $("replenishStartNow").checked, })`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
-- [ ] **NET-007** `getJson` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1520](../../static/app.js#L1520)。
-  - 原实现：`getJson(target)`；实现/测试证据：待补。
+- [x] **NET-007** `getJson` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1520](../../static/app.js#L1520)。
+  - 原实现：`getJson(target)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **NET-008** `fetch` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1589](../../static/app.js#L1589)。
   - 原实现：`fetch(ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/${action}ˋ, { method: "POST" })`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **NET-009** `fetch` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1620](../../static/app.js#L1620)。
@@ -814,8 +814,8 @@
   - 原实现：`getJson("/api/controls/pending-delete")`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
 - [x] **NET-019** `postJson` — 两者（写操作按模式分流）；计划 **V2-2C**；来源 [static/app.js:2042](../../static/app.js#L2042)。
   - 原实现：`postJson("/api/controls/pending-delete/empty", { confirm: "EMPTY_PENDING_DELETE_NOW" }, { timeoutMs: 600000 })`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
-- [ ] **NET-020** `postJson` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2068](../../static/app.js#L2068)。
-  - 原实现：`postJson("/api/control-commands", payload)`；实现/测试证据：待补。
+- [x] **NET-020** `postJson` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2068](../../static/app.js#L2068)。
+  - 原实现：`postJson("/api/control-commands", payload)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **NET-021** `postJson` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2089](../../static/app.js#L2089)。
   - 原实现：`postJson("/api/controls/upload/rescan", {})`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [x] **NET-022** `postJson` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2113](../../static/app.js#L2113)。
@@ -838,28 +838,28 @@
   - 原实现：`original('/auth/password',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(Object.fromEntries(new FormData(form)))})`；实现/测试证据：待补。
 - [ ] **NET-031** `original` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:134](../../cloud/readonly.js#L134)。
   - 原实现：`original('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}})`；实现/测试证据：待补。
-- [ ] **NET-032** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:41](../../cloud/commands.js#L41)。
-  - 原实现：`network('/auth/session')`；实现/测试证据：待补。
-- [ ] **NET-033** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:43](../../cloud/commands.js#L43)。
-  - 原实现：`network(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(body)})`；实现/测试证据：待补。
-- [ ] **NET-034** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:55](../../cloud/commands.js#L55)。
-  - 原实现：`network(url)`；实现/测试证据：待补。
-- [ ] **NET-035** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:80](../../cloud/commands.js#L80)。
-  - 原实现：`network(path,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf,'X-Client-Request-ID':record.requestId},body:JSON.stringify(body)})`；实现/测试证据：待补。
-- [ ] **NET-036** `dispatch` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:99](../../cloud/commands.js#L99)。
-  - 原实现：`dispatch(path,init.body?JSON.parse(init.body):{})`；实现/测试证据：待补。
-- [ ] **NET-037** `dispatch` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:101](../../cloud/commands.js#L101)。
-  - 原实现：`dispatch(new URL(url,location.origin).pathname,body)`；实现/测试证据：待补。
-- [ ] **NET-038** `postControl` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
-  - 原实现：`postControl(record.remote?'/console/commands/'+record.cloudCommandId+'/cancel':'/console/commands/request/'+record.requestId+'/cancel')`；实现/测试证据：待补。
-- [ ] **NET-039** `postControl` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:114](../../cloud/commands.js#L114)。
-  - 原实现：`postControl('/console/commands/'+record.cloudCommandId+'/resolve',{note,confirmation:'CONFIRMED_HOME_REQUEST_STOPPED'})`；实现/测试证据：待补。
-- [ ] **NET-040** `postControl` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
-  - 原实现：`postControl('/console/submission-requests/'+encodeURIComponent(input.value.trim())+'/cancel')`；实现/测试证据：待补。
-- [ ] **NET-041** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:132](../../cloud/commands.js#L132)。
-  - 原实现：`network('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}})`；实现/测试证据：待补。
-- [ ] **NET-042** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
-  - 原实现：`network('/console/commands')`；实现/测试证据：待补。
+- [x] **NET-032** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:41](../../cloud/commands.js#L41)。
+  - 原实现：`network('/auth/session')`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **NET-033** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:43](../../cloud/commands.js#L43)。
+  - 原实现：`network(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(body)})`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **NET-034** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:55](../../cloud/commands.js#L55)。
+  - 原实现：`network(url)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **NET-035** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:80](../../cloud/commands.js#L80)。
+  - 原实现：`network(path,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf,'X-Client-Request-ID':record.requestId},body:JSON.stringify(body)})`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **NET-036** `dispatch` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:99](../../cloud/commands.js#L99)。
+  - 原实现：`dispatch(path,init.body?JSON.parse(init.body):{})`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **NET-037** `dispatch` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:101](../../cloud/commands.js#L101)。
+  - 原实现：`dispatch(new URL(url,location.origin).pathname,body)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **NET-038** `postControl` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
+  - 原实现：`postControl(record.remote?'/console/commands/'+record.cloudCommandId+'/cancel':'/console/commands/request/'+record.requestId+'/cancel')`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **NET-039** `postControl` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:114](../../cloud/commands.js#L114)。
+  - 原实现：`postControl('/console/commands/'+record.cloudCommandId+'/resolve',{note,confirmation:'CONFIRMED_HOME_REQUEST_STOPPED'})`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **NET-040** `postControl` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
+  - 原实现：`postControl('/console/submission-requests/'+encodeURIComponent(input.value.trim())+'/cancel')`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **NET-041** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:132](../../cloud/commands.js#L132)。
+  - 原实现：`network('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}})`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **NET-042** `network` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
+  - 原实现：`network('/console/commands')`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **NET-043** `fetch` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:8](../../cloud/cleanup.js#L8)。
   - 原实现：`fetch(endpoint+'capabilities')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 - [x] **NET-044** `send` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:14](../../cloud/cleanup.js#L14)。
@@ -917,8 +917,8 @@
   - 原实现：`window.alert(result.message ¦¦ "待删区已清空")`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
 - [x] **CONF-017** `window.alert` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2045](../../static/app.js#L2045)。
   - 原实现：`window.alert(error.message ¦¦ "清空待删区失败")`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
-- [ ] **CONF-018** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2054](../../static/app.js#L2054)。
-  - 原实现：`window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")`；实现/测试证据：待补。
+- [x] **CONF-018** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2054](../../static/app.js#L2054)。
+  - 原实现：`window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **CONF-019** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2085](../../static/app.js#L2085)。
   - 原实现：`window.confirm("确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。")`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [x] **CONF-020** `window.confirm` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2109](../../static/app.js#L2109)。
@@ -929,20 +929,20 @@
   - 原实现：`window.confirm("再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。")`；实现/测试证据：待补。
 - [ ] **CONF-023** `alert` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:115](../../cloud/readonly.js#L115)。
   - 原实现：`alert('未修改，请核对密码后重试')`；实现/测试证据：待补。
-- [ ] **CONF-024** `alert` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
-  - 原实现：`alert(error.message)`；实现/测试证据：待补。
-- [ ] **CONF-025** `prompt` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:112](../../cloud/commands.js#L112)。
-  - 原实现：`prompt('先在家里核实原请求已停止及业务实际结果，再填写对账依据（至少10字）。此操作不会重试原命令。')`；实现/测试证据：待补。
-- [ ] **CONF-026** `prompt` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:113](../../cloud/commands.js#L113)。
-  - 原实现：`prompt('输入 CONFIRMED_HOME_REQUEST_STOPPED 确认原请求已停止')`；实现/测试证据：待补。
-- [ ] **CONF-027** `alert` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:114](../../cloud/commands.js#L114)。
-  - 原实现：`alert(error.message)`；实现/测试证据：待补。
-- [ ] **CONF-028** `confirm` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:118](../../cloud/commands.js#L118)。
-  - 原实现：`confirm('结束本次回执后，相同输入的下一次点击将创建新命令。确认？')`；实现/测试证据：待补。
-- [ ] **CONF-029** `alert` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
-  - 原实现：`alert('发送前撤销已记录；晚到收件也会被拒绝。请让递交器重新查询。')`；实现/测试证据：待补。
-- [ ] **CONF-030** `alert` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
-  - 原实现：`alert(error.message)`；实现/测试证据：待补。
+- [x] **CONF-024** `alert` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
+  - 原实现：`alert(error.message)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **CONF-025** `prompt` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:112](../../cloud/commands.js#L112)。
+  - 原实现：`prompt('先在家里核实原请求已停止及业务实际结果，再填写对账依据（至少10字）。此操作不会重试原命令。')`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **CONF-026** `prompt` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:113](../../cloud/commands.js#L113)。
+  - 原实现：`prompt('输入 CONFIRMED_HOME_REQUEST_STOPPED 确认原请求已停止')`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **CONF-027** `alert` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:114](../../cloud/commands.js#L114)。
+  - 原实现：`alert(error.message)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **CONF-028** `confirm` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:118](../../cloud/commands.js#L118)。
+  - 原实现：`confirm('结束本次回执后，相同输入的下一次点击将创建新命令。确认？')`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **CONF-029** `alert` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
+  - 原实现：`alert('发送前撤销已记录；晚到收件也会被拒绝。请让递交器重新查询。')`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **CONF-030** `alert` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
+  - 原实现：`alert(error.message)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **CONF-031** `confirm` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:13](../../cloud/cleanup.js#L13)。
   - 原实现：`confirm('本次选择是否包含人工或来源不明草稿？选“取消”将保护这类草稿。')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 - [x] **CONF-032** `confirm` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:29](../../cloud/cleanup.js#L29)。
@@ -1036,30 +1036,30 @@
   - 原实现：`status === "pending_confirmation" && !["auto_start_first", "auto_start_sequential"].includes(String(item.startMode ¦¦ ""))`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **GUARD-039** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1180](../../static/app.js#L1180)。
   - 原实现：`status === "pending_confirmation" ¦¦ status === "imported_waiting_start"`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
-- [ ] **GUARD-040** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1443](../../static/app.js#L1443)。
-  - 原实现：`state.continueInFlight = commandInFlight`；实现/测试证据：待补。
-- [ ] **GUARD-041** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1482](../../static/app.js#L1482)。
-  - 原实现：`result.allowed !== false`；实现/测试证据：待补。
-- [ ] **GUARD-042** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1487](../../static/app.js#L1487)。
-  - 原实现：`!commandInFlight && Boolean(state.runtime?.busy)`；实现/测试证据：待补。
-- [ ] **GUARD-043** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1488](../../static/app.js#L1488)。
-  - 原实现：`allowed && !runtimeBusy && (result.continueCanRetry === true ¦¦ !commandInFlight)`；实现/测试证据：待补。
-- [ ] **GUARD-044** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1488](../../static/app.js#L1488)。
-  - 原实现：`allowed && !runtimeBusy`；实现/测试证据：待补。
-- [ ] **GUARD-045** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1489](../../static/app.js#L1489)。
-  - 原实现：`button.dataset.allowed = clickable ? "true" : "false"`；实现/测试证据：待补。
-- [ ] **GUARD-046** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1491](../../static/app.js#L1491)。
-  - 原实现：`button.disabled = !clickable`；实现/测试证据：待补。
-- [ ] **GUARD-047** `条件门禁` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1515](../../static/app.js#L1515)。
-  - 原实现：`state.continueStatusBusy`；实现/测试证据：待补。
-- [ ] **GUARD-048** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1516](../../static/app.js#L1516)。
-  - 原实现：`state.continueStatusBusy = true`；实现/测试证据：待补。
-- [ ] **GUARD-049** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1534](../../static/app.js#L1534)。
-  - 原实现：`button.disabled = true`；实现/测试证据：待补。
-- [ ] **GUARD-050** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1535](../../static/app.js#L1535)。
-  - 原实现：`button.dataset.allowed = "false"`；实现/测试证据：待补。
-- [ ] **GUARD-051** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1545](../../static/app.js#L1545)。
-  - 原实现：`state.continueStatusBusy = false`；实现/测试证据：待补。
+- [x] **GUARD-040** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1443](../../static/app.js#L1443)。
+  - 原实现：`state.continueInFlight = commandInFlight`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-041** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1482](../../static/app.js#L1482)。
+  - 原实现：`result.allowed !== false`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-042** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1487](../../static/app.js#L1487)。
+  - 原实现：`!commandInFlight && Boolean(state.runtime?.busy)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-043** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1488](../../static/app.js#L1488)。
+  - 原实现：`allowed && !runtimeBusy && (result.continueCanRetry === true ¦¦ !commandInFlight)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-044** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1488](../../static/app.js#L1488)。
+  - 原实现：`allowed && !runtimeBusy`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-045** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1489](../../static/app.js#L1489)。
+  - 原实现：`button.dataset.allowed = clickable ? "true" : "false"`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-046** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1491](../../static/app.js#L1491)。
+  - 原实现：`button.disabled = !clickable`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-047** `条件门禁` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1515](../../static/app.js#L1515)。
+  - 原实现：`state.continueStatusBusy`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-048** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1516](../../static/app.js#L1516)。
+  - 原实现：`state.continueStatusBusy = true`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-049** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1534](../../static/app.js#L1534)。
+  - 原实现：`button.disabled = true`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-050** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1535](../../static/app.js#L1535)。
+  - 原实现：`button.dataset.allowed = "false"`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-051** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1545](../../static/app.js#L1545)。
+  - 原实现：`state.continueStatusBusy = false`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [ ] **GUARD-052** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1572](../../static/app.js#L1572)。
   - 原实现：`button.disabled = running`；实现/测试证据：待补。
 - [x] **GUARD-053** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1586](../../static/app.js#L1586)。
@@ -1146,12 +1146,12 @@
   - 原实现：`button.disabled = true`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
 - [x] **GUARD-094** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2047](../../static/app.js#L2047)。
   - 原实现：`button.disabled = false`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
-- [ ] **GUARD-095** `条件门禁` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2053](../../static/app.js#L2053)。
-  - 原实现：`button.dataset.allowed === "false"`；实现/测试证据：待补。
-- [ ] **GUARD-096** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2053](../../static/app.js#L2053)。
-  - 原实现：`button.dataset.allowed === "false"`；实现/测试证据：待补。
-- [ ] **GUARD-097** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2055](../../static/app.js#L2055)。
-  - 原实现：`button.disabled = true`；实现/测试证据：待补。
+- [x] **GUARD-095** `条件门禁` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2053](../../static/app.js#L2053)。
+  - 原实现：`button.dataset.allowed === "false"`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-096** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2053](../../static/app.js#L2053)。
+  - 原实现：`button.dataset.allowed === "false"`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-097** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2055](../../static/app.js#L2055)。
+  - 原实现：`button.disabled = true`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **GUARD-098** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2086](../../static/app.js#L2086)。
   - 原实现：`button.disabled = true`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [x] **GUARD-099** `状态/防重复约束` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2103](../../static/app.js#L2103)。
@@ -1190,48 +1190,48 @@
   - 原实现：`typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'`；实现/测试证据：待补。
 - [ ] **GUARD-116** `状态/防重复约束` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:148](../../cloud/readonly.js#L148)。
   - 原实现：`typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'`；实现/测试证据：待补。
-- [ ] **GUARD-117** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:9](../../cloud/commands.js#L9)。
-  - 原实现：`r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'&&typeof r.path==='string'`；实现/测试证据：待补。
-- [ ] **GUARD-118** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:9](../../cloud/commands.js#L9)。
-  - 原实现：`r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'`；实现/测试证据：待补。
-- [ ] **GUARD-119** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:9](../../cloud/commands.js#L9)。
-  - 原实现：`typeof r.requestId==='string'`；实现/测试证据：待补。
-- [ ] **GUARD-120** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:9](../../cloud/commands.js#L9)。
-  - 原实现：`typeof r.fingerprint==='string'`；实现/测试证据：待补。
-- [ ] **GUARD-121** `条件门禁` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:16](../../cloud/commands.js#L16)。
-  - 原实现：`!health.executorAvailable¦¦!health.homeReady¦¦health.commandBlocker¦¦unfinished()¦¦active.size`；实现/测试证据：待补。
-- [ ] **GUARD-122** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:18](../../cloud/commands.js#L18)。
-  - 原实现：`button.dataset.allowed==='true'`；实现/测试证据：待补。
-- [ ] **GUARD-123** `条件门禁` — 云端；计划 **V2-1**；来源 [cloud/commands.js:25](../../cloud/commands.js#L25)。
-  - 原实现：`record&&pending.has(record.state)`；实现/测试证据：待补。
-- [ ] **GUARD-124** `条件门禁` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:32](../../cloud/commands.js#L32)。
-  - 原实现：`observedEligibility&&typeof result.allowed==='boolean'`；实现/测试证据：待补。
-- [ ] **GUARD-125** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:32](../../cloud/commands.js#L32)。
-  - 原实现：`typeof result.allowed==='boolean'`；实现/测试证据：待补。
-- [ ] **GUARD-126** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:34](../../cloud/commands.js#L34)。
-  - 原实现：`fresh&&proof.allowed===true&&health.canContinue===true&&!health.commandBlocker`；实现/测试证据：待补。
-- [ ] **GUARD-127** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:34](../../cloud/commands.js#L34)。
-  - 原实现：`fresh&&proof.allowed===true&&health.canContinue===true`；实现/测试证据：待补。
-- [ ] **GUARD-128** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:34](../../cloud/commands.js#L34)。
-  - 原实现：`proof.allowed===true`；实现/测试证据：待补。
-- [ ] **GUARD-129** `条件门禁` — 云端；计划 **V2-1**；来源 [cloud/commands.js:38](../../cloud/commands.js#L38)。
-  - 原实现：`record&&pending.has(record.state)`；实现/测试证据：待补。
-- [ ] **GUARD-130** `条件门禁` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:67](../../cloud/commands.js#L67)。
-  - 原实现：`!allowedPath(path)`；实现/测试证据：待补。
-- [ ] **GUARD-131** `条件门禁` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:71](../../cloud/commands.js#L71)。
-  - 原实现：`active.has(fingerprint)`；实现/测试证据：待补。
-- [ ] **GUARD-132** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:73](../../cloud/commands.js#L73)。
-  - 原实现：`r.fingerprint===fingerprint`；实现/测试证据：待补。
-- [ ] **GUARD-133** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
-  - 原实现：`button.disabled=true`；实现/测试证据：待补。
-- [ ] **GUARD-134** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
-  - 原实现：`'/console/commands/request/'+record.requestId+'/cancel'`；实现/测试证据：待补。
-- [ ] **GUARD-135** `条件门禁` — 云端；计划 **V2-1**；来源 [cloud/commands.js:117](../../cloud/commands.js#L117)。
-  - 原实现：`!record.remote&&!pending.has(record.state)`；实现/测试证据：待补。
-- [ ] **GUARD-136** `条件门禁` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:125](../../cloud/commands.js#L125)。
-  - 原实现：`!button.disabled&&window.opsCloudCanWrite(button)`；实现/测试证据：待补。
-- [ ] **GUARD-137** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:125](../../cloud/commands.js#L125)。
-  - 原实现：`!button.disabled&&window.opsCloudCanWrite(button)`；实现/测试证据：待补。
+- [x] **GUARD-117** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:9](../../cloud/commands.js#L9)。
+  - 原实现：`r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'&&typeof r.path==='string'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-118** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:9](../../cloud/commands.js#L9)。
+  - 原实现：`r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-119** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:9](../../cloud/commands.js#L9)。
+  - 原实现：`typeof r.requestId==='string'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-120** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:9](../../cloud/commands.js#L9)。
+  - 原实现：`typeof r.fingerprint==='string'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-121** `条件门禁` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:16](../../cloud/commands.js#L16)。
+  - 原实现：`!health.executorAvailable¦¦!health.homeReady¦¦health.commandBlocker¦¦unfinished()¦¦active.size`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-122** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:18](../../cloud/commands.js#L18)。
+  - 原实现：`button.dataset.allowed==='true'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-123** `条件门禁` — 云端；计划 **V2-1**；来源 [cloud/commands.js:25](../../cloud/commands.js#L25)。
+  - 原实现：`record&&pending.has(record.state)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-124** `条件门禁` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:32](../../cloud/commands.js#L32)。
+  - 原实现：`observedEligibility&&typeof result.allowed==='boolean'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-125** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:32](../../cloud/commands.js#L32)。
+  - 原实现：`typeof result.allowed==='boolean'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-126** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:34](../../cloud/commands.js#L34)。
+  - 原实现：`fresh&&proof.allowed===true&&health.canContinue===true&&!health.commandBlocker`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-127** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:34](../../cloud/commands.js#L34)。
+  - 原实现：`fresh&&proof.allowed===true&&health.canContinue===true`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-128** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:34](../../cloud/commands.js#L34)。
+  - 原实现：`proof.allowed===true`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-129** `条件门禁` — 云端；计划 **V2-1**；来源 [cloud/commands.js:38](../../cloud/commands.js#L38)。
+  - 原实现：`record&&pending.has(record.state)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-130** `条件门禁` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:67](../../cloud/commands.js#L67)。
+  - 原实现：`!allowedPath(path)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-131** `条件门禁` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:71](../../cloud/commands.js#L71)。
+  - 原实现：`active.has(fingerprint)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-132** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:73](../../cloud/commands.js#L73)。
+  - 原实现：`r.fingerprint===fingerprint`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-133** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
+  - 原实现：`button.disabled=true`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-134** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
+  - 原实现：`'/console/commands/request/'+record.requestId+'/cancel'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-135** `条件门禁` — 云端；计划 **V2-1**；来源 [cloud/commands.js:117](../../cloud/commands.js#L117)。
+  - 原实现：`!record.remote&&!pending.has(record.state)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-136** `条件门禁` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:125](../../cloud/commands.js#L125)。
+  - 原实现：`!button.disabled&&window.opsCloudCanWrite(button)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **GUARD-137** `状态/防重复约束` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:125](../../cloud/commands.js#L125)。
+  - 原实现：`!button.disabled&&window.opsCloudCanWrite(button)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **GUARD-138** `状态/防重复约束` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:9](../../cloud/cleanup.js#L9)。
   - 原实现：`document.getElementById(spec[kind]?.prefix+'CleanupPreview')¦¦document.getElementById('pendingDeleteStatus')`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 - [x] **GUARD-139** `条件门禁` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:12](../../cloud/cleanup.js#L12)。
@@ -1632,10 +1632,10 @@
   - 原实现：`$("confirmProductionCleanupButton")?.addEventListener("click", async event => { const button = event.currentTarget; const preview = state.productionPreview; if (!preview?.deletableCount) return; if (!window.confirm(ˋ确认将 ${preview.deletableCount} 个生产文件（${formatBytes(preview.sizeBytes)}）移入待删区吗？保留 3 天后自动清除，期间可恢复；项目状态、上传记录及云端文件不会改变。ˋ)) return; if (preview.containsTestFiles && !window.confirm("选择中包含 CapCut 测试或首帧测试文件。再次确认仍要将这些测试文件移入`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
 - [x] **EVENT-041** `$("emptyPendingDeleteButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2C**；来源 [static/app.js:2035](../../static/app.js#L2035)。
   - 原实现：`$("emptyPendingDeleteButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; const info = state.pendingDelete ¦¦ {}; if (!window.confirm(ˋ确认立即永久清除待删区的 ${Number(info.count ¦¦ 0)} 项（约 ${formatBytes(info.sizeBytes)}）吗？清除后无法恢复。ˋ)) return; if (!window.confirm("再次确认：这一步会永久删除，不进入回收站。")) return; button.disabled = true; try { const result = await postJson("/api/controls/pending-delete/empty", { confir`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
-- [ ] **EVENT-042** `$("continueCurrentButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2051](../../static/app.js#L2051)。
-  - 原实现：`$("continueCurrentButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (button.dataset.allowed === "false") return; if (!window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")) return; button.disabled = true; button.textContent = "正在发送继续指令…"; try { const clientRequestId = (window.crypto?.randomUUID?.() ¦¦ ˋdashboard-${Date.now()}-${Math.random()}ˋ); // Name the project this page s`；实现/测试证据：待补。 安全继续留独立2E，用户亲自确认后才可合并。
-- [ ] **EVENT-043** `window.setTimeout` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2080](../../static/app.js#L2080)。
-  - 原实现：`window.setTimeout(refreshContinueStatus, 500)`；实现/测试证据：待补。
+- [x] **EVENT-042** `$("continueCurrentButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2051](../../static/app.js#L2051)。
+  - 原实现：`$("continueCurrentButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (button.dataset.allowed === "false") return; if (!window.confirm("确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。")) return; button.disabled = true; button.textContent = "正在发送继续指令…"; try { const clientRequestId = (window.crypto?.randomUUID?.() ¦¦ ˋdashboard-${Date.now()}-${Math.random()}ˋ); // Name the project this page s`；实现/测试证据：待补。 安全继续留独立2E，用户亲自确认后才可合并。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **EVENT-043** `window.setTimeout` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2080](../../static/app.js#L2080)。
+  - 原实现：`window.setTimeout(refreshContinueStatus, 500)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **EVENT-044** `$("uploadRescanButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2083](../../static/app.js#L2083)。
   - 原实现：`$("uploadRescanButton")?.addEventListener("click", async (event) => { const button = event.currentTarget; if (!window.confirm("确认重新对账正式清单，补传遗漏成片，并对云端已实时核验的任务继续安全清理吗？不会重新剪辑等待中的任务，也不会清理配音、公共素材、Logo或公共样品。")) return; button.disabled = true; button.textContent = "正在检查上传缺口…"; try { const result = await postJson("/api/controls/upload/rescan", {}); renderActionResult("uploadActionResult", { state: window.opsCloudPostJson ? (result.sta`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [x] **EVENT-045** `$("historicalCloudVerifyButton")?.addEventListener` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2107](../../static/app.js#L2107)。
@@ -1842,8 +1842,8 @@
   - 原实现：`setInterval(()=>{ if(typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'){ state.fullDashboardLoaded=false;void refresh(); } },60000)`；实现/测试证据：待补。
 - [ ] **EVENT-064** `setInterval` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:152](../../cloud/readonly.js#L152)。
   - 原实现：`setInterval(() => { const list=sourcePanel.querySelector('ul'); list.replaceChildren(); for (const [key,sample] of samples) { const age=Math.floor(sample.age+(performance.now()-sample.received)/1000); const row=document.createElement('li'); const parsed=new URL(key,location.origin); const names={'/api/health':'递交健康','/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/histo`；实现/测试证据：待补。
-- [ ] **EVENT-065** `(() => {
-  const network=window.opsCloudNetwork||window.fetch.bind(window), key='ops-command-receipts-v1';
+- [x] **EVENT-065** `(() => {
+  const network=window.opsCloudNetwork||window.fetch.bind(window), key='ops-command-receipts-v1'; V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
   const active=new Map();let health={},panel,list,specificResult;const eligibility=new Map();
   const pending=new Set(['submitting','queued','leased','sent','unknown']);
   const labels={submitting:'收件结果待查询',queued:'云端排队',leased:'代理已领取，尚未发送',sent:'已发家里，等待 HTTP 回执',unknown:'结果不明，必须在家里对账',completed:'已收到家里 HTTP 回执（业务进度请看原状态）',not_sent:'未发家里',cancelled:'已撤销发送前命令',expired:'发送前已过期',resolved_unknown:'已人工对账；原命令不再重试'};
@@ -1981,14 +1981,14 @@
   });
 })` — 云端；计划 **V2-1**；来源 [cloud/commands.js:3](../../cloud/commands.js#L3)。
   - 原实现：`(() => { const network=window.opsCloudNetwork¦¦window.fetch.bind(window), key='ops-command-receipts-v1'; const active=new Map();let health={},panel,list,specificResult;const eligibility=new Map(); const pending=new Set(['submitting','queued','leased','sent','unknown']); const labels={submitting:'收件结果待查询',queued:'云端排队',leased:'代理已领取，尚未发送',sent:'已发家里，等待 HTTP 回执',unknown:'结果不明，必须在家里对账',completed:'已收到家里 HTTP 回执（业务进度请看原状态）',not_sen`；实现/测试证据：待补。
-- [ ] **EVENT-066** `setTimeout` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:11](../../cloud/commands.js#L11)。
-  - 原实现：`setTimeout(resolve,ms)`；实现/测试证据：待补。
-- [ ] **EVENT-067** `document.addEventListener` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:124](../../cloud/commands.js#L124)。
-  - 原实现：`document.addEventListener('DOMContentLoaded',()=>{ document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudContr`；实现/测试证据：待补。
-- [ ] **EVENT-068** `document.addEventListener` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:125](../../cloud/commands.js#L125)。
-  - 原实现：`document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}},true)`；实现/测试证据：待补。
-- [ ] **EVENT-069** `setInterval` — 云端；计划 **V2-1**；来源 [cloud/commands.js:138](../../cloud/commands.js#L138)。
-  - 原实现：`setInterval(poll,3000)`；实现/测试证据：待补。
+- [x] **EVENT-066** `setTimeout` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:11](../../cloud/commands.js#L11)。
+  - 原实现：`setTimeout(resolve,ms)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **EVENT-067** `document.addEventListener` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:124](../../cloud/commands.js#L124)。
+  - 原实现：`document.addEventListener('DOMContentLoaded',()=>{ document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudContr`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **EVENT-068** `document.addEventListener` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:125](../../cloud/commands.js#L125)。
+  - 原实现：`document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}},true)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **EVENT-069** `setInterval` — 云端；计划 **V2-1**；来源 [cloud/commands.js:138](../../cloud/commands.js#L138)。
+  - 原实现：`setInterval(poll,3000)`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **EVENT-070** `(() => {
  const endpoint='/api/controls/cloud-cleanup/',previews=new Map(); 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
  const kinds={Draft:'drafts',Audio:'audio',Production:'production'};
@@ -2136,8 +2136,8 @@
   - 原实现：`"/api/controls/production-files"`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
 - [x] **PATH-005** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1137](../../static/app.js#L1137)。
   - 原实现：`ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/replenishˋ`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
-- [ ] **PATH-006** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:1518](../../static/app.js#L1518)。
-  - 原实现：`"/api/control-commands/current"`；实现/测试证据：待补。
+- [x] **PATH-006** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:1518](../../static/app.js#L1518)。
+  - 原实现：`"/api/control-commands/current"`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **PATH-007** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1589](../../static/app.js#L1589)。
   - 原实现：`ˋ/api/controls/tasks/${encodeURIComponent(taskId)}/${action}ˋ`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **PATH-008** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1646](../../static/app.js#L1646)。
@@ -2162,8 +2162,8 @@
   - 原实现：`"/api/controls/pending-delete"`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
 - [x] **PATH-018** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2C**；来源 [static/app.js:2042](../../static/app.js#L2042)。
   - 原实现：`"/api/controls/pending-delete/empty"`；实现/测试证据：待补。 家里模式实现/隔离证据：V2-2C_CLEANUP_PARITY.md、cleanup.test、cleanup-filter-parity、home-cleanup-browser-check；PR #34。云端写入口留2D，非生产验收。
-- [ ] **PATH-019** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2068](../../static/app.js#L2068)。
-  - 原实现：`"/api/control-commands"`；实现/测试证据：待补。
+- [x] **PATH-019** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2E**；来源 [static/app.js:2068](../../static/app.js#L2068)。
+  - 原实现：`"/api/control-commands"`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **PATH-020** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2089](../../static/app.js#L2089)。
   - 原实现：`"/api/controls/upload/rescan"`；实现/测试：V2-2A_UPLOAD_PARITY.md、uploads.test.tsx、upload-browser-check.cjs；PR #31，仅隔离；云端通用动作仍按各条未勾选项继续。
 - [x] **PATH-021** `接口/动态路径` — 两者（写操作按模式分流）；计划 **V2-2A**；来源 [static/app.js:2113](../../static/app.js#L2113)。
@@ -2214,44 +2214,44 @@
   - 原实现：`'/api/control-commands/current'`；实现/测试证据：待补。
 - [ ] **PATH-044** `接口/动态路径` — 云端；计划 **V2-1**；来源 [cloud/readonly.js:157](../../cloud/readonly.js#L157)。
   - 原实现：`'/api/subtitle-verification/current'`；实现/测试证据：待补。
-- [ ] **PATH-045** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:13](../../cloud/commands.js#L13)。
-  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。
-- [ ] **PATH-046** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:24](../../cloud/commands.js#L24)。
-  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。
-- [ ] **PATH-047** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:37](../../cloud/commands.js#L37)。
-  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。
-- [ ] **PATH-048** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:39](../../cloud/commands.js#L39)。
-  - 原实现：`'/api/control-commands/'`；实现/测试证据：待补。
-- [ ] **PATH-049** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:39](../../cloud/commands.js#L39)。
-  - 原实现：`'/api/control-commands/current'`；实现/测试证据：待补。
-- [ ] **PATH-050** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:41](../../cloud/commands.js#L41)。
-  - 原实现：`'/auth/session'`；实现/测试证据：待补。
-- [ ] **PATH-051** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:48](../../cloud/commands.js#L48)。
-  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。
-- [ ] **PATH-052** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:54](../../cloud/commands.js#L54)。
-  - 原实现：`'/console/commands/'`；实现/测试证据：待补。
-- [ ] **PATH-053** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:54](../../cloud/commands.js#L54)。
-  - 原实现：`'/console/commands/request/'`；实现/测试证据：待补。
-- [ ] **PATH-054** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:68](../../cloud/commands.js#L68)。
-  - 原实现：`'/api/controls/cloud-cleanup/preview'`；实现/测试证据：待补。
-- [ ] **PATH-055** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:69](../../cloud/commands.js#L69)。
-  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。
-- [ ] **PATH-056** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:77](../../cloud/commands.js#L77)。
-  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。
-- [ ] **PATH-057** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:87](../../cloud/commands.js#L87)。
-  - 原实现：`'/cloud-cleanup/execute'`；实现/测试证据：待补。
-- [ ] **PATH-058** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
-  - 原实现：`'/console/commands/'`；实现/测试证据：待补。
-- [ ] **PATH-059** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
-  - 原实现：`'/console/commands/request/'`；实现/测试证据：待补。
-- [ ] **PATH-060** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:114](../../cloud/commands.js#L114)。
-  - 原实现：`'/console/commands/'`；实现/测试证据：待补。
-- [ ] **PATH-061** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
-  - 原实现：`'/console/submission-requests/'`；实现/测试证据：待补。
-- [ ] **PATH-062** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:132](../../cloud/commands.js#L132)。
-  - 原实现：`'/console/status'`；实现/测试证据：待补。
-- [ ] **PATH-063** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
-  - 原实现：`'/console/commands'`；实现/测试证据：待补。
+- [x] **PATH-045** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:13](../../cloud/commands.js#L13)。
+  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-046** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:24](../../cloud/commands.js#L24)。
+  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-047** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:37](../../cloud/commands.js#L37)。
+  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-048** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:39](../../cloud/commands.js#L39)。
+  - 原实现：`'/api/control-commands/'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-049** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:39](../../cloud/commands.js#L39)。
+  - 原实现：`'/api/control-commands/current'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-050** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:41](../../cloud/commands.js#L41)。
+  - 原实现：`'/auth/session'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-051** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:48](../../cloud/commands.js#L48)。
+  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-052** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:54](../../cloud/commands.js#L54)。
+  - 原实现：`'/console/commands/'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-053** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:54](../../cloud/commands.js#L54)。
+  - 原实现：`'/console/commands/request/'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-054** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:68](../../cloud/commands.js#L68)。
+  - 原实现：`'/api/controls/cloud-cleanup/preview'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-055** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:69](../../cloud/commands.js#L69)。
+  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-056** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:77](../../cloud/commands.js#L77)。
+  - 原实现：`'/api/control-commands'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-057** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:87](../../cloud/commands.js#L87)。
+  - 原实现：`'/cloud-cleanup/execute'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-058** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
+  - 原实现：`'/console/commands/'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-059** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:108](../../cloud/commands.js#L108)。
+  - 原实现：`'/console/commands/request/'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-060** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:114](../../cloud/commands.js#L114)。
+  - 原实现：`'/console/commands/'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-061** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:128](../../cloud/commands.js#L128)。
+  - 原实现：`'/console/submission-requests/'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-062** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:132](../../cloud/commands.js#L132)。
+  - 原实现：`'/console/status'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
+- [x] **PATH-063** `接口/动态路径` — 云端；计划 **V2-2A**；来源 [cloud/commands.js:135](../../cloud/commands.js#L135)。
+  - 原实现：`'/console/commands'`；实现/测试证据：待补。 V2-2E隔离证据：V2-2E_SAFE_CONTINUE_PARITY.md、safe-continue.test、safe-continue-browser-check；PR #36。必须用户亲自确认后才可合并，非生产验收。
 - [x] **PATH-064** `接口/动态路径` — 云端；计划 **V2-2D**；来源 [cloud/cleanup.js:4](../../cloud/cleanup.js#L4)。
   - 原实现：`'/api/controls/cloud-cleanup/'`；实现/测试证据：待补。 云端实现/隔离证据：V2-2D_CLOUD_CLEANUP_PARITY.md、cloud-cleanup.test、poll-merge.test、cloud-cleanup-browser-check；PR #35。仅三类与待删区，非生产验收。
 - [ ] **PATH-065** `接口/动态路径` — 云端；计划 **V2-2F**；来源 [cloud/backups.js:6](../../cloud/backups.js#L6)。
