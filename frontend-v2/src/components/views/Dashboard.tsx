@@ -1,3 +1,4 @@
+import ContinueActions from "./ContinueActions";
 import FileManagers from "./FileManagers";
 import { uploadWriterFor } from "@/data/upload-writer";
 import TaskOperations from "./TaskOperations";
@@ -330,7 +331,19 @@ function Upload({
     </Panel>
   );
 }
-function ContinueStatus({ data }: { data: Row }) {
+function ContinueStatus({
+  data,
+  snapshot,
+  reader,
+  onResult,
+  refresh,
+}: {
+  data: Row;
+  snapshot: Snapshot;
+  reader: ReadClient | null;
+  onResult: (value: Row) => void;
+  refresh: () => void;
+}) {
   const result = o(o(data.controls).continue),
     state = t(result.state, "idle");
   const inFlight =
@@ -363,7 +376,12 @@ function ContinueStatus({ data }: { data: Row }) {
   return (
     <Panel title="安全继续与对账">
       <div className="data-actions">
-        <DisabledWrite>安全继续当前项目</DisabledWrite>
+        <ContinueActions
+          snapshot={snapshot}
+          reader={reader}
+          onResult={onResult}
+          refresh={refresh}
+        />
         <DisabledWrite>重置全部测试记录</DisabledWrite>
       </div>
       <Status state={state}>
@@ -442,7 +460,10 @@ export default function Dashboard({ view }: { view: View }) {
   const [date, setDate] = useState(""),
     [batchId, setBatch] = useState("");
   const [replenishment, setReplenishment] = useState<Row | null>(null);
-  const { snapshot, reader, refresh } = useDashboard(date, batchId);
+  const { snapshot, reader, refresh, acceptContinueResult } = useDashboard(
+    date,
+    batchId,
+  );
   const data = snapshot.dashboard;
   const canWrite = reader.current
     ? uploadWriterFor(reader.current, () => snapshot.status).available()
@@ -457,7 +478,7 @@ export default function Dashboard({ view }: { view: View }) {
               ? "家里模式"
               : "正在确认运行模式"}
         </Status>
-        <span>V2 预览：开放上传、任务与家里清理；云端清理尚未开放</span>
+        <span>V2 独立预览：操作资格由当前模式与服务状态决定</span>
         <Button variant="outline" size="sm" onClick={refresh}>
           刷新
         </Button>
@@ -536,9 +557,19 @@ export default function Dashboard({ view }: { view: View }) {
           )}
           {view === "commands" && (
             <>
-              <ContinueStatus data={data} />
+              <ContinueStatus
+                data={data}
+                snapshot={snapshot}
+                reader={reader.current}
+                onResult={acceptContinueResult}
+                refresh={refresh}
+              />
               {snapshot.mode === "cloud" && (
-                <CommandList items={snapshot.commands} />
+                <CommandList
+                  items={snapshot.commands}
+                  reader={reader.current}
+                  refresh={refresh}
+                />
               )}
             </>
           )}

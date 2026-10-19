@@ -1,3 +1,4 @@
+import { safeContinueFor } from './safe-continue'
 import { useEffect, useRef, useState } from 'react'
 import { ReadClient } from './client'
 import { list, object, type Snapshot } from './types'
@@ -124,6 +125,15 @@ export function useDashboard(date: string, batchId: string) {
           2,
         )
         if (cancelled) return
+        if (object(data.controls).continue) {
+          data.controls = {
+            ...object(data.controls),
+            continue: safeContinueFor(reader).observe(
+              object(object(data.controls).continue),
+              latest.current.status,
+            ),
+          }
+        }
         if (full) {
           fullLoaded = true
           lastFull = Date.now()
@@ -244,9 +254,17 @@ export function useDashboard(date: string, batchId: string) {
             !result.stale &&
             result.continueCanRetry !== true
       continueWasRunning = running
-      if (running) {
+      const controller = safeContinueFor(reader)
+      const target = controller.target()
+      const hasOriginal =
+        reader.mode === 'cloud' && target !== '/api/control-commands/current'
+      if ((running || hasOriginal || controller.needsPoll()) && target) {
         try {
-          const value = await reader.read('/api/control-commands/current')
+          const value = controller.observe(
+            await reader.read(target),
+            latest.current.status,
+            true,
+          )
           continueFailures = 0
           if (!cancelled)
             setSnapshot((old) => ({
@@ -260,6 +278,7 @@ export function useDashboard(date: string, batchId: string) {
               },
             }))
         } catch {
+          controller.failed()
           continueFailures++
           if (continueFailures >= 2 && !cancelled)
             setSnapshot((old) => ({
@@ -314,6 +333,19 @@ export function useDashboard(date: string, batchId: string) {
     snapshot,
     reader: client,
     refresh: () => setRevision((old) => old + 1),
+    acceptContinueResult: (result: Record<string, unknown>) =>
+      setSnapshot((old) => ({
+        ...old,
+        dashboard: {
+          ...old.dashboard,
+          controls: {
+            ...object(old.dashboard?.controls),
+            continue: client.current
+              ? safeContinueFor(client.current).observe(result, old.status)
+              : result,
+          },
+        },
+      })),
   }
 }
 

@@ -1,3 +1,4 @@
+import { CommandActions, SubmissionCancellation } from "./CommandActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   object as o,
@@ -163,7 +164,15 @@ export function SourcePanel({ snapshot }: { snapshot: Snapshot }) {
   );
 }
 
-export function CommandList({ items }: { items: Row[] }) {
+export function CommandList({
+  items,
+  reader = null,
+  refresh = () => {},
+}: {
+  items: Row[];
+  reader?: ReadClient | null;
+  refresh?: () => void;
+}) {
   return (
     <Panel title="云端命令回执（HTTP 回执与业务完成分开）">
       <p className="data-muted">
@@ -186,21 +195,12 @@ export function CommandList({ items }: { items: Row[] }) {
               <code>{t(x.cloudCommandId || x.requestId)}</code>
             </td>
             <td>
-              {["submitting", "queued", "leased"].includes(t(x.state)) && (
-                <DisabledWrite>撤销发送前命令</DisabledWrite>
-              )}
-              {x.state === "unknown" && (
-                <DisabledWrite>人工对账后解除阻塞</DisabledWrite>
-              )}
-              {!x.remote &&
-                !["submitting", "queued", "leased", "sent", "unknown"].includes(
-                  t(x.state),
-                ) && <DisabledWrite>结束本次回执，允许新操作</DisabledWrite>}
+              <CommandActions row={x} reader={reader} refresh={refresh} />
             </td>
           </tr>
         ))}
       </Table>
-      <DisabledWrite>撤销该递交器请求（仅发送前）</DisabledWrite>
+      <SubmissionCancellation reader={reader} refresh={refresh} />
     </Panel>
   );
 }

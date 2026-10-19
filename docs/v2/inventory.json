@@ -4636,13 +4636,19 @@
         "line": 1423,
         "name": "renderContinueResult",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "function renderContinueResult(result = {}) { if (window.opsCloudContinueResult) result = window.opsCloudContinueResult(result); state.lastContinueResult = result; const node = $(\"continueResult\"); const stateName = String(result.state || \"idle\"); state.continueCommandId = String(result.commandId || state.continueCommandId || \"\"); // A continue command is durable on the receiver. Keep the button locked for // every non-terminal",
         "excerptStartLine": 1423,
         "excerptStartColumn": 1,
-        "excerptEndLine": 1508
+        "excerptEndLine": 1508,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-211",
@@ -4650,13 +4656,19 @@
         "line": 1472,
         "name": "匿名回调@1472",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "item => `<div><span>${item.step}. ${escapeHtml(item.name)}</span><b>${Number(item.actual || 0)} / ${Number(item.expected || 0)}</b></div>`",
         "excerptStartLine": 1472,
         "excerptStartColumn": 62,
-        "excerptEndLine": 1472
+        "excerptEndLine": 1472,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-212",
@@ -4664,13 +4676,19 @@
         "line": 1514,
         "name": "refreshContinueStatus",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async function refreshContinueStatus() { if (state.continueStatusBusy) return; state.continueStatusBusy = true; try { const target = window.opsCloudContinueTarget ? window.opsCloudContinueTarget() : \"/api/control-commands/current\"; if (!target) return; const result = await getJson(target); state.continueStatusFailures = 0; renderContinueResult(result || {}); } catch (error) { state.continueStatusFailures += 1; // Never leave a",
         "excerptStartLine": 1514,
         "excerptStartColumn": 1,
-        "excerptEndLine": 1547
+        "excerptEndLine": 1547,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-213",
@@ -5742,13 +5760,18 @@
         "name": "匿名回调@2051",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async (event) => { const button = event.currentTarget; if (button.dataset.allowed === \"false\") return; if (!window.confirm(\"确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。\")) return; button.disabled = true; button.textContent = \"正在发送继续指令…\"; try { const clientRequestId = (window.crypto?.randomUUID?.() || `dashboard-${Date.now()}-${Math.random()}`); // Name the project this page showed when the user confirmed, so a stale // page cann",
         "excerptStartLine": 2051,
         "excerptStartColumn": 55,
         "excerptEndLine": 2082,
-        "verification": "deferred to dedicated safety-continue PR; user approval required before merge"
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch",
+        "pr": 36
       },
       {
         "id": "FN-266",
@@ -5757,12 +5780,18 @@
         "name": "匿名回调@2066",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "([, value]) => typeof value === \"string\" && value",
         "excerptStartLine": 2066,
         "excerptStartColumn": 15,
-        "excerptEndLine": 2066
+        "excerptEndLine": 2066,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-267",
@@ -6361,13 +6390,19 @@
         "line": 3,
         "name": "匿名回调@3",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "() => { const network=window.opsCloudNetwork||window.fetch.bind(window), key='ops-command-receipts-v1'; const active=new Map();let health={},panel,list,specificResult;const eligibility=new Map(); const pending=new Set(['submitting','queued','leased','sent','unknown']); const labels={submitting:'收件结果待查询',queued:'云端排队',leased:'代理已领取，尚未发送',sent:'已发家里，等待 HTTP 回执',unknown:'结果不明，必须在家里对账',completed:'已收到家里 HTTP 回执（业务进度请看原状态）',not_sent",
         "excerptStartLine": 3,
         "excerptStartColumn": 2,
-        "excerptEndLine": 140
+        "excerptEndLine": 140,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-298",
@@ -6375,13 +6410,19 @@
         "line": 9,
         "name": "匿名回调@9",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "r=>r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'&&typeof r.path==='string'",
         "excerptStartLine": 9,
         "excerptStartColumn": 108,
-        "excerptEndLine": 9
+        "excerptEndLine": 9,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-299",
@@ -6389,13 +6430,19 @@
         "line": 10,
         "name": "save",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "()=>localStorage.setItem(key,JSON.stringify(records.slice(-100)))",
         "excerptStartLine": 10,
         "excerptStartColumn": 14,
-        "excerptEndLine": 10
+        "excerptEndLine": 10,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-300",
@@ -6403,13 +6450,19 @@
         "line": 11,
         "name": "delay",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "ms=>new Promise(resolve=>setTimeout(resolve,ms))",
         "excerptStartLine": 11,
         "excerptStartColumn": 15,
-        "excerptEndLine": 11
+        "excerptEndLine": 11,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-301",
@@ -6417,13 +6470,19 @@
         "line": 11,
         "name": "匿名回调@11",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "resolve=>setTimeout(resolve,ms)",
         "excerptStartLine": 11,
         "excerptStartColumn": 31,
-        "excerptEndLine": 11
+        "excerptEndLine": 11,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-302",
@@ -6431,13 +6490,19 @@
         "line": 12,
         "name": "stable",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,stable(value[k])])):value",
         "excerptStartLine": 12,
         "excerptStartColumn": 16,
-        "excerptEndLine": 12
+        "excerptEndLine": 12,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-303",
@@ -6445,13 +6510,19 @@
         "line": 12,
         "name": "匿名回调@12",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "k=>[k,stable(value[k])]",
         "excerptStartLine": 12,
         "excerptStartColumn": 142,
-        "excerptEndLine": 12
+        "excerptEndLine": 12,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-304",
@@ -6459,13 +6530,19 @@
         "line": 13,
         "name": "allowedPath",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "path=>/^\\/api\\/controls\\/tasks\\/(create|[^/]+\\/(start|cancel|replenish))$/.test(path)||/^\\/api\\/controls\\/upload\\/(rescan|verify-history)$/.test(path)||path==='/api/control-commands'||/^\\/api\\/controls\\/cloud-cleanup\\/(preview|execute)$/.test(path)",
         "excerptStartLine": 13,
         "excerptStartColumn": 21,
-        "excerptEndLine": 13
+        "excerptEndLine": 13,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-305",
@@ -6473,13 +6550,19 @@
         "line": 14,
         "name": "unfinished",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "()=>records.some(r=>pending.has(r.state))",
         "excerptStartLine": 14,
         "excerptStartColumn": 20,
-        "excerptEndLine": 14
+        "excerptEndLine": 14,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-306",
@@ -6487,13 +6570,19 @@
         "line": 14,
         "name": "匿名回调@14",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "r=>pending.has(r.state)",
         "excerptStartLine": 14,
         "excerptStartColumn": 37,
-        "excerptEndLine": 14
+        "excerptEndLine": 14,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-307",
@@ -6501,13 +6590,19 @@
         "line": 15,
         "name": "匿名回调@15",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "button=>{ if(!health.executorAvailable||!health.homeReady||health.commandBlocker||unfinished()||active.size)return false; if(/^(preview|confirm)(Draft|Audio|Production)CleanupButton$/.test(button?.id||'')||button?.id==='emptyPendingDeleteButton')return health.canCleanup===true; if(button?.id==='continueCurrentButton')return health.canContinue===true&&button.dataset.allowed==='true'; if(['uploadRescanButton','historicalCloudVer",
         "excerptStartLine": 15,
         "excerptStartColumn": 27,
-        "excerptEndLine": 21
+        "excerptEndLine": 21,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-308",
@@ -6515,13 +6610,19 @@
         "line": 22,
         "name": "匿名回调@22",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "form=>Boolean(form.closest('#createTaskForm,#replenishForm'))&&health.executorAvailable&&health.homeReady&&!health.commandBlocker&&!unfinished()",
         "excerptStartLine": 22,
         "excerptStartColumn": 29,
-        "excerptEndLine": 22
+        "excerptEndLine": 22,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-309",
@@ -6529,13 +6630,19 @@
         "line": 23,
         "name": "匿名回调@23",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "result=>{ const record=[...records].reverse().find(r=>r.path==='/api/control-commands'); if(record&&pending.has(record.state))return {...result,state:record.state,allowed:false,continueCanRetry:false,message:labels[record.state],cloudCommandId:record.cloudCommandId}; let observedEligibility=true; if(record?.homeCommandId&&result.commandId!==record.homeCommandId){ observedEligibility=false; result=specificResult?.commandId===re",
         "excerptStartLine": 23,
         "excerptStartColumn": 33,
-        "excerptEndLine": 35
+        "excerptEndLine": 35,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-310",
@@ -6543,13 +6650,19 @@
         "line": 24,
         "name": "匿名回调@24",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "r=>r.path==='/api/control-commands'",
         "excerptStartLine": 24,
         "excerptStartColumn": 46,
-        "excerptEndLine": 24
+        "excerptEndLine": 24,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-311",
@@ -6557,13 +6670,19 @@
         "line": 36,
         "name": "匿名回调@36",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "()=>{ const record=[...records].reverse().find(r=>r.path==='/api/control-commands'); if(record&&pending.has(record.state))return null; return record?.homeCommandId?'/api/control-commands/'+encodeURIComponent(record.homeCommandId):'/api/control-commands/current'; }",
         "excerptStartLine": 36,
         "excerptStartColumn": 33,
-        "excerptEndLine": 40
+        "excerptEndLine": 40,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-312",
@@ -6571,13 +6690,19 @@
         "line": 37,
         "name": "匿名回调@37",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "r=>r.path==='/api/control-commands'",
         "excerptStartLine": 37,
         "excerptStartColumn": 46,
-        "excerptEndLine": 37
+        "excerptEndLine": 37,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-313",
@@ -6585,13 +6710,19 @@
         "line": 41,
         "name": "credentials",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async function credentials(){const r=await network('/auth/session');if(!r.ok)throw new Error('请重新登录');return r.json();}",
         "excerptStartLine": 41,
         "excerptStartColumn": 3,
-        "excerptEndLine": 41
+        "excerptEndLine": 41,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-314",
@@ -6599,13 +6730,19 @@
         "line": 42,
         "name": "postControl",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async function postControl(url,body={}){ const info=await credentials();const r=await network(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(body)}); const value=await r.json();if(!r.ok)throw new Error(value.detail||'操作失败');return value; }",
         "excerptStartLine": 42,
         "excerptStartColumn": 3,
-        "excerptEndLine": 45
+        "excerptEndLine": 45,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-315",
@@ -6613,13 +6750,19 @@
         "line": 46,
         "name": "capture",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "function capture(record,value){ record.state=value.state;record.cloudCommandId=value.cloudCommandId;record.updatedAt=Date.now(); if(record.path==='/api/control-commands'&&value.result?.kind==='http'){ try{const body=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(value.result.bodyBase64),c=>c.charCodeAt(0))));if(typeof body.commandId==='string')record.homeCommandId=body.commandId;}catch{} } save();paint();return value",
         "excerptStartLine": 46,
         "excerptStartColumn": 3,
-        "excerptEndLine": 52
+        "excerptEndLine": 52,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-316",
@@ -6627,13 +6770,19 @@
         "line": 49,
         "name": "匿名回调@49",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "c=>c.charCodeAt(0)",
         "excerptStartLine": 49,
         "excerptStartColumn": 104,
-        "excerptEndLine": 49
+        "excerptEndLine": 49,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-317",
@@ -6641,13 +6790,19 @@
         "line": 53,
         "name": "query",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async function query(record){ const url=record.cloudCommandId?'/console/commands/'+record.cloudCommandId:'/console/commands/request/'+record.requestId; const response=await network(url);if(response.status===404)return null; if(response.status===401)throw new Error('请重新登录');if(!response.ok)throw new Error('命令状态暂不可用'); return capture(record,await response.json()); }",
         "excerptStartLine": 53,
         "excerptStartColumn": 3,
-        "excerptEndLine": 58
+        "excerptEndLine": 58,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-318",
@@ -6655,13 +6810,19 @@
         "line": 59,
         "name": "finalResponse",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "function finalResponse(value){ if(value?.state==='completed'&&value.result?.kind==='http'){ const r=value.result,bytes=Uint8Array.from(atob(r.bodyBase64),c=>c.charCodeAt(0)); return new Response([204,205,304].includes(r.httpStatus)?null:bytes,{status:r.httpStatus,headers:{'Content-Type':r.contentType}}); } throw new Error(labels[value?.state]||'尚未得到家里回执；请看云端命令面板，不要重复提交'); }",
         "excerptStartLine": 59,
         "excerptStartColumn": 3,
-        "excerptEndLine": 65
+        "excerptEndLine": 65,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-319",
@@ -6669,13 +6830,19 @@
         "line": 61,
         "name": "匿名回调@61",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "c=>c.charCodeAt(0)",
         "excerptStartLine": 61,
         "excerptStartColumn": 69,
-        "excerptEndLine": 61
+        "excerptEndLine": 61,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-320",
@@ -6683,13 +6850,19 @@
         "line": 66,
         "name": "dispatch",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async function dispatch(path,payload){ if(!allowedPath(path))throw new Error('此操作尚未开放云端执行'); if(path==='/api/controls/cloud-cleanup/preview'){records=records.filter(r=>r.path!==path||pending.has(r.state));save();} const comparable={...payload};if(path==='/api/control-commands')delete comparable.clientRequestId; const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(path+'\\n'+J",
         "excerptStartLine": 66,
         "excerptStartColumn": 3,
-        "excerptEndLine": 95
+        "excerptEndLine": 95,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-321",
@@ -6697,13 +6870,19 @@
         "line": 68,
         "name": "匿名回调@68",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "r=>r.path!==path||pending.has(r.state)",
         "excerptStartLine": 68,
         "excerptStartColumn": 77,
-        "excerptEndLine": 68
+        "excerptEndLine": 68,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-322",
@@ -6711,13 +6890,19 @@
         "line": 70,
         "name": "匿名回调@70",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "v=>v.toString(16).padStart(2,'0')",
         "excerptStartLine": 70,
         "excerptStartColumn": 159,
-        "excerptEndLine": 70
+        "excerptEndLine": 70,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-323",
@@ -6725,13 +6910,19 @@
         "line": 72,
         "name": "匿名回调@72",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async()=>{ let record=records.find(r=>r.fingerprint===fingerprint),value; if(!record){ if(!health.executorAvailable||!health.homeReady||health.commandBlocker||unfinished())throw new Error('家里未就绪，或有待对账命令；尚未提交'); record={path,fingerprint,requestId:crypto.randomUUID(),state:'submitting',updatedAt:Date.now()};records.push(record);save();paint(); const body={...payload};if(path==='/api/control-commands')body.clientRequestId=record.",
         "excerptStartLine": 72,
         "excerptStartColumn": 17,
-        "excerptEndLine": 93
+        "excerptEndLine": 93,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-324",
@@ -6739,13 +6930,19 @@
         "line": 73,
         "name": "匿名回调@73",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "r=>r.fingerprint===fingerprint",
         "excerptStartLine": 73,
         "excerptStartColumn": 31,
-        "excerptEndLine": 73
+        "excerptEndLine": 73,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-325",
@@ -6753,13 +6950,19 @@
         "line": 97,
         "name": "匿名回调@97",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "(url,init={})=>{ if((init.method||'GET').toUpperCase()!=='POST')throw new Error('仅支持已声明的 POST 命令'); const path=new URL(url,location.origin).pathname;return dispatch(path,init.body?JSON.parse(init.body):{}); }",
         "excerptStartLine": 97,
         "excerptStartColumn": 29,
-        "excerptEndLine": 100
+        "excerptEndLine": 100,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-326",
@@ -6767,13 +6970,19 @@
         "line": 101,
         "name": "匿名回调@101",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async(url,body)=>{const r=await dispatch(new URL(url,location.origin).pathname,body);const result=await r.json();if(!r.ok)throw new Error(result.detail||'家里拒绝该操作');return result;}",
         "excerptStartLine": 101,
         "excerptStartColumn": 27,
-        "excerptEndLine": 101
+        "excerptEndLine": 101,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-327",
@@ -6781,13 +6990,19 @@
         "line": 102,
         "name": "paint",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "function paint(){ if(!list)return;list.replaceChildren(); for(const record of [...records].reverse().concat(remoteRecords).slice(0,50)){ const item=document.createElement('li'),text=document.createElement('span'); text.textContent=record.path+' · '+(labels[record.state]||record.state)+' · '+(record.cloudCommandId||record.requestId);item.append(text); if(['submitting','queued','leased'].includes(record.state)){ const button=doc",
         "excerptStartLine": 102,
         "excerptStartColumn": 3,
-        "excerptEndLine": 123
+        "excerptEndLine": 123,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-328",
@@ -6795,13 +7010,19 @@
         "line": 108,
         "name": "匿名回调@108",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async()=>{button.disabled=true;try{await postControl(record.remote?'/console/commands/'+record.cloudCommandId+'/cancel':'/console/commands/request/'+record.requestId+'/cancel');record.state='cancelled';save();paint();}catch(error){alert(error.message);}}",
         "excerptStartLine": 108,
         "excerptStartColumn": 99,
-        "excerptEndLine": 108
+        "excerptEndLine": 108,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-329",
@@ -6809,13 +7030,19 @@
         "line": 111,
         "name": "匿名回调@111",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async()=>{ const note=prompt('先在家里核实原请求已停止及业务实际结果，再填写对账依据（至少10字）。此操作不会重试原命令。');if(!note)return; if(prompt('输入 CONFIRMED_HOME_REQUEST_STOPPED 确认原请求已停止')!=='CONFIRMED_HOME_REQUEST_STOPPED')return; try{capture(record,await postControl('/console/commands/'+record.cloudCommandId+'/resolve',{note,confirmation:'CONFIRMED_HOME_REQUEST_STOPPED'}));}catch(error){alert(error.message);} }",
         "excerptStartLine": 111,
         "excerptStartColumn": 101,
-        "excerptEndLine": 115
+        "excerptEndLine": 115,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-330",
@@ -6823,13 +7050,19 @@
         "line": 118,
         "name": "匿名回调@118",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "()=>{if(!confirm('结束本次回执后，相同输入的下一次点击将创建新命令。确认？'))return;records=records.filter(r=>r!==record);save();paint();}",
         "excerptStartLine": 118,
         "excerptStartColumn": 104,
-        "excerptEndLine": 118
+        "excerptEndLine": 118,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-331",
@@ -6837,13 +7070,19 @@
         "line": 118,
         "name": "匿名回调@118",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "r=>r!==record",
         "excerptStartLine": 118,
         "excerptStartColumn": 183,
-        "excerptEndLine": 118
+        "excerptEndLine": 118,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-332",
@@ -6851,13 +7090,19 @@
         "line": 124,
         "name": "匿名回调@124",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "()=>{ document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}},true); panel=document.createElement('d",
         "excerptStartLine": 124,
         "excerptStartColumn": 48,
-        "excerptEndLine": 139
+        "excerptEndLine": 139,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-333",
@@ -6865,13 +7110,19 @@
         "line": 125,
         "name": "匿名回调@125",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}}",
         "excerptStartLine": 125,
         "excerptStartColumn": 39,
-        "excerptEndLine": 125
+        "excerptEndLine": 125,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-334",
@@ -6879,13 +7130,19 @@
         "line": 128,
         "name": "匿名回调@128",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async event=>{event.preventDefault();try{await postControl('/console/submission-requests/'+encodeURIComponent(input.value.trim())+'/cancel');alert('发送前撤销已记录；晚到收件也会被拒绝。请让递交器重新查询。');}catch(error){alert(error.message);}}",
         "excerptStartLine": 128,
         "excerptStartColumn": 355,
-        "excerptEndLine": 128
+        "excerptEndLine": 128,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-335",
@@ -6893,13 +7150,19 @@
         "line": 131,
         "name": "poll",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "async function poll(){if(polling)return;polling=true;try{ const response=await network('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}}); if(response.ok)health=await response.json();else health={}; for(const record of records.filter(r=>pending.has(r.state)))await query(record); const all=await network('/console/commands');if(all.ok){const body=await all.json();remoteRecords=(body.",
         "excerptStartLine": 131,
         "excerptStartColumn": 5,
-        "excerptEndLine": 137
+        "excerptEndLine": 137,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-336",
@@ -6907,13 +7170,19 @@
         "line": 134,
         "name": "匿名回调@134",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "r=>pending.has(r.state)",
         "excerptStartLine": 134,
         "excerptStartColumn": 42,
-        "excerptEndLine": 134
+        "excerptEndLine": 134,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-337",
@@ -6921,13 +7190,19 @@
         "line": 135,
         "name": "匿名回调@135",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "r=>!records.some(local=>local.cloudCommandId===r.cloudCommandId)",
         "excerptStartLine": 135,
         "excerptStartColumn": 129,
-        "excerptEndLine": 135
+        "excerptEndLine": 135,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-338",
@@ -6935,13 +7210,19 @@
         "line": 135,
         "name": "匿名回调@135",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "local=>local.cloudCommandId===r.cloudCommandId",
         "excerptStartLine": 135,
         "excerptStartColumn": 146,
-        "excerptEndLine": 135
+        "excerptEndLine": 135,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-339",
@@ -6949,13 +7230,19 @@
         "line": 135,
         "name": "匿名回调@135",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "r=>({...r,path:r.target,remote:true})",
         "excerptStartLine": 135,
         "excerptStartColumn": 199,
-        "excerptEndLine": 135
+        "excerptEndLine": 135,
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "FN-340",
@@ -7571,10 +7858,16 @@
         "line": 1520,
         "name": "getJson",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "getJson(target)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "getJson(target)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-008",
@@ -7804,9 +8097,15 @@
         "name": "postJson",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
-        "detail": "postJson(\"/api/control-commands\", payload)"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "postJson(\"/api/control-commands\", payload)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-021",
@@ -7980,10 +8279,16 @@
         "line": 41,
         "name": "network",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "network('/auth/session')"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "network('/auth/session')",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-033",
@@ -7991,10 +8296,16 @@
         "line": 43,
         "name": "network",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "network(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(body)})"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "network(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(body)})",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-034",
@@ -8002,10 +8313,16 @@
         "line": 55,
         "name": "network",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "network(url)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "network(url)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-035",
@@ -8013,10 +8330,16 @@
         "line": 80,
         "name": "network",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "network(path,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf,'X-Client-Request-ID':record.requestId},body:JSON.stringify(body)})"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "network(path,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf,'X-Client-Request-ID':record.requestId},body:JSON.stringify(body)})",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-036",
@@ -8024,10 +8347,16 @@
         "line": 99,
         "name": "dispatch",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "dispatch(path,init.body?JSON.parse(init.body):{})"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "dispatch(path,init.body?JSON.parse(init.body):{})",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-037",
@@ -8035,10 +8364,16 @@
         "line": 101,
         "name": "dispatch",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "dispatch(new URL(url,location.origin).pathname,body)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "dispatch(new URL(url,location.origin).pathname,body)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-038",
@@ -8046,10 +8381,16 @@
         "line": 108,
         "name": "postControl",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "postControl(record.remote?'/console/commands/'+record.cloudCommandId+'/cancel':'/console/commands/request/'+record.requestId+'/cancel')"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "postControl(record.remote?'/console/commands/'+record.cloudCommandId+'/cancel':'/console/commands/request/'+record.requestId+'/cancel')",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-039",
@@ -8057,10 +8398,16 @@
         "line": 114,
         "name": "postControl",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "postControl('/console/commands/'+record.cloudCommandId+'/resolve',{note,confirmation:'CONFIRMED_HOME_REQUEST_STOPPED'})"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "postControl('/console/commands/'+record.cloudCommandId+'/resolve',{note,confirmation:'CONFIRMED_HOME_REQUEST_STOPPED'})",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-040",
@@ -8068,10 +8415,16 @@
         "line": 128,
         "name": "postControl",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "postControl('/console/submission-requests/'+encodeURIComponent(input.value.trim())+'/cancel')"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "postControl('/console/submission-requests/'+encodeURIComponent(input.value.trim())+'/cancel')",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-041",
@@ -8079,10 +8432,16 @@
         "line": 132,
         "name": "network",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "network('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}})"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "network('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}})",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-042",
@@ -8090,10 +8449,16 @@
         "line": 135,
         "name": "network",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "network('/console/commands')"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "network('/console/commands')",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "NET-043",
@@ -8540,9 +8905,15 @@
         "name": "window.confirm",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
-        "detail": "window.confirm(\"确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。\")"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "window.confirm(\"确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。\")",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "CONF-019",
@@ -8617,10 +8988,16 @@
         "line": 108,
         "name": "alert",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "alert(error.message)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "alert(error.message)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "CONF-025",
@@ -8628,10 +9005,16 @@
         "line": 112,
         "name": "prompt",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "prompt('先在家里核实原请求已停止及业务实际结果，再填写对账依据（至少10字）。此操作不会重试原命令。')"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "prompt('先在家里核实原请求已停止及业务实际结果，再填写对账依据（至少10字）。此操作不会重试原命令。')",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "CONF-026",
@@ -8639,10 +9022,16 @@
         "line": 113,
         "name": "prompt",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "prompt('输入 CONFIRMED_HOME_REQUEST_STOPPED 确认原请求已停止')"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "prompt('输入 CONFIRMED_HOME_REQUEST_STOPPED 确认原请求已停止')",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "CONF-027",
@@ -8650,10 +9039,16 @@
         "line": 114,
         "name": "alert",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "alert(error.message)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "alert(error.message)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "CONF-028",
@@ -8661,10 +9056,16 @@
         "line": 118,
         "name": "confirm",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "confirm('结束本次回执后，相同输入的下一次点击将创建新命令。确认？')"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "confirm('结束本次回执后，相同输入的下一次点击将创建新命令。确认？')",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "CONF-029",
@@ -8672,10 +9073,16 @@
         "line": 128,
         "name": "alert",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "alert('发送前撤销已记录；晚到收件也会被拒绝。请让递交器重新查询。')"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "alert('发送前撤销已记录；晚到收件也会被拒绝。请让递交器重新查询。')",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "CONF-030",
@@ -8683,10 +9090,16 @@
         "line": 128,
         "name": "alert",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "alert(error.message)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "alert(error.message)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "CONF-031",
@@ -9524,10 +9937,16 @@
         "line": 1443,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "state.continueInFlight = commandInFlight"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "state.continueInFlight = commandInFlight",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-041",
@@ -9535,10 +9954,16 @@
         "line": 1482,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "result.allowed !== false"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "result.allowed !== false",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-042",
@@ -9546,10 +9971,16 @@
         "line": 1487,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "!commandInFlight && Boolean(state.runtime?.busy)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "!commandInFlight && Boolean(state.runtime?.busy)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-043",
@@ -9557,10 +9988,16 @@
         "line": 1488,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "allowed && !runtimeBusy && (result.continueCanRetry === true || !commandInFlight)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "allowed && !runtimeBusy && (result.continueCanRetry === true || !commandInFlight)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-044",
@@ -9568,10 +10005,16 @@
         "line": 1488,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "allowed && !runtimeBusy"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "allowed && !runtimeBusy",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-045",
@@ -9579,10 +10022,16 @@
         "line": 1489,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.dataset.allowed = clickable ? \"true\" : \"false\""
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "button.dataset.allowed = clickable ? \"true\" : \"false\"",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-046",
@@ -9590,10 +10039,16 @@
         "line": 1491,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = !clickable"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "button.disabled = !clickable",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-047",
@@ -9601,10 +10056,16 @@
         "line": 1515,
         "name": "条件门禁",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "state.continueStatusBusy"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "state.continueStatusBusy",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-048",
@@ -9612,10 +10073,16 @@
         "line": 1516,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "state.continueStatusBusy = true"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "state.continueStatusBusy = true",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-049",
@@ -9623,10 +10090,16 @@
         "line": 1534,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = true"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "button.disabled = true",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-050",
@@ -9634,10 +10107,16 @@
         "line": 1535,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.dataset.allowed = \"false\""
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "button.dataset.allowed = \"false\"",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-051",
@@ -9645,10 +10124,16 @@
         "line": 1545,
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "state.continueStatusBusy = false"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "state.continueStatusBusy = false",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-052",
@@ -10419,9 +10904,15 @@
         "name": "条件门禁",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.dataset.allowed === \"false\""
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "button.dataset.allowed === \"false\"",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-096",
@@ -10430,9 +10921,15 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.dataset.allowed === \"false\""
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "button.dataset.allowed === \"false\"",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-097",
@@ -10441,9 +10938,15 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = true"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "button.disabled = true",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-098",
@@ -10717,10 +11220,16 @@
         "line": 9,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'&&typeof r.path==='string'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'&&typeof r.path==='string'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-118",
@@ -10728,10 +11237,16 @@
         "line": 9,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-119",
@@ -10739,10 +11254,16 @@
         "line": 9,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "typeof r.requestId==='string'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "typeof r.requestId==='string'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-120",
@@ -10750,10 +11271,16 @@
         "line": 9,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "typeof r.fingerprint==='string'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "typeof r.fingerprint==='string'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-121",
@@ -10761,10 +11288,16 @@
         "line": 16,
         "name": "条件门禁",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "!health.executorAvailable||!health.homeReady||health.commandBlocker||unfinished()||active.size"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "!health.executorAvailable||!health.homeReady||health.commandBlocker||unfinished()||active.size",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-122",
@@ -10772,10 +11305,16 @@
         "line": 18,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.dataset.allowed==='true'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "button.dataset.allowed==='true'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-123",
@@ -10783,10 +11322,16 @@
         "line": 25,
         "name": "条件门禁",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "record&&pending.has(record.state)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "record&&pending.has(record.state)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-124",
@@ -10794,10 +11339,16 @@
         "line": 32,
         "name": "条件门禁",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "observedEligibility&&typeof result.allowed==='boolean'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "observedEligibility&&typeof result.allowed==='boolean'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-125",
@@ -10805,10 +11356,16 @@
         "line": 32,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "typeof result.allowed==='boolean'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "typeof result.allowed==='boolean'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-126",
@@ -10816,10 +11373,16 @@
         "line": 34,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "fresh&&proof.allowed===true&&health.canContinue===true&&!health.commandBlocker"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "fresh&&proof.allowed===true&&health.canContinue===true&&!health.commandBlocker",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-127",
@@ -10827,10 +11390,16 @@
         "line": 34,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "fresh&&proof.allowed===true&&health.canContinue===true"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "fresh&&proof.allowed===true&&health.canContinue===true",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-128",
@@ -10838,10 +11407,16 @@
         "line": 34,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "proof.allowed===true"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "proof.allowed===true",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-129",
@@ -10849,10 +11424,16 @@
         "line": 38,
         "name": "条件门禁",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "record&&pending.has(record.state)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "record&&pending.has(record.state)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-130",
@@ -10860,10 +11441,16 @@
         "line": 67,
         "name": "条件门禁",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "!allowedPath(path)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "!allowedPath(path)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-131",
@@ -10871,10 +11458,16 @@
         "line": 71,
         "name": "条件门禁",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "active.has(fingerprint)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "active.has(fingerprint)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-132",
@@ -10882,10 +11475,16 @@
         "line": 73,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "r.fingerprint===fingerprint"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "r.fingerprint===fingerprint",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-133",
@@ -10893,10 +11492,16 @@
         "line": 108,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled=true"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "button.disabled=true",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-134",
@@ -10904,10 +11509,16 @@
         "line": 108,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/commands/request/'+record.requestId+'/cancel'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/console/commands/request/'+record.requestId+'/cancel'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-135",
@@ -10915,10 +11526,16 @@
         "line": 117,
         "name": "条件门禁",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "!record.remote&&!pending.has(record.state)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "!record.remote&&!pending.has(record.state)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-136",
@@ -10926,10 +11543,16 @@
         "line": 125,
         "name": "条件门禁",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "!button.disabled&&window.opsCloudCanWrite(button)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "!button.disabled&&window.opsCloudCanWrite(button)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-137",
@@ -10937,10 +11560,16 @@
         "line": 125,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "!button.disabled&&window.opsCloudCanWrite(button)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "!button.disabled&&window.opsCloudCanWrite(button)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "GUARD-138",
@@ -13982,10 +14611,15 @@
         "name": "$(\"continueCurrentButton\")?.addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
         "detail": "$(\"continueCurrentButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (button.dataset.allowed === \"false\") return; if (!window.confirm(\"确认让家里工作台安全继续当前项目吗？它会先核对任务清单，不会删除素材或重做有效成片。\")) return; button.disabled = true; button.textContent = \"正在发送继续指令…\"; try { const clientRequestId = (window.crypto?.randomUUID?.() || `dashboard-${Date.now()}-${Math.random()}`); // Name the project this page s",
-        "verification": "deferred to dedicated safety-continue PR; user approval required before merge"
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch",
+        "pr": 36
       },
       {
         "id": "EVENT-043",
@@ -13993,10 +14627,16 @@
         "line": 2080,
         "name": "window.setTimeout",
         "mode": "两者（写操作按模式分流）",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "window.setTimeout(refreshContinueStatus, 500)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "window.setTimeout(refreshContinueStatus, 500)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "EVENT-044",
@@ -14337,10 +14977,16 @@
         "line": 3,
         "name": "(() => {\r\n  const network=window.opsCloudNetwork||window.fetch.bind(window), key='ops-command-receipts-v1';\r\n  const active=new Map();let health={},panel,list,specificResult;const eligibility=new Map();\r\n  const pending=new Set(['submitting','queued','leased','sent','unknown']);\r\n  const labels={submitting:'收件结果待查询',queued:'云端排队',leased:'代理已领取，尚未发送',sent:'已发家里，等待 HTTP 回执',unknown:'结果不明，必须在家里对账',completed:'已收到家里 HTTP 回执（业务进度请看原状态）',not_sent:'未发家里',cancelled:'已撤销发送前命令',expired:'发送前已过期',resolved_unknown:'已人工对账；原命令不再重试'};\r\n  let remoteRecords=[];let records=[];\r\n  try{const saved=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(saved))records=saved.filter(r=>r&&typeof r.requestId==='string'&&typeof r.fingerprint==='string'&&typeof r.path==='string').slice(-100);}catch{}\r\n  const save=()=>localStorage.setItem(key,JSON.stringify(records.slice(-100)));\r\n  const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));\r\n  const stable=value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,stable(value[k])])):value;\r\n  const allowedPath=path=>/^\\/api\\/controls\\/tasks\\/(create|[^/]+\\/(start|cancel|replenish))$/.test(path)||/^\\/api\\/controls\\/upload\\/(rescan|verify-history)$/.test(path)||path==='/api/control-commands'||/^\\/api\\/controls\\/cloud-cleanup\\/(preview|execute)$/.test(path);\r\n  const unfinished=()=>records.some(r=>pending.has(r.state));\r\n  window.opsCloudCanWrite=button=>{\r\n    if(!health.executorAvailable||!health.homeReady||health.commandBlocker||unfinished()||active.size)return false;\r\n    if(/^(preview|confirm)(Draft|Audio|Production)CleanupButton$/.test(button?.id||'')||button?.id==='emptyPendingDeleteButton')return health.canCleanup===true;\r\n    if(button?.id==='continueCurrentButton')return health.canContinue===true&&button.dataset.allowed==='true';\r\n    if(['uploadRescanButton','historicalCloudVerifyButton'].includes(button?.id))return true;\r\n    return Boolean(button?.closest('#createTaskForm,#replenishForm')||button?.dataset.cloudControl);\r\n  };\r\n  window.opsCloudAcceptForm=form=>Boolean(form.closest('#createTaskForm,#replenishForm'))&&health.executorAvailable&&health.homeReady&&!health.commandBlocker&&!unfinished();\r\n  window.opsCloudContinueResult=result=>{\r\n    const record=[...records].reverse().find(r=>r.path==='/api/control-commands');\r\n    if(record&&pending.has(record.state))return {...result,state:record.state,allowed:false,continueCanRetry:false,message:labels[record.state],cloudCommandId:record.cloudCommandId};\r\n    let observedEligibility=true;\r\n    if(record?.homeCommandId&&result.commandId!==record.homeCommandId){\r\n      observedEligibility=false;\r\n      result=specificResult?.commandId===record.homeCommandId?specificResult:{commandId:record.homeCommandId,state:'persisted',allowed:false,message:'正在按原命令编号查询业务状态'};\r\n    }else if(record?.homeCommandId===result.commandId){specificResult=result;}\r\n    const identity=result.commandId||'';\r\n    if(observedEligibility&&typeof result.allowed==='boolean')eligibility.set(identity,{allowed:result.allowed,continueCanRetry:result.continueCanRetry,continueLockReason:result.continueLockReason,at:performance.now()});\r\n    const proof=eligibility.get(identity),fresh=proof&&performance.now()-proof.at<=10000;\r\n    return {...result,...(fresh?{continueCanRetry:proof.continueCanRetry,continueLockReason:proof.continueLockReason}:{}),allowed:fresh&&proof.allowed===true&&health.canContinue===true&&!health.commandBlocker};\r\n  };\r\n  window.opsCloudContinueTarget=()=>{\r\n    const record=[...records].reverse().find(r=>r.path==='/api/control-commands');\r\n    if(record&&pending.has(record.state))return null;\r\n    return record?.homeCommandId?'/api/control-commands/'+encodeURIComponent(record.homeCommandId):'/api/control-commands/current';\r\n  };\r\n  async function credentials(){const r=await network('/auth/session');if(!r.ok)throw new Error('请重新登录');return r.json();}\r\n  async function postControl(url,body={}){\r\n    const info=await credentials();const r=await network(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(body)});\r\n    const value=await r.json();if(!r.ok)throw new Error(value.detail||'操作失败');return value;\r\n  }\r\n  function capture(record,value){\r\n    record.state=value.state;record.cloudCommandId=value.cloudCommandId;record.updatedAt=Date.now();\r\n    if(record.path==='/api/control-commands'&&value.result?.kind==='http'){\r\n      try{const body=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(value.result.bodyBase64),c=>c.charCodeAt(0))));if(typeof body.commandId==='string')record.homeCommandId=body.commandId;}catch{}\r\n    }\r\n    save();paint();return value;\r\n  }\r\n  async function query(record){\r\n    const url=record.cloudCommandId?'/console/commands/'+record.cloudCommandId:'/console/commands/request/'+record.requestId;\r\n    const response=await network(url);if(response.status===404)return null;\r\n    if(response.status===401)throw new Error('请重新登录');if(!response.ok)throw new Error('命令状态暂不可用');\r\n    return capture(record,await response.json());\r\n  }\r\n  function finalResponse(value){\r\n    if(value?.state==='completed'&&value.result?.kind==='http'){\r\n      const r=value.result,bytes=Uint8Array.from(atob(r.bodyBase64),c=>c.charCodeAt(0));\r\n      return new Response([204,205,304].includes(r.httpStatus)?null:bytes,{status:r.httpStatus,headers:{'Content-Type':r.contentType}});\r\n    }\r\n    throw new Error(labels[value?.state]||'尚未得到家里回执；请看云端命令面板，不要重复提交');\r\n  }\r\n  async function dispatch(path,payload){\r\n    if(!allowedPath(path))throw new Error('此操作尚未开放云端执行');\r\n    if(path==='/api/controls/cloud-cleanup/preview'){records=records.filter(r=>r.path!==path||pending.has(r.state));save();}\r\n    const comparable={...payload};if(path==='/api/control-commands')delete comparable.clientRequestId;\r\n    const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(path+'\\n'+JSON.stringify(stable(comparable))))),v=>v.toString(16).padStart(2,'0')).join('');\r\n    if(active.has(fingerprint))return (await active.get(fingerprint)).clone();\r\n    const work=(async()=>{\r\n      let record=records.find(r=>r.fingerprint===fingerprint),value;\r\n      if(!record){\r\n        if(!health.executorAvailable||!health.homeReady||health.commandBlocker||unfinished())throw new Error('家里未就绪，或有待对账命令；尚未提交');\r\n        record={path,fingerprint,requestId:crypto.randomUUID(),state:'submitting',updatedAt:Date.now()};records.push(record);save();paint();\r\n        const body={...payload};if(path==='/api/control-commands')body.clientRequestId=record.requestId;\r\n        const info=await credentials();\r\n        try{\r\n          const response=await network(path,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf,'X-Client-Request-ID':record.requestId},body:JSON.stringify(body)});\r\n          const answer=await response.json();\r\n          if(response.status===202&&answer.cloudCommand) value=capture(record,answer);\r\n          else if(response.ok)throw new Error('云端未返回排队契约，停止自动处理');\r\n          else{record.state='not_sent';save();paint();throw new Error(answer.detail||'云端拒绝收件');}\r\n        }catch(error){if(record.state==='not_sent')throw error;/* Lost acknowledgement: GET only, never repeat POST. */}\r\n      }\r\n      for(let n=0;n<(path.endsWith('/cloud-cleanup/execute')?1000:180);n++){\r\n        value=value||await query(record);\r\n        if(value&&!['queued','leased','sent'].includes(value.state))return finalResponse(value);\r\n        await delay(1000);value=null;\r\n      }\r\n      throw new Error('仍在查询命令回执；面板将继续查询，不会自动重发。输入内容保留。');\r\n    })();active.set(fingerprint,work);\r\n    try{return (await work).clone();}finally{active.delete(fingerprint);paint();}\r\n  }\r\n  window.opsCloudDispatch=dispatch;\r\n  window.opsCloudWriteFetch=(url,init={})=>{\r\n    if((init.method||'GET').toUpperCase()!=='POST')throw new Error('仅支持已声明的 POST 命令');\r\n    const path=new URL(url,location.origin).pathname;return dispatch(path,init.body?JSON.parse(init.body):{});\r\n  };\r\n  window.opsCloudPostJson=async(url,body)=>{const r=await dispatch(new URL(url,location.origin).pathname,body);const result=await r.json();if(!r.ok)throw new Error(result.detail||'家里拒绝该操作');return result;};\r\n  function paint(){\r\n    if(!list)return;list.replaceChildren();\r\n    for(const record of [...records].reverse().concat(remoteRecords).slice(0,50)){\r\n      const item=document.createElement('li'),text=document.createElement('span');\r\n      text.textContent=record.path+' · '+(labels[record.state]||record.state)+' · '+(record.cloudCommandId||record.requestId);item.append(text);\r\n      if(['submitting','queued','leased'].includes(record.state)){\r\n        const button=document.createElement('button');button.textContent='撤销发送前命令';button.onclick=async()=>{button.disabled=true;try{await postControl(record.remote?'/console/commands/'+record.cloudCommandId+'/cancel':'/console/commands/request/'+record.requestId+'/cancel');record.state='cancelled';save();paint();}catch(error){alert(error.message);}};item.append(button);\r\n      }\r\n      if(record.state==='unknown'){\r\n        const button=document.createElement('button');button.textContent='人工对账后解除阻塞';button.onclick=async()=>{\r\n          const note=prompt('先在家里核实原请求已停止及业务实际结果，再填写对账依据（至少10字）。此操作不会重试原命令。');if(!note)return;\r\n          if(prompt('输入 CONFIRMED_HOME_REQUEST_STOPPED 确认原请求已停止')!=='CONFIRMED_HOME_REQUEST_STOPPED')return;\r\n          try{capture(record,await postControl('/console/commands/'+record.cloudCommandId+'/resolve',{note,confirmation:'CONFIRMED_HOME_REQUEST_STOPPED'}));}catch(error){alert(error.message);}\r\n        };item.append(button);\r\n      }\r\n      if(!record.remote&&!pending.has(record.state)){\r\n        const button=document.createElement('button');button.textContent='结束本次回执，允许新操作';button.onclick=()=>{if(!confirm('结束本次回执后，相同输入的下一次点击将创建新命令。确认？'))return;records=records.filter(r=>r!==record);save();paint();};item.append(button);\r\n      }\r\n      list.append(item);\r\n    }\r\n    window.dispatchEvent(new Event('ops-cloud-write-state'));\r\n  }\r\n  document.addEventListener('DOMContentLoaded',()=>{\r\n    document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}},true);\r\n    panel=document.createElement('details');panel.open=true;panel.dataset.cloudCommands='true';panel.style.cssText='margin:12px;padding:12px;box-sizing:border-box;max-width:calc(100% - 24px);overflow-wrap:anywhere';\r\n    const title=document.createElement('summary');title.textContent='云端命令回执（HTTP 回执与业务完成分开）';list=document.createElement('ul');panel.append(title,list);document.body.prepend(panel);\r\n    const cancelForm=document.createElement('form');cancelForm.dataset.cloudAccount='true';const input=document.createElement('input');input.placeholder='递交器原请求ID（仅用于收件回包丢失）';input.required=true;const cancel=document.createElement('button');cancel.textContent='撤销该递交器请求（仅发送前）';cancelForm.append(input,cancel);panel.append(cancelForm);cancelForm.onsubmit=async event=>{event.preventDefault();try{await postControl('/console/submission-requests/'+encodeURIComponent(input.value.trim())+'/cancel');alert('发送前撤销已记录；晚到收件也会被拒绝。请让递交器重新查询。');}catch(error){alert(error.message);}};\r\n    paint();\r\n    let polling=false;\r\n    async function poll(){if(polling)return;polling=true;try{\r\n      const response=await network('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}});\r\n      if(response.ok)health=await response.json();else health={};\r\n      for(const record of records.filter(r=>pending.has(r.state)))await query(record);\r\n      const all=await network('/console/commands');if(all.ok){const body=await all.json();remoteRecords=(body.items||[]).filter(r=>!records.some(local=>local.cloudCommandId===r.cloudCommandId)).map(r=>({...r,path:r.target,remote:true}));}\r\n      paint();\r\n    }catch{health={};window.dispatchEvent(new Event('ops-cloud-write-state'));}finally{polling=false;}}\r\n    poll();setInterval(poll,3000);\r\n  });\r\n})",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "(() => { const network=window.opsCloudNetwork||window.fetch.bind(window), key='ops-command-receipts-v1'; const active=new Map();let health={},panel,list,specificResult;const eligibility=new Map(); const pending=new Set(['submitting','queued','leased','sent','unknown']); const labels={submitting:'收件结果待查询',queued:'云端排队',leased:'代理已领取，尚未发送',sent:'已发家里，等待 HTTP 回执',unknown:'结果不明，必须在家里对账',completed:'已收到家里 HTTP 回执（业务进度请看原状态）',not_sen"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "(() => { const network=window.opsCloudNetwork||window.fetch.bind(window), key='ops-command-receipts-v1'; const active=new Map();let health={},panel,list,specificResult;const eligibility=new Map(); const pending=new Set(['submitting','queued','leased','sent','unknown']); const labels={submitting:'收件结果待查询',queued:'云端排队',leased:'代理已领取，尚未发送',sent:'已发家里，等待 HTTP 回执',unknown:'结果不明，必须在家里对账',completed:'已收到家里 HTTP 回执（业务进度请看原状态）',not_sen",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "EVENT-066",
@@ -14348,10 +14994,16 @@
         "line": 11,
         "name": "setTimeout",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "setTimeout(resolve,ms)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "setTimeout(resolve,ms)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "EVENT-067",
@@ -14359,10 +15011,16 @@
         "line": 124,
         "name": "document.addEventListener",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "document.addEventListener('DOMContentLoaded',()=>{ document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudContr"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "document.addEventListener('DOMContentLoaded',()=>{ document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudContr",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "EVENT-068",
@@ -14370,10 +15028,16 @@
         "line": 125,
         "name": "document.addEventListener",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}},true)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "document.addEventListener('click',event=>{const button=event.target.closest('button[data-cloud-control]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(!button.disabled&&window.opsCloudCanWrite(button)){if(button.dataset.cloudControl==='replenish-open')openReplenishment(button.dataset.taskId);else void controlTask(button,button.dataset.cloudControl);}},true)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "EVENT-069",
@@ -14381,10 +15045,16 @@
         "line": 138,
         "name": "setInterval",
         "mode": "云端",
-        "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "setInterval(poll,3000)"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "setInterval(poll,3000)",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "EVENT-070",
@@ -14620,9 +15290,15 @@
         "name": "接口/动态路径",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
-        "detail": "\"/api/control-commands/current\""
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "\"/api/control-commands/current\"",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-007",
@@ -14852,9 +15528,15 @@
         "name": "接口/动态路径",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
-        "detail": "\"/api/control-commands\""
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "\"/api/control-commands\"",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-020",
@@ -15191,10 +15873,16 @@
         "line": 13,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/control-commands'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/api/control-commands'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-046",
@@ -15202,10 +15890,16 @@
         "line": 24,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/control-commands'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/api/control-commands'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-047",
@@ -15213,10 +15907,16 @@
         "line": 37,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/control-commands'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/api/control-commands'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-048",
@@ -15224,10 +15924,16 @@
         "line": 39,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/control-commands/'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/api/control-commands/'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-049",
@@ -15235,10 +15941,16 @@
         "line": 39,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/control-commands/current'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/api/control-commands/current'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-050",
@@ -15246,10 +15958,16 @@
         "line": 41,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/auth/session'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/auth/session'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-051",
@@ -15257,10 +15975,16 @@
         "line": 48,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/control-commands'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/api/control-commands'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-052",
@@ -15268,10 +15992,16 @@
         "line": 54,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/commands/'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/console/commands/'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-053",
@@ -15279,10 +16009,16 @@
         "line": 54,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/commands/request/'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/console/commands/request/'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-054",
@@ -15290,10 +16026,16 @@
         "line": 68,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/controls/cloud-cleanup/preview'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/api/controls/cloud-cleanup/preview'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-055",
@@ -15301,10 +16043,16 @@
         "line": 69,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/control-commands'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/api/control-commands'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-056",
@@ -15312,10 +16060,16 @@
         "line": 77,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/control-commands'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/api/control-commands'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-057",
@@ -15323,10 +16077,16 @@
         "line": 87,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/cloud-cleanup/execute'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/cloud-cleanup/execute'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-058",
@@ -15334,10 +16094,16 @@
         "line": 108,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/commands/'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/console/commands/'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-059",
@@ -15345,10 +16111,16 @@
         "line": 108,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/commands/request/'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/console/commands/request/'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-060",
@@ -15356,10 +16128,16 @@
         "line": 114,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/commands/'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/console/commands/'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-061",
@@ -15367,10 +16145,16 @@
         "line": 128,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/submission-requests/'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/console/submission-requests/'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-062",
@@ -15378,10 +16162,16 @@
         "line": 132,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/status'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/console/status'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-063",
@@ -15389,10 +16179,16 @@
         "line": 135,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2A",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/commands'"
+        "planned": "V2-2E",
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2E_SAFE_CONTINUE_PARITY.md",
+          "frontend-v2/src/test/safe-continue.test.tsx",
+          "frontend-v2/scripts/safe-continue-browser-check.cjs"
+        ],
+        "detail": "'/console/commands'",
+        "pr": 36,
+        "verification": "isolated only; USER APPROVAL REQUIRED BEFORE MERGE; no production/shadow/switch"
       },
       {
         "id": "PATH-064",

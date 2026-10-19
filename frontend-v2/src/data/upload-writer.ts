@@ -10,6 +10,7 @@ import { object, text, type Row } from "./types";
 import { commandLabels } from "@/components/views/presentation";
 
 const allowed = new Set([
+  "/api/control-commands",
   "/api/controls/cloud-cleanup/preview",
   "/api/controls/cloud-cleanup/execute",
   "/api/controls/upload/rescan",
@@ -67,9 +68,13 @@ export class UploadWriter {
     }
     if (this.reader.mode !== "cloud")
       throw new Error("无法确认运行模式，尚未提交");
+    const comparable = { ...(body || {}) };
+    if (path === "/api/control-commands") delete comparable.clientRequestId;
     const digest = await crypto.subtle.digest(
       "SHA-256",
-      new TextEncoder().encode(path + "\n" + JSON.stringify(stable(body))),
+      new TextEncoder().encode(
+        path + "\n" + JSON.stringify(stable(comparable)),
+      ),
     );
     const fingerprint = Array.from(new Uint8Array(digest), (byte) =>
       byte.toString(16).padStart(2, "0"),
@@ -178,7 +183,11 @@ export class UploadWriter {
             "X-CSRF-Token": String(info.csrf),
             "X-Client-Request-ID": String(record.requestId),
           },
-          body: JSON.stringify(body || {}),
+          body: JSON.stringify(
+            path === "/api/control-commands"
+              ? { ...body, clientRequestId: record.requestId }
+              : body || {},
+          ),
         });
         const value = object(await response.json());
         if (response.status === 202 && value.cloudCommand) {
