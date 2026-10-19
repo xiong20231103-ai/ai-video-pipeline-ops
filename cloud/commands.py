@@ -171,7 +171,7 @@ class CommandQueue:
             try:raw=base64.b64decode(result['bodyBase64'],validate=True)
             except ValueError:raise CommandError('invalid_result_encoding',400) from None
             if len(raw)>MAX_REPLY:raise CommandError('command_result_too_large',413)
-        elif set(result)!={'kind','reason'} or not isinstance(result.get('reason'),str) or result.get('reason') not in {'transport_uncertain','restart_after_send','send_permit_denied','invalid_or_expired','local_result_unavailable'}:raise CommandError('invalid_result_reason',400)
+        elif set(result)!={'kind','reason'} or not isinstance(result.get('reason'),str) or result.get('reason') not in {'transport_uncertain','restart_after_send','send_permit_denied','invalid_or_expired','local_result_unavailable','agent_rejected_identity','agent_rejected_contract'}:raise CommandError('invalid_result_reason',400)
         encoded=canonical(result);digest=hashlib.sha256(encoded.encode()).hexdigest()
         with self.store.db(True) as db:
             row=db.execute('SELECT * FROM commands WHERE id=?',(identifier,)).fetchone()
