@@ -39,7 +39,15 @@ class FeishuSender:
  def __init__(self,settings,transport=None,clock=time.time,prefix=''):
   self.prefix=prefix;self.settings=validate_settings(settings);self.transport=transport or build_opener(ProxyHandler({}),NoRedirect());self.clock=clock
  def __call__(self,batch):
-  payload={'msg_type':'text','content':{'text':self.prefix+message(batch,self.settings.get('keyword',''))}}
+  return self.post(self.prefix+message(batch,self.settings.get('keyword','')))
+ def send_report(self,text):
+  # M5 daily report: same signed, redirect-free channel; keyword line first.
+  keyword=public_text(self.settings.get('keyword',''),64)
+  text=self.prefix+(keyword+'\n' if keyword else '')+text
+  if len(text.encode())>16000:raise ValueError('notification_message_too_large')
+  return self.post(text)
+ def post(self,text):
+  payload={'msg_type':'text','content':{'text':text}}
   if self.settings.get('signing_secret'):
    stamp=str(int(self.clock()));payload.update(timestamp=stamp,sign=sign(stamp,self.settings['signing_secret']))
   raw=json.dumps(payload,ensure_ascii=False,separators=(',',':')).encode()
