@@ -20,6 +20,7 @@ for(const mode of ['home','cloud'])for(const [width,height]of [[1920,1080],[1440
   return route.fulfill({json:{state:'partial_failed',message:'隔离模拟：部分失败，请看逐项结果',results:[{name:'模拟失败文件',reason:'模拟共享引用'}]}});
  }
  assert.equal(req.method(),'GET');
+ if(key==='/api/controls/cloud-cleanup/capabilities')return route.fulfill({json:{protocol:1}});
  if(spec)return route.fulfill({json:{items:[{[spec.id]:'server-object',name:'模拟文件',category:kind==='drafts'?'formal':'capcut_test',categoryLabel:'模拟类别',defaultSelected:kind==='production',sizeBytes:1024,date:'2026-10-19',updatedAt:'2026-10-19T12:00:00+08:00',project:'隔离项目',material:'模拟材料',language:'DE',audioBatch:'A',sourceLabel:'隔离来源'}, {[spec.id]:'locked',name:'模拟受保护文件',protected:true,protectedReason:'模拟活动租约',sizeBytes:2048}],counts:{total:2,protected:1,deletable:1,categories:{capcut_test:{label:'模拟测试文件',total:1,sizeBytes:1024,deletable:1,protected:0}}},snapshotToken:'synthetic-list'}});
  const body=key==='/auth/options'?{registrationOpen:false}:key==='/auth/session'?{username:'隔离账号',csrf:'synthetic-only'}:key==='/console/status'?fixture.status:key==='/console/commands'?fixture.commands:key==='/api/controls/pending-delete'?{count:pendingCount,sizeBytes:pendingCount*1024,nextPurgeAt:'2026-10-22T12:00:00+08:00'}:key==='/api/safety'?fixture.safety:key.startsWith('/api/dashboard')?fixture.dashboard:null;assert(body,'Unexpected GET '+key);return route.fulfill({json:body});
  });
@@ -29,7 +30,7 @@ for(const mode of ['home','cloud'])for(const [width,height]of [[1920,1080],[1440
  for(const theme of ['dark','light']){
   if(theme==='light')await page.getByRole('button',{name:'切换到浅色主题'}).click();
   for(const[kind,spec]of Object.entries(specs)){
-   await page.getByRole('button',{name:'管理 '+spec.title,exact:true}).click();const checkbox=page.getByRole('checkbox',{name:'选择 模拟文件'});await checkbox.waitFor();assert(await page.getByRole('checkbox',{name:'选择 模拟受保护文件'}).isDisabled());
+   await page.getByRole('button',{name:'管理 '+spec.title,exact:true}).click();const checkbox=page.getByRole('checkbox',{name:'选择 模拟文件'});await checkbox.waitFor();await checkbox.evaluate(async node=>{const dialog=node.closest('[role=dialog]');if(dialog)await Promise.all(dialog.getAnimations().map(animation=>animation.finished.catch(()=>{})))});assert(await page.getByRole('checkbox',{name:'选择 模拟受保护文件'}).isDisabled());
    if(kind!=='production')await checkbox.check();
    const snap=async suffix=>{const name=`${mode}-${theme}-${kind}-${suffix}-${width}x${height}.png`;if(evidence)await page.screenshot({path:path.join(evidence,name),animations:'disabled'});screenshots.push(name);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'horizontal page overflow');};
    await snap('list');const preview=page.getByRole('button',{name:kind==='production'?'预览清理':'预览删除',exact:true});

@@ -7,6 +7,7 @@ import {
   pendingStates,
   captureReceipt,
   saveReceipts,
+  mergePolledReceipts,
 } from './receipts'
 
 const empty = (): Snapshot => ({
@@ -190,7 +191,8 @@ export function useDashboard(date: string, batchId: string) {
           reader.read('/console/status', 0),
           reader.read('/console/commands', 0),
         ])
-        const local = localReceipts()
+        const before = localReceipts()
+        const local = [...before]
         for (let i = 0; i < local.length; i++) {
           if (!pendingStates.has(String(local[i].state))) continue
           const row = local[i]
@@ -204,11 +206,14 @@ export function useDashboard(date: string, batchId: string) {
           }
         }
         try {
-          saveReceipts(local)
+          saveReceipts(mergePolledReceipts(before, local))
         } catch {
           /* Read-only display can continue with blocked storage. */
         }
-        update({ status, commands: mergeReceipts(local, list(commands.items)) })
+        update({
+          status,
+          commands: mergeReceipts(localReceipts(), list(commands.items)),
+        })
       } catch {
         update({ status: {} })
       } finally {
