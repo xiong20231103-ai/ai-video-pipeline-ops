@@ -1,3 +1,4 @@
+import { legacyDestination } from "@/lib/entry";
 import { BlurText } from "@/components/react-bits/Motion";
 import { ToastHost } from "@/components/views/Feedback";
 import { lazy, Suspense, useEffect, useState } from "react";
@@ -274,7 +275,7 @@ export default function App() {
               </Tooltip>
               <Separator orientation="vertical" className="topbar-separator" />
               <Button variant="ghost" size="sm" asChild className="legacy-link">
-                <a href="/" target="_blank" rel="noreferrer">
+                <a href={legacyDestination} target="_blank" rel="noreferrer">
                   旧版控制台
                   <ArrowUpRight size={14} />
                 </a>
@@ -320,7 +321,7 @@ export default function App() {
                 </p>
               </div>
               <Button variant="outline" size="sm" asChild>
-                <a href="/" target="_blank" rel="noreferrer">
+                <a href={legacyDestination} target="_blank" rel="noreferrer">
                   打开旧页面
                   <ExternalLink size={13} />
                 </a>

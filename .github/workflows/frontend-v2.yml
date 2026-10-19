@@ -3,9 +3,9 @@ name: Dashboard V2
 on:
   push:
     branches: [main]
-    paths: [frontend-v2/**, static/v2/**, .github/workflows/frontend-v2.yml]
+    paths: [frontend-v2/**, static/v2/**, cloud/login*, cloud/entry.py, .github/workflows/frontend-v2.yml]
   pull_request:
-    paths: [frontend-v2/**, static/v2/**, .github/workflows/frontend-v2.yml]
+    paths: [frontend-v2/**, static/v2/**, cloud/login*, cloud/entry.py, .github/workflows/frontend-v2.yml]
 
 permissions:
   contents: read
@@ -57,6 +57,9 @@ jobs:
         env:
           V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
       - run: node scripts/polish-browser-check.cjs
+        env:
+          V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
+      - run: node scripts/entry-browser-check.cjs
         env:
           V2_EVIDENCE_DIR: ${{ runner.temp }}/dashboard-v2-evidence
       - uses: actions/upload-artifact@v4

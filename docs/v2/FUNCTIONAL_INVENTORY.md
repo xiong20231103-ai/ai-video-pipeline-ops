@@ -770,11 +770,11 @@
 - [x] **FN-365** `匿名回调@65` — 云端；计划 **V2-1**；来源 [cloud/backups.js:65](../../cloud/backups.js#L65)。
   - 原实现：`() => { if (panel.open) show(body, message); }`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（请求一次备份、排队反馈；目录按需展开和刷新）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
 - [ ] **FN-366** `匿名回调@3` — 云端；计划 **V2-4**；来源 [cloud/login.js:3](../../cloud/login.js#L3)。
-  - 原实现：`response => response.json()`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
+  - 原实现：`response => { if (!response.ok) throw new Error('options_unavailable'); return response.json(); }`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
 - [ ] **FN-367** `匿名回调@3` — 云端；计划 **V2-4**；来源 [cloud/login.js:3](../../cloud/login.js#L3)。
-  - 原实现：`data => { document.getElementById('registration').hidden = !data.registrationOpen; }`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
+  - 原实现：`data => { document.getElementById('registration').hidden = data.registrationOpen !== true; }`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
 - [ ] **FN-368** `匿名回调@5` — 云端；计划 **V2-4**；来源 [cloud/login.js:5](../../cloud/login.js#L5)。
-  - 原实现：`async event => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'; return; } if (route === '/auth/login') location.assig`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
+  - 原实现：`async event => { event.preventDefault(); const form = event.currentTarget; if (form.getAttribute('aria-busy') === 'true') return; busy(true); message.textContent = ''; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'; return; } if (route === '/aut`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
 
 ## interfaces（52 项）
 

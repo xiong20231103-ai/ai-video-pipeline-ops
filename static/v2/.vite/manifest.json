@@ -1,6 +1,6 @@
 {
   "index.html": {
-    "file": "assets/index-BhCZLRSj.js",
+    "file": "assets/index-l7LygsPU.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -8,11 +8,11 @@
       "src/components/views/Dashboard.tsx"
     ],
     "css": [
-      "assets/index-ioHv8Ncp.css"
+      "assets/index-DwmIMyTp.css"
     ]
   },
   "src/components/views/Dashboard.tsx": {
-    "file": "assets/Dashboard-DyKPYdwN.js",
+    "file": "assets/Dashboard-BwpKXTQB.js",
     "name": "Dashboard",
     "src": "src/components/views/Dashboard.tsx",
     "isDynamicEntry": true,

@@ -1,3 +1,4 @@
+import { loginDestination } from "@/lib/entry";
 import { object, type Mode, type Row, type Sample } from "./types";
 
 export class ReadClient {
@@ -11,7 +12,7 @@ export class ReadClient {
   onRefresh?: () => void;
   constructor(
     readonly network: typeof fetch = window.fetch.bind(window),
-    readonly redirect = () => window.location.assign("/login"),
+    readonly redirect = () => window.location.assign(loginDestination()),
   ) {}
   async detect(): Promise<Mode> {
     if (window.location.hostname === "100.92.17.9") return (this.mode = "home");
