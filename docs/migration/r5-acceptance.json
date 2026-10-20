@@ -1,0 +1,15 @@
+{
+  "schema":1,
+  "module":"R5",
+  "developmentStatus":"isolated-candidate",
+  "categories":["drafts","audio","production"],
+  "fiveDirectoryExtension":false,
+  "reusesPendingDelete":true,
+  "retentionDays":3,
+  "isolation":{"status":"local-passed-ci-pending","profiles":20,"readTargets":28,"functionBodies":75,"testCount":550,"skipped":1,"seconds":269.674,"businessDifferences":0},
+  "realShadow":{"status":"not-run","fullBatchId":null,"mismatchCount":null},
+  "switch":{"executed":false,"enabled":false,"authorityHookInstalled":false},
+  "productionFilesChanged":false,
+  "homeProgramsRestarted":false,
+  "productionCleanupRequested":false
+}
