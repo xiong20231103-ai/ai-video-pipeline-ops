@@ -52,6 +52,25 @@ class ExecutionLedger:
         # after acknowledgement. Never mistake a lost result for an unsent job.
         with self.db() as db:db.execute("UPDATE executions SET state='acknowledged',job=NULL,result=NULL,updated=? WHERE id=?",(time.time(),identifier))
 
+
+def post_receipt(transport,spec,headers=None):
+    """Existing bounded one-shot HTTP path, shared by legacy/staged callers."""
+    port=8766 if spec['source']=='receiver' else 8765
+    host='127.0.0.1' if spec['source']=='receiver' else '100.92.17.9'
+    request=urllib.request.Request('http://'+host+':'+str(port)+spec['target'],data=canonical(spec['body']).encode(),
+        headers={'Content-Type':'application/json',**(headers or {})},method='POST')
+    try:response=transport.open(request,timeout=spec['timeoutSeconds'])
+    except urllib.error.HTTPError as error:response=error
+    with response:
+        lengths=response.headers.get_all('Content-Length',[])
+        if len(lengths)>1 or lengths and (len(lengths[0])>10 or not lengths[0].isdigit()):raise http.client.HTTPException('Invalid reply length')
+        expected=int(lengths[0]) if lengths else None
+        if expected is not None and expected>MAX_REPLY:raise OSError('Home reply exceeded bound; result uncertain')
+        raw=response.read(MAX_REPLY+1)
+        if len(raw)>MAX_REPLY or expected is not None and len(raw)!=expected:raise OSError('Home reply incomplete or exceeded bound; result uncertain')
+        return {'kind':'http','httpStatus':response.code,'contentType':response.headers.get('Content-Type','application/json'),
+                'bodyBase64':base64.b64encode(raw).decode('ascii')}
+
 class ExecutionWorker:
     def __init__(self,agent,*,ordinary_backend=None):self.ordinary_backend=ordinary_backend;self.agent=agent;self.state=agent.state_dir;self._ledger=None;self.lock=threading.Lock();self.clock=time.time;self.active=threading.Event();self.home_busy=threading.Event();self.retry_after=0.0;self.rejection_path=self.state/'execution-rejections.jsonl'
     def enabled(self):
@@ -75,22 +94,7 @@ class ExecutionWorker:
         # legacy worker; the same ledger/permit/expiry path guards both backends.
         if self.ordinary_backend is not None and self.ordinary_backend.supports(spec['target']):
             return self.ordinary_backend.send(job)
-        port=8766 if spec['source']=='receiver' else 8765
-        # Receiver permits tokenless writes only from loopback (existing contract).
-        host='127.0.0.1' if spec['source']=='receiver' else '100.92.17.9'
-        request=urllib.request.Request('http://'+host+':'+str(port)+spec['target'],data=canonical(spec['body']).encode(),
-            headers={'Content-Type':'application/json'},method='POST')
-        try:response=self.agent.transport.open(request,timeout=spec['timeoutSeconds'])
-        except urllib.error.HTTPError as error:response=error
-        with response:
-            lengths=response.headers.get_all('Content-Length',[])
-            if len(lengths)>1 or lengths and (len(lengths[0])>10 or not lengths[0].isdigit()):raise http.client.HTTPException('Invalid reply length')
-            expected=int(lengths[0]) if lengths else None
-            if expected is not None and expected>MAX_REPLY:raise OSError('Home reply exceeded bound; result uncertain')
-            raw=response.read(MAX_REPLY+1)
-            if len(raw)>MAX_REPLY or expected is not None and len(raw)!=expected:raise OSError('Home reply incomplete or exceeded bound; result uncertain')
-            return {'kind':'http','httpStatus':response.code,'contentType':response.headers.get('Content-Type','application/json'),
-                    'bodyBase64':base64.b64encode(raw).decode('ascii')}
+        return post_receipt(self.agent.transport,spec)
     def process(self,job):
         self.active.set()
         try:

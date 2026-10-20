@@ -19,6 +19,24 @@ CURRENT_FILES=PREVIOUS_FILES+('contracts/state_files.py','deploy/agent-json.ps1'
 BACKUP_FILES=CURRENT_FILES+tuple('agent/'+name for name in ('backup_crypto.py','backup_policy.py','backup_setup.py','backup_snapshot.py','backup_runtime.py','backup_pack.py','backup_restore.py'))+('contracts/backup_crypto.py',)
 
 FILES=BACKUP_FILES+('agent/execution.py','contracts/commands.py')
+R6_FILES=FILES+(
+    'agent/staged_runtime.py','agent/core/staged_modules.py','agent/core/transition.py','agent/core/dispatch_claim.py',
+    'agent/engine_runtime.py','agent/legacy_host.py','agent/cutover.py','pending_delete.py','cleanup_tickets.py',
+    'agent/core/__init__.py','agent/core/authority_lease.py','agent/core/cleanup.py',
+    'agent/core/cleanup_logic.py','agent/core/collection.py','agent/core/collection_logic.py',
+    'agent/core/composed.py','agent/core/control_plane.py','agent/core/engine_host.py',
+    'agent/core/ordinary.py','agent/core/ordinary_logic.py','agent/core/ordinary_fence.py',
+    'agent/core/projection_store.py','agent/core/recovery.py','agent/core/recovery_logic.py',
+    'agent/core/recovery_transport.py','agent/core/retirement_gate.py','agent/core/compatibility_logic.py',
+    'agent/core/snapshot.py','contracts/golden.py','docs/migration/r1-provenance.json',
+    'docs/migration/r6-provenance.json',
+    'agent/core/collection_replay.py','agent/core/comparison.py','agent/core/history_export.py',
+    'agent/core/history_timeline.py','agent/core/history_transfer.py','agent/core/oracle.py',
+    'agent/core/ordinary_ingress.py','agent/core/replay.py','agent/core/runtime_ports.py','agent/core/sandbox.py',
+    'contracts/history.py','contracts/shadow.py','contracts/timeline.py','contracts/shadow_rules.json',
+    'docs/migration/r3-provenance.json','docs/migration/r4-provenance.json','docs/migration/r5-provenance.json',
+    'deploy/agent_source_update.py',
+)
 
 class UpdateError(ValueError):
     def __init__(self,code): self.code=code;super().__init__(code)
@@ -37,7 +55,7 @@ def validate(root,expected=None):
     if len(commit)!=40 or any(char not in '0123456789abcdef' for char in commit): raise UpdateError('invalid_commit')
     if expected and commit!=expected: raise UpdateError('unexpected_commit')
     names=set(manifest.get('sha256',{}))
-    if names not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(BACKUP_FILES),set(FILES)): raise UpdateError('unexpected_source_whitelist')
+    if names not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(BACKUP_FILES),set(FILES),set(R6_FILES)): raise UpdateError('unexpected_source_whitelist')
     for name in names:
         path=root/name;reject_link(path)
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=manifest['sha256'][name]:
@@ -54,7 +72,7 @@ def copy_code(source,target):
             shutil.copyfile(source/name,temporary);temporary.replace(destination)
         finally: temporary.unlink(missing_ok=True)
     # Remove only the explicitly known additive runtime files on rollback.
-    for name in set(FILES)-set(names):
+    for name in set(R6_FILES)-set(names):
         destination=target/name;reject_link(destination);destination.unlink(missing_ok=True)
 
 def prepare(source,target,backup,expected):
@@ -83,7 +101,7 @@ def restore(backup,target):
     if str(target.absolute())!=metadata['target']: raise UpdateError('rollback_target_mismatch')
     validate(backup,metadata['before']);reject_link(target)
     current=read_json(target/'deployment-manifest.json')
-    if current.get('commit') not in {metadata['before'],metadata['after']} or set(current.get('sha256',{})) not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(FILES)):
+    if current.get('commit') not in {metadata['before'],metadata['after']} or set(current.get('sha256',{})) not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(BACKUP_FILES),set(FILES),set(R6_FILES)):
         raise UpdateError('rollback_source_identity_changed')
     copy_code(backup,target);validate(target,metadata['before'])
 

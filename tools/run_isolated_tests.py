@@ -2,6 +2,7 @@
 import importlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import socket
@@ -96,7 +97,9 @@ with tempfile.TemporaryDirectory(prefix="ops-isolated-") as scratch:
         print("Generated frozen receiver adapter fixtures only; no live inputs.")
     with patch("app.urllib.request.urlopen", side_effect=RuntimeError("Live HTTP blocked")), \
          patch.object(subprocess, "Popen", side_effect=RuntimeError("Process launch blocked")):
-        suite = unittest.defaultTestLoader.discover(str(root / "tests"), pattern="test_*.py")
+        pattern=os.environ.get('OPS_ISOLATED_PATTERN','test_*.py')
+        if not re.fullmatch(r'test_[A-Za-z0-9_*]+\.py',pattern):raise ValueError('Invalid isolated test pattern')
+        suite = unittest.defaultTestLoader.discover(str(root / "tests"), pattern=pattern)
         result = unittest.TextTestRunner(verbosity=1).run(suite)
     print("Isolation: worktree/temp writes only; live HTTP and process launches blocked.")
     sys.exit(0 if result.wasSuccessful() else 1)
