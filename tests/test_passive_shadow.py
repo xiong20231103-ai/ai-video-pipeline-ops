@@ -12,7 +12,7 @@ class PassiveTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as td:
    base=Path(td);roots=self.roots(base);state=roots['WB']/'ops_pipeline_status.json'
    state.write_text('{"state":"paused"}');secret=roots['OPS']/'config.json';secret.write_text('{"password":"never-store"}')
-   bad=roots['WB']/'saved_task_box.json';bad.write_text('{"token":"never-store"}')
+   bad=roots['WB']/'saved_task_box.json';bad.write_text('{"leaseToken":"never-store"}')
    before={p:p.read_bytes() for p in (state,secret,bad)}
    result=m.record(base/'out',roots)
    self.assertFalse(result['realShadowPassed']);self.assertFalse(result['comparable']);self.assertEqual(result['businessRequests'],0)

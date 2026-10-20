@@ -4,7 +4,7 @@ Captures allowlisted state by content hash for later *offline* comparisons.
 Does not claim R1-R5 real-shadow acceptance or activate a migration pointer.
 """
 from __future__ import annotations
-import argparse,datetime,hashlib,json,os,sqlite3,sys,time,uuid
+import argparse,datetime,hashlib,json,os,re,sqlite3,sys,time,uuid
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from agent.backup_policy import RULES,default_roots,match_paths,checked_stat,PolicyError
@@ -51,8 +51,18 @@ def stable_bytes(path):
 
 def safe_json(body):
     text=body.decode('utf-8-sig');safe_facts(text)
-    value=json.loads(text);safe_facts(value)
+    value=json.loads(text);no_credentials(value)
     return value
+
+def no_credentials(value):
+    safe_facts(value)
+    if isinstance(value,dict):
+        for key,item in value.items():
+            if re.search(r'token|secret|password|webhook|authorization|cookie|invitation|authkey|api.?key',str(key),re.I):
+                raise SnapshotError('credential_field_forbidden')
+            no_credentials(item)
+    elif isinstance(value,list):
+        for item in value:no_credentials(item)
 
 def ops_projection(path,output):
     # Copy the main DB/WAL while stable. SQLite may write shared-memory even in
@@ -83,7 +93,7 @@ def ops_projection(path,output):
                 cursor=db.execute('select * from "'+name+'"')
                 columns=[c[0] for c in cursor.description]
                 rows=[dict(zip(columns,row)) for row in cursor]
-                safe_facts(rows);result[name]=sorted(rows,key=encoded)
+                no_credentials(rows);result[name]=sorted(rows,key=encoded)
             return encoded(result)
         finally:db.close()
     finally:
