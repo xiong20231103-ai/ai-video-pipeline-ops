@@ -131,6 +131,15 @@ class HistoryTests(unittest.TestCase):
         second=build_bundle(self.snapshot(reset='fixture-reset-2'),source='home',sequence=2,base_generation=first['generationId']);self.install(second)
         self.assertEqual('old',self.store.resolve_alias('home','old')['canonical'])
         self.assertEqual('current',self.store.resolve_alias('home','old',generation=first['generationId'])['canonical'])
+    def test_delta_replaces_and_shrinks_keys_across_separate_chunks(self):
+        first=self.bundle(tasks=[('old-a','Waiting'),('old-b','Waiting'),('old-c','Waiting')]);self.install(first)
+        second=build_bundle(self.snapshot(tasks=[('new','Completed')]),source='home',sequence=2,previous=first)
+        operations=[op for chunk in second['chunks'] for op in chunk]
+        # Deliver all inserts before all deletes, one operation per chunk.
+        operations.sort(key=lambda op:op['op']=='delete')
+        second['chunks']=[[op] for op in operations];second['manifest']['chunks']=[sha(c) for c in second['chunks']];second['generationId']=sha(second['manifest'])
+        self.install(second)
+        self.assertEqual(['new'],[x['key'] for x in self.store.listing('home','ops.tasks')['items']])
     def test_transfer_lost_ack_resumes_without_recreating_generation(self):
         bundle=self.bundle();store=self.store
         class Client:

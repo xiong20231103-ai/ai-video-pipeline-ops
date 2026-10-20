@@ -12,7 +12,7 @@ class HistoryStore:
             db.executescript("""
             PRAGMA journal_mode=WAL;
             CREATE TABLE IF NOT EXISTS sources(source TEXT PRIMARY KEY,active TEXT,highwater INTEGER NOT NULL);
-            CREATE TABLE IF NOT EXISTS generations(id TEXT PRIMARY KEY,source TEXT NOT NULL,seq INTEGER NOT NULL,state TEXT NOT NULL,descriptor TEXT NOT NULL,created REAL NOT NULL,UNIQUE(source,seq));
+            CREATE TABLE IF NOT EXISTS generations(id TEXT PRIMARY KEY,source TEXT NOT NULL,seq INTEGER NOT NULL,state TEXT NOT NULL,descriptor TEXT NOT NULL,created REAL NOT NULL,reserved_bytes INTEGER NOT NULL,reserved_rows INTEGER NOT NULL,UNIQUE(source,seq));
             CREATE TABLE IF NOT EXISTS records(generation TEXT NOT NULL,kind TEXT NOT NULL,record_key TEXT NOT NULL,body TEXT NOT NULL,digest TEXT NOT NULL,byte_count INTEGER NOT NULL,PRIMARY KEY(generation,kind,record_key));
             CREATE TABLE IF NOT EXISTS chunks(generation TEXT NOT NULL,position INTEGER NOT NULL,digest TEXT NOT NULL,PRIMARY KEY(generation,position));
             CREATE TABLE IF NOT EXISTS touched(generation TEXT NOT NULL,kind TEXT NOT NULL,record_key TEXT NOT NULL,PRIMARY KEY(generation,kind,record_key));
@@ -43,12 +43,16 @@ class HistoryStore:
             if descriptor['sequence']<=current['highwater']:raise HistoryError('history_sequence_stale',409)
             if descriptor['baseGeneration']!=current['active']:raise HistoryError('history_base_changed',409)
             if db.execute('SELECT count(*) FROM generations WHERE source=?',(source,)).fetchone()[0]>=10:raise HistoryError('history_generation_limit',413)
-            reserved=sum(json.loads(row[0])['summary']['bytes'] for row in db.execute('SELECT descriptor FROM generations'))
-            if reserved+descriptor['summary']['bytes']>self.quota:raise HistoryError('history_quota_exceeded',413)
+            reserve_bytes=descriptor['summary']['bytes'];reserve_rows=descriptor['summary']['rowCount']
             if descriptor['mode']=='delta':
-                parent=self._generation(db,current['active'])
-                if json.loads(parent['descriptor'])['resetGeneration']!=descriptor['resetGeneration']:raise HistoryError('history_delta_across_reset_forbidden',409)
-            try:db.execute('INSERT INTO generations VALUES(?,?,?,?,?,?)',(generation,source,descriptor['sequence'],'staging',canonical(descriptor).decode(),self.clock()))
+                parent=self._generation(db,current['active']);base=json.loads(parent['descriptor'])
+                if base['resetGeneration']!=descriptor['resetGeneration']:raise HistoryError('history_delta_across_reset_forbidden',409)
+                # Staging may temporarily hold old + new keys before deletion
+                # chunks arrive. Reserve this explicitly, not just final size.
+                reserve_bytes+=base['summary']['bytes'];reserve_rows+=base['summary']['rowCount']
+            reserved=db.execute('SELECT coalesce(sum(reserved_bytes),0) FROM generations').fetchone()[0]
+            if reserved+reserve_bytes>self.quota:raise HistoryError('history_quota_exceeded',413)
+            try:db.execute('INSERT INTO generations VALUES(?,?,?,?,?,?,?,?)',(generation,source,descriptor['sequence'],'staging',canonical(descriptor).decode(),self.clock(),reserve_bytes,reserve_rows))
             except sqlite3.IntegrityError:raise HistoryError('history_sequence_conflict',409) from None
             if descriptor['mode']=='delta':db.execute('INSERT INTO records SELECT ?,kind,record_key,body,digest,byte_count FROM records WHERE generation=?',(generation,current['active']))
             return self._status(db,generation)
@@ -84,7 +88,7 @@ class HistoryStore:
                 if body is None:db.execute('DELETE FROM records WHERE generation=? AND kind=? AND record_key=?',(generation,kind,key))
                 else:db.execute('INSERT OR REPLACE INTO records VALUES(?,?,?,?,?,?)',(generation,kind,key,body,fingerprint,byte_count))
             used=db.execute('SELECT coalesce(sum(byte_count),0),count(*) FROM records WHERE generation=?',(generation,)).fetchone()
-            if used[0]>descriptor['summary']['bytes'] or used[1]>descriptor['summary']['rowCount']:raise HistoryError('history_dataset_limit',413)
+            if used[0]>row['reserved_bytes'] or used[1]>row['reserved_rows']:raise HistoryError('history_dataset_limit',413)
             db.execute('INSERT INTO chunks VALUES(?,?,?)',(generation,position,digest))
             return self._status(db,generation)
     def _records(self,db,generation,kind=None):
@@ -131,7 +135,7 @@ class HistoryStore:
             previous=current['active']
             db.execute("INSERT INTO changes SELECT ?,n.kind,n.record_key,CASE WHEN p.record_key IS NULL THEN 'insert' ELSE 'update' END FROM records n LEFT JOIN records p ON p.generation=? AND p.kind=n.kind AND p.record_key=n.record_key WHERE n.generation=? AND (p.record_key IS NULL OR n.digest<>p.digest)",(generation,previous,generation))
             db.execute("INSERT INTO changes SELECT ?,p.kind,p.record_key,'delete' FROM records p LEFT JOIN records n ON n.generation=? AND n.kind=p.kind AND n.record_key=p.record_key WHERE p.generation=? AND n.record_key IS NULL",(generation,generation,previous))
-            db.execute("UPDATE generations SET state='ready' WHERE id=?",(generation,))
+            db.execute("UPDATE generations SET state='ready',reserved_bytes=?,reserved_rows=? WHERE id=?",(descriptor['summary']['bytes'],descriptor['summary']['rowCount'],generation))
             db.execute('INSERT OR REPLACE INTO sources VALUES(?,?,?)',(row['source'],generation,row['seq']))
             db.execute('INSERT INTO selections(source,previous,target,reason,created) VALUES(?,?,?,?,?)',(row['source'],previous,generation,'verified-import',self.clock()))
             return self._status(db,generation)
