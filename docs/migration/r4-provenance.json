@@ -1,0 +1,370 @@
+{
+  "schema": 1,
+  "legacyCommit": "f78db5a4bfd32eb5ebeab2c63f6dea48cc26f061",
+  "legacySha256": "f4d754cd86c524933d3f87da1006167c2fd698e288fcda09992115dc0e1c044e",
+  "functions": [
+    {
+      "name": "_is_recoverable_draft_waiting",
+      "legacyStart": 139,
+      "legacyEnd": 151,
+      "candidateStart": 7,
+      "candidateEnd": 19
+    },
+    {
+      "name": "now_iso",
+      "legacyStart": 183,
+      "legacyEnd": 184,
+      "candidateStart": 22,
+      "candidateEnd": 23
+    },
+    {
+      "name": "parse_time",
+      "legacyStart": 187,
+      "legacyEnd": 193,
+      "candidateStart": 26,
+      "candidateEnd": 32
+    },
+    {
+      "name": "sanitize_public_value",
+      "legacyStart": 203,
+      "legacyEnd": 214,
+      "candidateStart": 35,
+      "candidateEnd": 46
+    },
+    {
+      "name": "resolve_path",
+      "legacyStart": 217,
+      "legacyEnd": 219,
+      "candidateStart": 49,
+      "candidateEnd": 51
+    },
+    {
+      "name": "receiver_base_url",
+      "legacyStart": 272,
+      "legacyEnd": 278,
+      "candidateStart": 54,
+      "candidateEnd": 60
+    },
+    {
+      "name": "ensure_receiver_workbench_running",
+      "legacyStart": 281,
+      "legacyEnd": 284,
+      "candidateStart": 63,
+      "candidateEnd": 66
+    },
+    {
+      "name": "_continue_launch_result",
+      "legacyStart": 287,
+      "legacyEnd": 307,
+      "candidateStart": 69,
+      "candidateEnd": 89
+    },
+    {
+      "name": "_ensure_workbench_for_continue",
+      "legacyStart": 310,
+      "legacyEnd": 328,
+      "candidateStart": 92,
+      "candidateEnd": 110
+    },
+    {
+      "name": "_persist_continue_launch_state",
+      "legacyStart": 331,
+      "legacyEnd": 350,
+      "candidateStart": 113,
+      "candidateEnd": 132
+    },
+    {
+      "name": "_continue_target_signature",
+      "legacyStart": 353,
+      "legacyEnd": 377,
+      "candidateStart": 135,
+      "candidateEnd": 159
+    },
+    {
+      "name": "_continue_target_changed",
+      "legacyStart": 380,
+      "legacyEnd": 402,
+      "candidateStart": 162,
+      "candidateEnd": 184
+    },
+    {
+      "name": "_archive_continue_command",
+      "legacyStart": 405,
+      "legacyEnd": 421,
+      "candidateStart": 187,
+      "candidateEnd": 203
+    },
+    {
+      "name": "_expire_continue_command",
+      "legacyStart": 424,
+      "legacyEnd": 435,
+      "candidateStart": 206,
+      "candidateEnd": 217
+    },
+    {
+      "name": "_capcut_recovery_command_is_stale",
+      "legacyStart": 438,
+      "legacyEnd": 460,
+      "candidateStart": 220,
+      "candidateEnd": 242
+    },
+    {
+      "name": "request_workbench_continue",
+      "legacyStart": 463,
+      "legacyEnd": 493,
+      "candidateStart": 245,
+      "candidateEnd": 275
+    },
+    {
+      "name": "enqueue_control_command",
+      "legacyStart": 496,
+      "legacyEnd": 568,
+      "candidateStart": 278,
+      "candidateEnd": 350
+    },
+    {
+      "name": "continue_command_file",
+      "legacyStart": 571,
+      "legacyEnd": 573,
+      "candidateStart": 353,
+      "candidateEnd": 355
+    },
+    {
+      "name": "fish_bridge_status",
+      "legacyStart": 576,
+      "legacyEnd": 590,
+      "candidateStart": 358,
+      "candidateEnd": 372
+    },
+    {
+      "name": "read_json_object",
+      "legacyStart": 593,
+      "legacyEnd": 602,
+      "candidateStart": 375,
+      "candidateEnd": 384
+    },
+    {
+      "name": "_write_json_atomic",
+      "legacyStart": 613,
+      "legacyEnd": 617,
+      "candidateStart": 387,
+      "candidateEnd": 391
+    },
+    {
+      "name": "_stable_file_id",
+      "legacyStart": 620,
+      "legacyEnd": 623,
+      "candidateStart": 394,
+      "candidateEnd": 397
+    },
+    {
+      "name": "control_command_path",
+      "legacyStart": 730,
+      "legacyEnd": 731,
+      "candidateStart": 400,
+      "candidateEnd": 401
+    },
+    {
+      "name": "read_control_command",
+      "legacyStart": 734,
+      "legacyEnd": 736,
+      "candidateStart": 404,
+      "candidateEnd": 406
+    },
+    {
+      "name": "write_control_command",
+      "legacyStart": 739,
+      "legacyEnd": 743,
+      "candidateStart": 409,
+      "candidateEnd": 413
+    },
+    {
+      "name": "list_control_commands",
+      "legacyStart": 746,
+      "legacyEnd": 753,
+      "candidateStart": 416,
+      "candidateEnd": 423
+    },
+    {
+      "name": "_sync_queued_command_from_mailbox",
+      "legacyStart": 2219,
+      "legacyEnd": 2307,
+      "candidateStart": 426,
+      "candidateEnd": 514
+    },
+    {
+      "name": "_stale_step12_recovery_reason",
+      "legacyStart": 2310,
+      "legacyEnd": 2358,
+      "candidateStart": 517,
+      "candidateEnd": 565
+    },
+    {
+      "name": "continue_command_status",
+      "legacyStart": 2361,
+      "legacyEnd": 2500,
+      "candidateStart": 568,
+      "candidateEnd": 707
+    },
+    {
+      "name": "workbench_runtime_dir",
+      "legacyStart": 2527,
+      "legacyEnd": 2531,
+      "candidateStart": 710,
+      "candidateEnd": 714
+    },
+    {
+      "name": "workbench_health_payload",
+      "legacyStart": 2546,
+      "legacyEnd": 2612,
+      "candidateStart": 717,
+      "candidateEnd": 783
+    },
+    {
+      "name": "_is_tailnet_or_local",
+      "legacyStart": 2883,
+      "legacyEnd": 2894,
+      "candidateStart": 786,
+      "candidateEnd": 797
+    },
+    {
+      "name": "require_control_permission",
+      "legacyStart": 2897,
+      "legacyEnd": 2899,
+      "candidateStart": 800,
+      "candidateEnd": 802
+    },
+    {
+      "name": "receiver_json",
+      "legacyStart": 2902,
+      "legacyEnd": 2930,
+      "candidateStart": 805,
+      "candidateEnd": 833
+    },
+    {
+      "name": "reconciliation_payload",
+      "legacyStart": 5519,
+      "legacyEnd": 5675,
+      "candidateStart": 836,
+      "candidateEnd": 992
+    },
+    {
+      "name": "control_continue_current",
+      "legacyStart": 6451,
+      "legacyEnd": 6489,
+      "candidateStart": 995,
+      "candidateEnd": 1033
+    },
+    {
+      "name": "_current_continue_target",
+      "legacyStart": 6492,
+      "legacyEnd": 6509,
+      "candidateStart": 1036,
+      "candidateEnd": 1053
+    },
+    {
+      "name": "create_control_command",
+      "legacyStart": 6513,
+      "legacyEnd": 6544,
+      "candidateStart": 1056,
+      "candidateEnd": 1087
+    },
+    {
+      "name": "_expected_continue_target",
+      "legacyStart": 6547,
+      "legacyEnd": 6570,
+      "candidateStart": 1090,
+      "candidateEnd": 1113
+    },
+    {
+      "name": "current_control_command",
+      "legacyStart": 6574,
+      "legacyEnd": 6576,
+      "candidateStart": 1116,
+      "candidateEnd": 1118
+    },
+    {
+      "name": "get_control_command",
+      "legacyStart": 6580,
+      "legacyEnd": 6588,
+      "candidateStart": 1121,
+      "candidateEnd": 1129
+    },
+    {
+      "name": "cancel_control_command",
+      "legacyStart": 6592,
+      "legacyEnd": 6606,
+      "candidateStart": 1132,
+      "candidateEnd": 1146
+    },
+    {
+      "name": "control_continue_current_status",
+      "legacyStart": 6610,
+      "legacyEnd": 6612,
+      "candidateStart": 1149,
+      "candidateEnd": 1151
+    },
+    {
+      "name": "unhandled_error",
+      "legacyStart": 6982,
+      "legacyEnd": 6984,
+      "candidateStart": 1154,
+      "candidateEnd": 1156
+    }
+  ],
+  "requiredPorts": [
+    "BASE_DIR",
+    "COLLECTOR",
+    "CONFIG",
+    "CONTINUE_COMMAND_NAME",
+    "CONTINUE_EXPECTED_FIELDS",
+    "CONTINUE_EXPECTED_LABELS",
+    "CONTROL_COMMAND_CLAIM_TIMEOUT_SECONDS",
+    "CONTROL_COMMAND_DIR",
+    "CONTROL_COMMAND_LOCK",
+    "CONTROL_COMMAND_TTL_SECONDS",
+    "Collector",
+    "HEALTH_LOG_IGNORED",
+    "HEALTH_LOG_KEYWORDS",
+    "HEALTH_LOG_LINE",
+    "HEALTH_LOG_ZERO_FAILURES",
+    "HTTPException",
+    "JSONResponse",
+    "LOCAL_PATH_PATTERN",
+    "OPEN_RECOVERY_COMMAND_STATES",
+    "Path",
+    "RECOVERABLE_DRAFT_REOPEN_ERRORS",
+    "SENSITIVE_KEY_PARTS",
+    "STORE",
+    "_CLEANUP_SOURCE_STRICT",
+    "_HEALTH_CACHE",
+    "authoritative_active_task_box",
+    "current_date_label",
+    "datetime",
+    "hashlib",
+    "ipaddress",
+    "json",
+    "os",
+    "pipeline_for_date",
+    "process_status",
+    "production_capcut_tasks",
+    "re",
+    "task_box_payloads",
+    "time",
+    "timedelta",
+    "timezone",
+    "upload_task_index",
+    "urllib",
+    "uuid"
+  ],
+  "deferredBoundaries": [
+    "authoritative_active_task_box",
+    "current_date_label",
+    "pipeline_for_date",
+    "process_status",
+    "production_capcut_tasks",
+    "recent_log_errors",
+    "task_box_payloads",
+    "upload_task_index"
+  ]
+}
