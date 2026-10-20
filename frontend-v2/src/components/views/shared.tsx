@@ -1,3 +1,4 @@
+import { FadeContent } from '@/components/react-bits/Motion'
 import type { ReactNode } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,20 +17,24 @@ export function Panel({
   children,
   actions,
   className = '',
+  motionId,
 }: {
   title: string
+  motionId?: string
   children: ReactNode
   actions?: ReactNode
   className?: string
 }) {
   return (
-    <Card className={`data-panel ${className}`} data-panel={title}>
-      <header className="data-panel-heading">
-        <h2>{title}</h2>
-        {actions}
-      </header>
-      {children}
-    </Card>
+    <FadeContent id={motionId || title}>
+      <Card className={`data-panel ${className}`} data-panel={title}>
+        <header className="data-panel-heading">
+          <h2>{title}</h2>
+          {actions}
+        </header>
+        {children}
+      </Card>
+    </FadeContent>
   )
 }
 export function Status({
@@ -67,7 +72,14 @@ export function Progress({ value }: { value: unknown }) {
   )
 }
 export function Empty({ children = '暂无数据' }: { children?: ReactNode }) {
-  return <p className="data-empty">{children}</p>
+  return (
+    <div className="data-empty">
+      <span className="empty-mark" aria-hidden="true">
+        ◇
+      </span>
+      <p>{children}</p>
+    </div>
+  )
 }
 export function DisabledWrite({ children }: { children: ReactNode }) {
   return (

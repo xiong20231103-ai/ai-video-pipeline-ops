@@ -1,3 +1,5 @@
+import { BlurText } from "@/components/react-bits/Motion";
+import { ToastHost } from "@/components/views/Feedback";
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
   Activity,
@@ -145,7 +147,7 @@ function SidebarFooter() {
       <div className="sidebar-note">
         <Box size={16} />
         <span>独立预览空间</span>
-        <Badge variant="outline">V2-2E</Badge>
+        <Badge variant="outline">V2-3</Badge>
       </div>
       <p>专注创作，让流程井然有序。</p>
     </div>
@@ -182,6 +184,7 @@ export default function App() {
 
   return (
     <TooltipProvider delayDuration={250}>
+      <ToastHost />
       <a
         className="skip-link"
         href="#main-content"
@@ -286,7 +289,9 @@ export default function App() {
                   <span />
                   WORKSPACE OVERVIEW
                 </div>
-                <h1>{current.label}</h1>
+                <h1>
+                  <BlurText text={current.label} />
+                </h1>
                 <p>{current.description}</p>
               </div>
               <span className="section-icon" aria-hidden="true">

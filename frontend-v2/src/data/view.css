@@ -474,3 +474,14 @@
 .task-operation-sheet{overflow-y:auto;width:min(100vw,42rem);max-width:42rem}.data-form{display:grid;gap:1rem;padding:1rem}.data-form label{display:grid;gap:.4rem}.data-form textarea{min-height:7rem;resize:vertical;padding:.7rem;background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:.6rem}.data-form .checkbox-label{display:flex;align-items:center;gap:.5rem}
 
 .file-manager-sheet{width:min(96vw,90rem);max-width:90rem;overflow-y:auto}.file-manager-body{padding:1.2rem;display:grid;gap:1rem}.manager-filters{display:flex;flex-wrap:wrap;gap:.8rem}.manager-filters label{display:grid;gap:.4rem;min-width:9rem}.category-tiles{display:flex;gap:.6rem;flex-wrap:wrap}.file-manager-body .data-table-scroll{max-height:55vh;overflow:auto}
+
+/* V2-3: bounded, non-blocking feedback. Existing modal semantics remain intact. */
+.v2-toast-region{position:fixed;right:24px;bottom:24px;z-index:100;max-width:min(440px,calc(100vw - 32px));pointer-events:none}
+.v2-toast{display:flex;align-items:center;gap:16px;padding:16px 20px;border:1px solid var(--border);border-radius:16px;background:var(--card);color:var(--foreground);box-shadow:0 12px 40px #0005;pointer-events:auto;overflow-wrap:anywhere}
+.v2-toast p{margin:0;flex:1}.empty-mark{display:block;font-size:28px;opacity:.45;margin-bottom:8px}.data-empty p{margin:0}
+@supports(backdrop-filter:blur(16px)){.v2-toast{backdrop-filter:blur(16px);background:color-mix(in srgb,var(--card) 92%,transparent)}}
+@media(max-width:640px){.v2-toast-region{right:16px;bottom:16px}.v2-toast{padding:12px 16px}}
+@media(prefers-reduced-motion:reduce){.bits-blur-text{filter:none!important;transform:none!important;opacity:1!important}}
+
+/* Animation wrappers remain shrinkable grid items, including narrow tables. */
+.dashboard-content > div,.resource-grid > div{min-width:0;max-width:100%}

@@ -106,7 +106,7 @@ export function SourcePanel({
     "/api/subtitle-verification/current": "字幕核验",
   };
   return (
-    <Panel title={`云端缓存 · ${state}`}>
+    <Panel title={`云端缓存 · ${state}`} motionId="cloud-sources">
       <p className="data-muted">
         列表记录本页读到的各份数据；切换日期后旧条目会保留，请以当前所选看板为准。
       </p>
