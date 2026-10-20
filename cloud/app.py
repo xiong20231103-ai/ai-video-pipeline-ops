@@ -104,6 +104,14 @@ def create_app(config=None,store=None,static_root=None):
         if store.limited(kind+':'+rate_identity(request),maximum): raise HTTPException(429,'rate_limited')
     mount_backups(application,vault,agent,session,csrf,bounded_json)
     enqueue_command=mount_commands(application,commands,agent,session,csrf,bounded_json,rate,rate_identity,config['origin'])
+    # R2 is additive and disabled by default. No old /api/cache/command path changes.
+    if config.get('history_enabled') is True:
+        from cloud.history import HistoryStore
+        from cloud.history_routes import mount_history
+        history=HistoryStore(Path(store.path).parent/'history.db')
+        application.state.history=history
+        mount_history(application,history,agent,session,csrf,bounded_json)
+
     @application.middleware('http')
     async def security(request,call_next):
         if request.method=='POST' and request.headers.get('content-length','').isdigit() and int(request.headers['content-length'])>MAX_BODY:
