@@ -1,0 +1,343 @@
+{
+  "schema": 1,
+  "sourceCommit": "f78db5a4bfd32eb5ebeab2c63f6dea48cc26f061",
+  "functions": [
+    {
+      "name": "split_completed_cleanup_warning",
+      "legacyStart": 161,
+      "legacyEnd": 180,
+      "candidateStart": 9,
+      "candidateEnd": 28
+    },
+    {
+      "name": "now_iso",
+      "legacyStart": 183,
+      "legacyEnd": 184,
+      "candidateStart": 31,
+      "candidateEnd": 32
+    },
+    {
+      "name": "parse_time",
+      "legacyStart": 187,
+      "legacyEnd": 193,
+      "candidateStart": 35,
+      "candidateEnd": 41
+    },
+    {
+      "name": "safe_int",
+      "legacyStart": 196,
+      "legacyEnd": 200,
+      "candidateStart": 44,
+      "candidateEnd": 48
+    },
+    {
+      "name": "sanitize_public_value",
+      "legacyStart": 203,
+      "legacyEnd": 214,
+      "candidateStart": 51,
+      "candidateEnd": 62
+    },
+    {
+      "name": "resolve_path",
+      "legacyStart": 217,
+      "legacyEnd": 219,
+      "candidateStart": 65,
+      "candidateEnd": 67
+    },
+    {
+      "name": "read_json_object",
+      "legacyStart": 593,
+      "legacyEnd": 602,
+      "candidateStart": 70,
+      "candidateEnd": 79
+    },
+    {
+      "name": "_workbench_root",
+      "legacyStart": 1603,
+      "legacyEnd": 1616,
+      "candidateStart": 82,
+      "candidateEnd": 95
+    },
+    {
+      "name": "is_test_history_task",
+      "legacyStart": 2862,
+      "legacyEnd": 2880,
+      "candidateStart": 98,
+      "candidateEnd": 116
+    },
+    {
+      "name": "Store",
+      "legacyStart": 3000,
+      "legacyEnd": 3306,
+      "candidateStart": 119,
+      "candidateEnd": 402
+    },
+    {
+      "name": "Collector",
+      "legacyStart": 3309,
+      "legacyEnd": 4516,
+      "candidateStart": 406,
+      "candidateEnd": 1561
+    },
+    {
+      "name": "task_category",
+      "legacyStart": 4604,
+      "legacyEnd": 4611,
+      "candidateStart": 1564,
+      "candidateEnd": 1571
+    },
+    {
+      "name": "capcut_error_code",
+      "legacyStart": 4614,
+      "legacyEnd": 4627,
+      "candidateStart": 1574,
+      "candidateEnd": 1587
+    },
+    {
+      "name": "decorate_pipeline_stages",
+      "legacyStart": 4639,
+      "legacyEnd": 4665,
+      "candidateStart": 1590,
+      "candidateEnd": 1616
+    },
+    {
+      "name": "capcut_stage_for_tasks",
+      "legacyStart": 4668,
+      "legacyEnd": 4719,
+      "candidateStart": 1619,
+      "candidateEnd": 1670
+    },
+    {
+      "name": "current_date_label",
+      "legacyStart": 4722,
+      "legacyEnd": 4724,
+      "candidateStart": 1673,
+      "candidateEnd": 1675
+    },
+    {
+      "name": "pipeline_dates",
+      "legacyStart": 4727,
+      "legacyEnd": 4740,
+      "candidateStart": 1678,
+      "candidateEnd": 1691
+    },
+    {
+      "name": "authoritative_capcut_task_ids",
+      "legacyStart": 4743,
+      "legacyEnd": 4756,
+      "candidateStart": 1694,
+      "candidateEnd": 1707
+    },
+    {
+      "name": "production_capcut_tasks",
+      "legacyStart": 4759,
+      "legacyEnd": 4770,
+      "candidateStart": 1710,
+      "candidateEnd": 1721
+    },
+    {
+      "name": "upload_task_index",
+      "legacyStart": 4773,
+      "legacyEnd": 4781,
+      "candidateStart": 1724,
+      "candidateEnd": 1732
+    },
+    {
+      "name": "_local_or_cloud_final_is_valid",
+      "legacyStart": 4784,
+      "legacyEnd": 4805,
+      "candidateStart": 1735,
+      "candidateEnd": 1756
+    },
+    {
+      "name": "remote_capcut_summaries",
+      "legacyStart": 4808,
+      "legacyEnd": 4845,
+      "candidateStart": 1759,
+      "candidateEnd": 1796
+    },
+    {
+      "name": "task_box_created_at",
+      "legacyStart": 4851,
+      "legacyEnd": 4870,
+      "candidateStart": 1799,
+      "candidateEnd": 1818
+    },
+    {
+      "name": "task_box_sort_key",
+      "legacyStart": 4873,
+      "legacyEnd": 4901,
+      "candidateStart": 1821,
+      "candidateEnd": 1849
+    },
+    {
+      "name": "task_box_payloads",
+      "legacyStart": 4904,
+      "legacyEnd": 5171,
+      "candidateStart": 1852,
+      "candidateEnd": 2119
+    },
+    {
+      "name": "authoritative_active_task_box",
+      "legacyStart": 5174,
+      "legacyEnd": 5231,
+      "candidateStart": 2122,
+      "candidateEnd": 2179
+    },
+    {
+      "name": "pipeline_for_date",
+      "legacyStart": 5253,
+      "legacyEnd": 5311,
+      "candidateStart": 2182,
+      "candidateEnd": 2240
+    },
+    {
+      "name": "overview_payload",
+      "legacyStart": 5314,
+      "legacyEnd": 5424,
+      "candidateStart": 2243,
+      "candidateEnd": 2353
+    },
+    {
+      "name": "public_task_items",
+      "legacyStart": 5427,
+      "legacyEnd": 5429,
+      "candidateStart": 2356,
+      "candidateEnd": 2358
+    },
+    {
+      "name": "public_task_item",
+      "legacyStart": 5432,
+      "legacyEnd": 5443,
+      "candidateStart": 2361,
+      "candidateEnd": 2372
+    },
+    {
+      "name": "public_metrics_payload",
+      "legacyStart": 5446,
+      "legacyEnd": 5452,
+      "candidateStart": 2375,
+      "candidateEnd": 2381
+    },
+    {
+      "name": "service_health_payload",
+      "legacyStart": 5455,
+      "legacyEnd": 5483,
+      "candidateStart": 2384,
+      "candidateEnd": 2412
+    },
+    {
+      "name": "source_status_payload",
+      "legacyStart": 5486,
+      "legacyEnd": 5516,
+      "candidateStart": 2415,
+      "candidateEnd": 2445
+    },
+    {
+      "name": "_current_stage",
+      "legacyStart": 5678,
+      "legacyEnd": 5706,
+      "candidateStart": 2448,
+      "candidateEnd": 2476
+    },
+    {
+      "name": "current_project_status_payload",
+      "legacyStart": 5709,
+      "legacyEnd": 5939,
+      "candidateStart": 2479,
+      "candidateEnd": 2709
+    },
+    {
+      "name": "dashboard_payload",
+      "legacyStart": 5942,
+      "legacyEnd": 6012,
+      "candidateStart": 2712,
+      "candidateEnd": 2782
+    },
+    {
+      "name": "dashboard_summary_payload",
+      "legacyStart": 6015,
+      "legacyEnd": 6083,
+      "candidateStart": 2785,
+      "candidateEnd": 2853
+    },
+    {
+      "name": "subtitle_verification_inventory",
+      "legacyStart": 6615,
+      "legacyEnd": 6660,
+      "candidateStart": 2856,
+      "candidateEnd": 2901
+    }
+  ],
+  "requiredPorts": [
+    "BASE_DIR",
+    "CAPCUT_STATE_TEXT",
+    "COLLECTOR",
+    "COMPLETED_STATES",
+    "CONFIG",
+    "DATA_DIR",
+    "FAILED_STATES",
+    "FORMAL_PROJECT_NAMES",
+    "HTTPException",
+    "LEGACY_DRAFT_CLEANUP_MARKERS",
+    "LEGACY_INVALID_JSON_BACKSLASH",
+    "LOCAL_PATH_PATTERN",
+    "Path",
+    "SENSITIVE_KEY_PARTS",
+    "STAGE_META",
+    "STORE",
+    "TASK_BOX_STALE_SECONDS",
+    "TASK_OPTIONAL_COLUMNS",
+    "TASK_REQUIRED_COLUMNS",
+    "WAITING_STATES",
+    "_CLEANUP_SOURCE_STRICT",
+    "archived_task_payloads",
+    "control_plane_json",
+    "datetime",
+    "hashlib",
+    "historical_cloud_verification_status",
+    "json",
+    "load_control_actions",
+    "load_task_box_receipt",
+    "load_test_reset_state",
+    "local_recovery_status",
+    "persist_task_box_receipt",
+    "re",
+    "receiver_json",
+    "reconciliation_payload",
+    "system_metrics",
+    "threading",
+    "time",
+    "urllib",
+    "workbench_health_payload"
+  ],
+  "deferredAdapters": [
+    "archived_task_payloads",
+    "control_plane_json",
+    "historical_cloud_verification_status",
+    "load_control_actions",
+    "load_task_box_receipt",
+    "load_test_reset_state",
+    "local_recovery_status",
+    "persist_task_box_receipt",
+    "process_status",
+    "receiver_json",
+    "reconciliation_payload",
+    "system_metrics",
+    "workbench_health_payload"
+  ],
+  "excludedMethods": {
+    "Store": [
+      "__init__",
+      "connect",
+      "connection",
+      "clear_all"
+    ],
+    "Collector": [
+      "start",
+      "stop",
+      "run",
+      "reset_runtime"
+    ]
+  }
+}
