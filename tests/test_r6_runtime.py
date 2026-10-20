@@ -3,6 +3,7 @@ import asyncio
 import base64
 from contextlib import contextmanager
 import copy
+from concurrent.futures import ThreadPoolExecutor,wait
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -24,6 +25,81 @@ from agent.core.engine_host import EngineHost,CompatibilityApp
 from agent.core.ordinary_fence import OrdinaryFence,FenceRejected
 from agent.core.projection_store import durable_store
 from agent.core.retirement_gate import RULES,switch_blockers,retirement_blockers,required_targets,pre_retirement_blockers
+
+
+def projection_load(store,*,iterations=20,timeout=60):
+    """Exercise real overlapping workers, then join BEFORE Store/temp cleanup.
+
+    This is a correctness check, not a hosted-runner disk-speed benchmark.
+    SQLite's per-operation busy timeout is 10 seconds; the old join(5) was
+    shorter than one allowed operation and also raced cleanup on assertion.
+    A deadline is still enforced; cancellation never turns it into a pass.
+    """
+    stop=threading.Event();progress=[0]*4;started=time.monotonic()
+    def run(index):
+        for i in range(iterations):
+            if stop.is_set():return
+            if index==0:store.event('fixture','INFO',str(i),{})
+            else:store.events(10)
+            progress[index]+=1
+    executor=ThreadPoolExecutor(max_workers=4,thread_name_prefix='r6-projection-check')
+    futures=[]
+    try:
+        futures=[executor.submit(run,index) for index in range(4)]
+        _,pending=wait(futures,timeout=timeout)
+        if pending:
+            raise AssertionError(f'projection workload deadline exceeded: completed={progress}, elapsed={time.monotonic()-started:.3f}s')
+        for future in futures:future.result()
+        if progress!=[iterations]*4:raise AssertionError(f'projection workload incomplete: {progress}')
+        return progress
+    finally:
+        stop.set()
+        # Keep the Store alive through every in-flight operation, even when a
+        # worker fails/deadline expires. Do not leave threads using a deleted DB.
+        executor.shutdown(wait=True,cancel_futures=True)
+
+
+class ProjectionLoadLifecycleTests(unittest.TestCase):
+    def test_deadline_still_fails_and_waits_for_inflight_operations_before_return(self):
+        entered=threading.Event();release=threading.Event();deadline=threading.Event();active=[];lock=threading.Lock()
+        class SlowStore:
+            def events(self,*args):
+                with lock:active.append(threading.current_thread().name)
+                try:entered.set();release.wait()
+                finally:
+                    with lock:active.remove(threading.current_thread().name)
+            event=events
+        outcome=[]
+        def run():
+            try:projection_load(SlowStore(),timeout=.05)
+            except BaseException as error:outcome.append(error)
+        def expired(futures,*,timeout):
+            if not entered.wait(2):raise AssertionError('inert worker did not start')
+            deadline.set();return set(),set(futures)
+        caller=threading.Thread(target=run)
+        with patch(__name__+'.wait',side_effect=expired):
+            caller.start()
+            try:
+                self.assertTrue(deadline.wait(3))
+                # Expiry is signalled explicitly; no scheduler-speed assumption.
+                # The caller still waits for the active operation to be released.
+                self.assertTrue(caller.is_alive());self.assertTrue(active)
+            finally:release.set();caller.join(3)
+        self.assertFalse(caller.is_alive());self.assertEqual([],active)
+        self.assertEqual(1,len(outcome));self.assertIsInstance(outcome[0],AssertionError)
+        self.assertIn('deadline exceeded',str(outcome[0]))
+
+    def test_worker_error_is_not_swallowed_and_all_other_workers_exit(self):
+        active=[];lock=threading.Lock()
+        class FailedStore:
+            def events(self,*args):
+                with lock:active.append(threading.current_thread().name)
+                try:raise OSError('inert connection failure')
+                finally:
+                    with lock:active.remove(threading.current_thread().name)
+            event=events
+        with self.assertRaisesRegex(OSError,'inert connection failure'):projection_load(FailedStore())
+        self.assertEqual([],active)
 
 
 def attestation_fixture(build,ledger):
@@ -68,19 +144,27 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual({'tasks','task_history','events','heartbeats','source_health','sqlite_sequence'},set(rows))
 
     def test_durable_projection_handles_real_concurrent_reads_and_short_writes(self):
-        with ComposedSession(vars(app),tickets=CleanupTickets(),store_factory=durable_store(self.root/'projection.db')) as session:
-            failures=[]
-            def run(write):
-                try:
-                    for i in range(20):
-                        if write:session.store.event('fixture','INFO',str(i),{})
-                        else:session.store.events(10)
-                except BaseException as error:failures.append(type(error).__name__)
-            threads=[threading.Thread(target=run,args=(i==0,)) for i in range(4)]
-            for thread in threads:thread.start()
-            for thread in threads:thread.join(5)
-            self.assertFalse(any(t.is_alive() for t in threads));self.assertEqual([],failures)
+        path=self.root/'projection.db'
+        with ComposedSession(vars(app),tickets=CleanupTickets(),store_factory=durable_store(path)) as session:
+            active=[];opened=[];lock=threading.Lock();connect=session.store.connect
+            class TrackedConnection:
+                def __init__(self,db):self.db=db
+                def __getattr__(self,name):return getattr(self.db,name)
+                def close(self):
+                    self.db.close()
+                    with lock:active.remove(self)
+            def tracked_connect():
+                result=TrackedConnection(connect())
+                with lock:active.append(result);opened.append(result)
+                return result
+            with patch.object(session.store,'connect',side_effect=tracked_connect):
+                self.assertEqual([20]*4,projection_load(session.store))
+            self.assertEqual([],active);self.assertEqual(80,len(opened))
             self.assertEqual(20,len(session.store.events(100)))
+        # Successful concurrent work must survive close/reopen, not merely leave
+        # a count in an in-memory session. No database cleanup until all joined.
+        with ComposedSession(vars(app),tickets=CleanupTickets(),store_factory=durable_store(path)) as reopened:
+            self.assertEqual(20,len(reopened.store.events(100)))
 
     def test_nested_control_plane_callback_does_not_wait_for_its_own_owner_fence(self):
         result=[]
