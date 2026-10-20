@@ -64,9 +64,11 @@ def no_credentials(value):
                 walk(item)
         elif isinstance(node,list):
             for item in node:walk(item)
+        elif isinstance(node,str) and re.search(r'["\u0027][^"\u0027]*(?:token|secret|password|webhook|authorization|cookie)[^"\u0027]*["\u0027]\s*:',node,re.I):
+            raise SnapshotError('embedded_credential_field_forbidden')
     walk(value)
 
-def ops_projection(path,output):
+def ops_projection(path,output,prior=None):
     # Copy the main DB/WAL while stable. SQLite may write shared-memory even in
     # mode=ro; therefore no SQLite connection ever touches the production path.
     parts={};before={}
@@ -90,13 +92,22 @@ def ops_projection(path,output):
         try:
             names=[row[0] for row in db.execute("select name from sqlite_master where type='table'")]
             if set(names)-TABLES:raise ValueError('unexpected_ops_table')
-            result={}
+            result={};cursors={};rejected=0;prior=prior or {}
             for name in sorted(names):
-                cursor=db.execute('select * from "'+name+'"')
+                maximum=db.execute('select coalesce(max(rowid),0) from "'+name+'"').fetchone()[0]
+                start=prior.get(name,0) if name in {'events','task_history'} else 0
+                if not isinstance(start,int) or start<0 or start>maximum:start=0
+                cursor=db.execute('select * from "'+name+'" where rowid>?',(start,))
                 columns=[c[0] for c in cursor.description]
-                rows=[dict(zip(columns,row)) for row in cursor]
-                no_credentials(rows);result[name]=sorted(rows,key=encoded)
-            return encoded(result)
+                rows=[]
+                for row in cursor:
+                    row=dict(zip(columns,row))
+                    try:no_credentials(row)
+                    except SnapshotError:rejected+=1;continue
+                    rows.append(row)
+                result[name]=dict(mode='append-delta' if name in {'events','task_history'} else 'full-projection',afterRowId=start,throughRowId=maximum,rows=sorted(rows,key=encoded))
+                if name in {'events','task_history'}:cursors[name]=maximum
+            return encoded(result),cursors,rejected
         finally:db.close()
     finally:
         # Only our unique scratch children, never recursive deletion of sources.
@@ -146,8 +157,12 @@ def record(output,roots,*,quota=MAX_TOTAL,budget_seconds=20):
             except SnapshotError:problem('private_content_rejected')
             except (OSError,ValueError,UnicodeError):problem('unreadable_or_unaligned')
     try:
-        body=ops_projection(Path(roots['OPS'])/'data/ops.db',output)
-        if body is not None:store('OPS','data/ops.logical.json',body)
+        projection=ops_projection(Path(roots['OPS'])/'data/ops.db',output,cache.get('__ops_cursors__'))
+        if projection is not None:
+            body,cursors,rejected=projection
+            store('OPS','data/ops.logical.json',body)
+            if not exhausted:next_cache['__ops_cursors__']=cursors
+            if rejected:errors['private_database_rows_rejected']=rejected
     except SnapshotError:problem('private_database_content_rejected')
     except (OSError,ValueError,sqlite3.Error):problem('database_unaligned_or_unavailable')
     if budget_hit:

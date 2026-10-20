@@ -44,4 +44,17 @@ class PassiveTests(unittest.TestCase):
    self.assertGreater(result['fileCount'],0)
    result=m.record(base/'out',roots,budget_seconds=0)
    self.assertTrue(result['budgetHit']);self.assertFalse(result['comparable'])
+ def test_append_history_is_incremental_and_embedded_tokens_rejected(self):
+  with tempfile.TemporaryDirectory() as td:
+   base=Path(td);roots=self.roots(base);path=roots['OPS']/'data/ops.db';path.parent.mkdir()
+   with closing(sqlite3.connect(path)) as db:
+    db.execute('create table events(id integer primary key,message text)')
+    db.execute("insert into events(message) values('first')")
+    db.execute('insert into events(message) values(?)',('{"snapshotToken":"must-not-store"}',));db.commit()
+   m.record(base/'out',roots)
+   with closing(sqlite3.connect(path)) as db:db.execute("insert into events(message) values('second')");db.commit()
+   m.record(base/'out',roots)
+   objects=[p.read_bytes() for p in (base/'out'/'objects').iterdir()]
+   self.assertFalse(any(b'must-not-store' in body for body in objects))
+   self.assertTrue(any(b'"afterRowId":2' in body and b'second' in body and b'first' not in body for body in objects))
 if __name__=='__main__':unittest.main()
