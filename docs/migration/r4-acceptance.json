@@ -1,0 +1,13 @@
+{
+  "schema":1,
+  "module":"R4",
+  "developmentStatus":"candidate-and-protocol-adapter",
+  "isolation":{"status":"local-passed-ci-pending","frozenProfiles":20,"readTargets":28,"businessDifferences":0,"testCount":500,"skipped":1,"seconds":307.979},
+  "ruleMatrix":{"requiredRules":42,"allPositiveNegativeCasesVerified":false},
+  "realShadow":{"status":"not-run","fullBatchId":null,"mismatchCount":null},
+  "switch":{"executed":false,"enabled":false,"authorityHookInstalled":false},
+  "dependencies":["ops PR #43","workbench PR #30"],
+  "productionFilesChanged":false,
+  "homeProgramsRestarted":false,
+  "safeContinueRequested":false
+}
