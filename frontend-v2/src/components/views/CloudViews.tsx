@@ -1,3 +1,5 @@
+import AccountActions from "./AccountActions";
+import BackupAction from "./BackupAction";
 import { CommandActions, SubmissionCancellation } from "./CommandActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -16,7 +18,7 @@ import {
   formatDateTime,
 } from "@/data/legacy-formatters";
 import { commandLabels } from "./presentation";
-import { Panel, Status, Table, Empty, DisabledWrite, Field } from "./shared";
+import { Panel, Status, Table, Empty, Field, DisabledWrite } from "./shared";
 import { Button } from "@/components/ui/button";
 
 export function Freshness({ snapshot }: { snapshot: Snapshot }) {
@@ -64,7 +66,13 @@ export function Freshness({ snapshot }: { snapshot: Snapshot }) {
   );
 }
 
-export function SourcePanel({ snapshot }: { snapshot: Snapshot }) {
+export function SourcePanel({
+  snapshot,
+  reader = null,
+}: {
+  snapshot: Snapshot;
+  reader?: ReadClient | null;
+}) {
   const [tick, setTick] = useState(() => performance.now());
   useEffect(() => {
     const timer = setInterval(() => setTick(performance.now()), 1000);
@@ -157,8 +165,7 @@ export function SourcePanel({ snapshot }: { snapshot: Snapshot }) {
         })}
       </Table>
       <div className="data-actions">
-        <DisabledWrite>修改密码</DisabledWrite>
-        <DisabledWrite>退出登录</DisabledWrite>
+        <AccountActions reader={reader} />
       </div>
     </Panel>
   );
@@ -301,7 +308,7 @@ export function BackupPanel({ reader }: { reader: ReadClient | null }) {
                         下载 {name}
                       </a>
                     ))}
-                  <DisabledWrite>校验云端文件</DisabledWrite>
+                  <BackupAction reader={reader} packageId={t(item.packageId)} />
                 </div>
               </article>
             ))}
@@ -321,7 +328,7 @@ export function BackupPanel({ reader }: { reader: ReadClient | null }) {
           <Empty>{busy ? "正在读取…" : "展开后按需读取备份列表"}</Empty>
         )}
       </details>
-      <DisabledWrite>请求一次备份</DisabledWrite>
+      <BackupAction reader={reader} />
     </Panel>
   );
 }

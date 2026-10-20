@@ -3767,12 +3767,19 @@
         "name": "postJson",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/home-cleanup.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "async function postJson(url, payload, options = {}) { if (window.opsCloudPostJson) return window.opsCloudPostJson(url, payload); const timeoutMs = Number.isFinite(Number(options.timeoutMs)) ? Math.max(1000, Number(options.timeoutMs)) : 10000; const controller = new AbortController(); const timer = window.setTimeout(() => controller.abort(), timeoutMs); try { const response = await fetch(url, { method: \"POST\", headers: { \"Conte",
         "excerptStartLine": 1087,
         "excerptStartColumn": 1,
-        "excerptEndLine": 1115
+        "excerptEndLine": 1115,
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/home-cleanup.ts:105",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-172",
@@ -3781,12 +3788,19 @@
         "name": "匿名回调@1093",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/home-cleanup.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "() => controller.abort()",
         "excerptStartLine": 1093,
         "excerptStartColumn": 35,
-        "excerptEndLine": 1093
+        "excerptEndLine": 1093,
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/home-cleanup.ts:105",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-173",
@@ -4697,12 +4711,19 @@
         "name": "renderActionResult",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "function renderActionResult(id, result = {}) { const node = $(id); const stateName = String(result.state || \"idle\"); node.className = `action-result ${stateName === \"completed\" ? \"completed\" : stateName === \"failed\" ? \"failed\" : \"neutral\"}`; node.textContent = `${result.message || \"尚无操作记录\"}${result.updatedAt ? ` · ${formatDateTime(result.updatedAt)}` : \"\"}`; }",
         "excerptStartLine": 1549,
         "excerptStartColumn": 1,
-        "excerptEndLine": 1554
+        "excerptEndLine": 1554,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:259",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-214",
@@ -4711,12 +4732,19 @@
         "name": "renderHistoricalCloudVerification",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "function renderHistoricalCloudVerification(result = {}) { const stateName = String(result.state || \"idle\"); const total = Number(result.total ?? result.eligible ?? 0); const processed = Number(result.processed || 0); const verified = Number(result.verified || 0); const failed = Number(result.failed || 0); const summary = total ? ` · ${processed}/${total}，通过 ${verified}，失败 ${failed}` : \"\"; renderActionResult(\"historicalCloudVer",
         "excerptStartLine": 1556,
         "excerptStartColumn": 1,
-        "excerptEndLine": 1576
+        "excerptEndLine": 1576,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:259",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-215",
@@ -4837,12 +4865,19 @@
         "name": "匿名回调@1714",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2C",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "event => { state.date = event.target.value; state.historyExplicit = true; refresh(); }",
         "excerptStartLine": 1714,
         "excerptStartColumn": 52,
-        "excerptEndLine": 1718
+        "excerptEndLine": 1718,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-221",
@@ -4851,12 +4886,19 @@
         "name": "匿名回调@1719",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2C",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "event => { state.batchId = event.target.value; state.date = \"\"; state.historyExplicit = Boolean(state.batchId); refresh(); }",
         "excerptStartLine": 1719,
         "excerptStartColumn": 48,
-        "excerptEndLine": 1724
+        "excerptEndLine": 1724,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:29",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-222",
@@ -4865,12 +4907,19 @@
         "name": "匿名回调@1725",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2C",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "event => { state.step5Filter = event.target.value; renderTasks(state.step5Items); }",
         "excerptStartLine": 1725,
         "excerptStartColumn": 53,
-        "excerptEndLine": 1728
+        "excerptEndLine": 1728,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:324",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-223",
@@ -5840,12 +5889,19 @@
         "name": "匿名回调@2124",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。\")) return; if (!window.confirm(\"再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。\")) return; button.disabled = true; button.textContent = \"正在备份并重置…\"; try { const result = await postJson(\"/api/controls/testing/reset\", { confirm: \"RESET_TEST_RECORDS\" }); state.date = \"\"; state.batchId = \"\"; renderActionResult(\"resetR",
         "excerptStartLine": 2124,
         "excerptStartColumn": 56,
-        "excerptEndLine": 2150
+        "excerptEndLine": 2150,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:18",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-270",
@@ -5920,21 +5976,19 @@
         "name": "匿名回调@2",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "frontend-v2/src/test/admin.test.tsx"
         ],
         "detail": "() => { const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupBu",
-        "pr": 30,
-        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated",
+        "pr": 37,
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch",
         "excerptStartLine": 2,
         "excerptStartColumn": 2,
-        "excerptEndLine": 166
+        "excerptEndLine": 166,
+        "implementation": "frontend-v2/src/data/client.ts:3"
       },
       {
         "id": "FN-274",
@@ -5943,21 +5997,19 @@
         "name": "匿名回调@10",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
-          "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
         ],
         "detail": "event => { if (!event.target.closest('[data-cloud-account]') && !window.opsCloudAcceptForm?.(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); } }",
-        "pr": 30,
-        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated",
+        "pr": 37,
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch",
         "excerptStartLine": 10,
         "excerptStartColumn": 39,
-        "excerptEndLine": 12
+        "excerptEndLine": 12,
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37"
       },
       {
         "id": "FN-275",
@@ -6173,21 +6225,19 @@
         "name": "匿名回调@48",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "frontend-v2/src/test/admin.test.tsx"
         ],
         "detail": "async (input, init = {}) => { const url = new URL(input instanceof Request ? input.url : input, location.href); if (url.origin !== location.origin || !url.pathname.startsWith('/api/')) return original(input, init); const method = (init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase(); if (method !== 'GET') {if(window.opsCloudWriteFetch)return window.opsCloudWriteFetch(url.href,init);throw new Error('写",
-        "pr": 30,
-        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated",
+        "pr": 37,
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch",
         "excerptStartLine": 48,
         "excerptStartColumn": 18,
-        "excerptEndLine": 70
+        "excerptEndLine": 70,
+        "implementation": "frontend-v2/src/data/client.ts:3"
       },
       {
         "id": "FN-285",
@@ -6219,21 +6269,19 @@
         "name": "匿名回调@71",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "frontend-v2/src/test/admin.test.tsx"
         ],
         "detail": "() => { // The home H4 timer measures browser reception. Cloud reception is not a // fresh home scan: derive displayed age from cloud cache/source ages. const paintCloudAge=()=>{ if(!dashboardSample||typeof state==='undefined')return; const sample=dashboardSample;const since=(performance.now()-sample.received)/1000; const age=sample.age+since;const known=sample.sourceAge!==null&&Number.isFinite(sample.sourceAge)&&sample.source",
-        "pr": 30,
-        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated",
+        "pr": 37,
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch",
         "excerptStartLine": 71,
         "excerptStartColumn": 49,
-        "excerptEndLine": 165
+        "excerptEndLine": 165,
+        "implementation": "frontend-v2/src/data/client.ts:3"
       },
       {
         "id": "FN-287",
@@ -6265,12 +6313,19 @@
         "name": "credentials",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "async function credentials() { const response = await original('/auth/session'); if (!response.ok) throw new Error(); return response.json(); }",
         "excerptStartLine": 106,
         "excerptStartColumn": 5,
-        "excerptEndLine": 106
+        "excerptEndLine": 106,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-289",
@@ -6279,12 +6334,19 @@
         "name": "匿名回调@107",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "async () => { const info = await credentials(); await original('/auth/logout',{method:'POST',headers:{'X-CSRF-Token':info.csrf}}); location.assign('/login'); }",
         "excerptStartLine": 107,
         "excerptStartColumn": 22,
-        "excerptEndLine": 107
+        "excerptEndLine": 107,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-290",
@@ -6293,12 +6355,19 @@
         "name": "匿名回调@108",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "() => { if (account.querySelector('form')) return; const form = document.createElement('form'); for (const [name,label] of [['oldPassword','当前密码'],['newPassword','新密码（至少12个字符）']]) { const input = document.createElement('input'); input.type='password'; input.name=name; input.required=true; input.placeholder=label; input.maxLength=256; input.autocomplete=name==='newPassword'?'new-password':'current-password'; if(name==='newPassw",
         "excerptStartLine": 108,
         "excerptStartColumn": 24,
-        "excerptEndLine": 117
+        "excerptEndLine": 117,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-291",
@@ -6307,12 +6376,19 @@
         "name": "匿名回调@115",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "async event=>{event.preventDefault();submit.disabled=true;try{const info=await credentials();const response=await original('/auth/password',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(Object.fromEntries(new FormData(form)))});if(response.ok){form.reset();location.assign('/login');}else alert('未修改，请核对密码后重试');}finally{submit.disabled=false;}}",
         "excerptStartLine": 115,
         "excerptStartColumn": 21,
-        "excerptEndLine": 115
+        "excerptEndLine": 115,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-292",
@@ -6321,12 +6397,19 @@
         "name": "disableWrites",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "()=>{ const buttons=[...document.querySelectorAll('button[onclick], button[data-cloud-control], #createTaskForm button, #replenishForm button[type=\"submit\"]'),...writeIds.map(id=>document.getElementById(id)).filter(Boolean)]; for(const button of buttons) { const action=/^controlTask\\(this, '(start|cancel)'\\)$/.exec(button.getAttribute('onclick')||''); if(action){button.dataset.cloudControl=action[1];button.removeAttribute('onc",
         "excerptStartLine": 119,
         "excerptStartColumn": 25,
-        "excerptEndLine": 129
+        "excerptEndLine": 129,
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-293",
@@ -6335,12 +6418,19 @@
         "name": "匿名回调@120",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "id=>document.getElementById(id)",
         "excerptStartLine": 120,
         "excerptStartColumn": 176,
-        "excerptEndLine": 120
+        "excerptEndLine": 120,
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-294",
@@ -6349,12 +6439,19 @@
         "name": "pollHealth",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/useDashboard.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "async function pollHealth() { try { const response=await original('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}}); if(response.status===401){location.assign('/login');return;} if(!response.ok)throw new Error(); const health=await response.json(); const text=health.heartbeatAgeSeconds===null?'等待家里代理部署/连接':!health.agentOnline?'家里离线，距心跳 '+Math.floor(health.heartbeatAgeSeconds)+' 秒'",
         "excerptStartLine": 132,
         "excerptStartColumn": 5,
-        "excerptEndLine": 142
+        "excerptEndLine": 142,
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/useDashboard.ts:197",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-295",
@@ -6363,12 +6460,19 @@
         "name": "匿名回调@147",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/useDashboard.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "()=>{ if(typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'){ state.fullDashboardLoaded=false;void refresh(); } }",
         "excerptStartLine": 147,
         "excerptStartColumn": 17,
-        "excerptEndLine": 151
+        "excerptEndLine": 151,
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/useDashboard.ts:197",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-296",
@@ -6377,12 +6481,19 @@
         "name": "匿名回调@152",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "() => { const list=sourcePanel.querySelector('ul'); list.replaceChildren(); for (const [key,sample] of samples) { const age=Math.floor(sample.age+(performance.now()-sample.received)/1000); const row=document.createElement('li'); const parsed=new URL(key,location.origin); const names={'/api/health':'递交健康','/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/history':'历史任务箱',",
         "excerptStartLine": 152,
         "excerptStartColumn": 17,
-        "excerptEndLine": 164
+        "excerptEndLine": 164,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-297",
@@ -7545,12 +7656,19 @@
         "name": "匿名回调@2",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/console-admin.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "() => { const api = async (path, method = 'GET') => { const headers = {}; if (method !== 'GET') { const session = await fetch('/auth/session').then(r => r.json()); headers['X-CSRF-Token'] = session.csrf; } const response = await fetch(path, {method, headers}); if (!response.ok) throw new Error(`请求失败 (${response.status})`); return response.json(); }; const element = (tag, text) => { const node = document.createElement(tag); if ",
         "excerptStartLine": 2,
         "excerptStartColumn": 2,
-        "excerptEndLine": 68
+        "excerptEndLine": 68,
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/console-admin.ts:11",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-355",
@@ -7559,12 +7677,19 @@
         "name": "api",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/console-admin.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "async (path, method = 'GET') => { const headers = {}; if (method !== 'GET') { const session = await fetch('/auth/session').then(r => r.json()); headers['X-CSRF-Token'] = session.csrf; } const response = await fetch(path, {method, headers}); if (!response.ok) throw new Error(`请求失败 (${response.status})`); return response.json(); }",
         "excerptStartLine": 3,
         "excerptStartColumn": 15,
-        "excerptEndLine": 12
+        "excerptEndLine": 12,
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/console-admin.ts:11",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-356",
@@ -7573,12 +7698,19 @@
         "name": "匿名回调@6",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/console-admin.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "r => r.json()",
         "excerptStartLine": 6,
         "excerptStartColumn": 57,
-        "excerptEndLine": 6
+        "excerptEndLine": 6,
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/console-admin.ts:11",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-357",
@@ -7587,12 +7719,19 @@
         "name": "element",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "(tag, text) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; return node; }",
         "excerptStartLine": 13,
         "excerptStartColumn": 19,
-        "excerptEndLine": 17
+        "excerptEndLine": 17,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:215",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-358",
@@ -7601,12 +7740,19 @@
         "name": "show",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "async (body, message) => { try { const result = await api('/console/backups'); body.replaceChildren(); body.append(element('p', `仅台账和配置恢复；视频、草稿不在备份中。已用及预留 ${(result.usedReservedBytes / 1048576).toFixed(1)} MiB / ${(result.quotaBytes / 1e9).toFixed(0)} GB。`)); const phase = result.agentState?.phase || 'waiting_configuration'; const phases = {waiting_configuration: '等待本机配置恢复密钥', creating: '正在生成', uploading: '正在上传', completed: '最",
         "excerptStartLine": 18,
         "excerptStartColumn": 16,
-        "excerptEndLine": 49
+        "excerptEndLine": 49,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:215",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-359",
@@ -7615,12 +7761,19 @@
         "name": "匿名回调@32",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "p => p.name",
         "excerptStartLine": 32,
         "excerptStartColumn": 77,
-        "excerptEndLine": 32
+        "excerptEndLine": 32,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:215",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-360",
@@ -7629,12 +7782,19 @@
         "name": "匿名回调@39",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "async () => { verify.disabled = true; try { const checked = await api(`/console/backups/${item.packageId}/verify`, 'POST'); message.textContent = checked.verified ? `校验通过：${item.packageId}` : `校验失败：${item.packageId}`; } catch (error) { message.textContent = error.message; } finally { verify.disabled = false; } }",
         "excerptStartLine": 39,
         "excerptStartColumn": 26,
-        "excerptEndLine": 44
+        "excerptEndLine": 44,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-361",
@@ -7643,12 +7803,19 @@
         "name": "匿名回调@47",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "e => `${new Date(e.at * 1000).toLocaleString()} ${e.code}`",
         "excerptStartLine": 47,
         "excerptStartColumn": 89,
-        "excerptEndLine": 47
+        "excerptEndLine": 47,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-362",
@@ -7657,12 +7824,19 @@
         "name": "匿名回调@50",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "() => { const panel = element('details'); panel.id = 'cloudBackupPanel'; panel.style.cssText = 'margin:16px;padding:12px;border:1px solid #888;border-radius:8px;overflow-wrap:anywhere'; panel.append(element('summary', '异地备份（台账与配置）')); const refresh = element('button', '刷新列表'), request = element('button', '请求一次备份'); refresh.type = request.type = 'button'; const message = element('p'), body = element('div'); message.setAttribute",
         "excerptStartLine": 50,
         "excerptStartColumn": 49,
-        "excerptEndLine": 67
+        "excerptEndLine": 67,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-363",
@@ -7671,12 +7845,19 @@
         "name": "匿名回调@57",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "() => show(body, message)",
         "excerptStartLine": 57,
         "excerptStartColumn": 23,
-        "excerptEndLine": 57
+        "excerptEndLine": 57,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-364",
@@ -7685,12 +7866,19 @@
         "name": "匿名回调@58",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "async () => { request.disabled = true; try { await api('/console/backups/request', 'POST'); message.textContent = '请求已排队；代理配置就绪后执行。稍后刷新列表查看。'; } catch (error) { message.textContent = error.message; } finally { request.disabled = false; } }",
         "excerptStartLine": 58,
         "excerptStartColumn": 23,
-        "excerptEndLine": 63
+        "excerptEndLine": 63,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-365",
@@ -7699,12 +7887,19 @@
         "name": "匿名回调@65",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
         "detail": "() => { if (panel.open) show(body, message); }",
         "excerptStartLine": 65,
         "excerptStartColumn": 38,
-        "excerptEndLine": 65
+        "excerptEndLine": 65,
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "FN-366",
@@ -7712,13 +7907,15 @@
         "line": 3,
         "name": "匿名回调@3",
         "mode": "云端",
-        "planned": "V2-1",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
         "detail": "response => response.json()",
         "excerptStartLine": 3,
         "excerptStartColumn": 29,
-        "excerptEndLine": 3
+        "excerptEndLine": 3,
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "FN-367",
@@ -7726,13 +7923,15 @@
         "line": 3,
         "name": "匿名回调@3",
         "mode": "云端",
-        "planned": "V2-1",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
         "detail": "data => { document.getElementById('registration').hidden = !data.registrationOpen; }",
         "excerptStartLine": 3,
         "excerptStartColumn": 63,
-        "excerptEndLine": 3
+        "excerptEndLine": 3,
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "FN-368",
@@ -7740,13 +7939,15 @@
         "line": 5,
         "name": "匿名回调@5",
         "mode": "云端",
-        "planned": "V2-1",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
         "detail": "async event => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'; return; } if (route === '/auth/login') location.assig",
         "excerptStartLine": 5,
         "excerptStartColumn": 58,
-        "excerptEndLine": 16
+        "excerptEndLine": 16,
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       }
     ],
     "interfaces": [
@@ -7831,9 +8032,16 @@
         "name": "fetch",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "fetch(url, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), signal: controller.signal, })"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/home-cleanup.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "fetch(url, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), signal: controller.signal, })",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/home-cleanup.ts:105",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-006",
@@ -8148,9 +8356,16 @@
         "name": "postJson",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "postJson(\"/api/controls/testing/reset\", { confirm: \"RESET_TEST_RECORDS\" })"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "postJson(\"/api/controls/testing/reset\", { confirm: \"RESET_TEST_RECORDS\" })",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:18",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-024",
@@ -8236,9 +8451,16 @@
         "name": "original",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "original('/auth/session')"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "original('/auth/session')",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-029",
@@ -8247,9 +8469,16 @@
         "name": "original",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "original('/auth/logout',{method:'POST',headers:{'X-CSRF-Token':info.csrf}})"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "original('/auth/logout',{method:'POST',headers:{'X-CSRF-Token':info.csrf}})",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-030",
@@ -8258,9 +8487,16 @@
         "name": "original",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "original('/auth/password',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(Object.fromEntries(new FormData(form)))})"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "original('/auth/password',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(Object.fromEntries(new FormData(form)))})",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-031",
@@ -8269,9 +8505,16 @@
         "name": "original",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "original('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}})"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/useDashboard.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "original('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}})",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/useDashboard.ts:197",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-032",
@@ -8521,9 +8764,16 @@
         "name": "fetch",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "fetch('/auth/session')"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/console-admin.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "fetch('/auth/session')",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/console-admin.ts:11",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-047",
@@ -8532,9 +8782,16 @@
         "name": "fetch",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "fetch(path, {method, headers})"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/console-admin.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "fetch(path, {method, headers})",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/console-admin.ts:11",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-048",
@@ -8543,9 +8800,16 @@
         "name": "api",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "api('/console/backups')"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "api('/console/backups')",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:215",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-049",
@@ -8554,9 +8818,16 @@
         "name": "api",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "api(`/console/backups/${item.packageId}/verify`, 'POST')"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "api(`/console/backups/${item.packageId}/verify`, 'POST')",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-050",
@@ -8565,9 +8836,16 @@
         "name": "api",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "api('/console/backups/request', 'POST')"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "api('/console/backups/request', 'POST')",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "NET-051",
@@ -8575,10 +8853,12 @@
         "line": 3,
         "name": "fetch",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "fetch('/auth/options')"
+        "detail": "fetch('/auth/options')",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "NET-052",
@@ -8586,10 +8866,12 @@
         "line": 10,
         "name": "fetch",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))})"
+        "detail": "fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))})",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       }
     ],
     "confirmations": [
@@ -8956,9 +9238,16 @@
         "name": "window.confirm",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "window.confirm(\"确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。\")"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "window.confirm(\"确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。\")",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:18",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "CONF-022",
@@ -8967,9 +9256,16 @@
         "name": "window.confirm",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "window.confirm(\"再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。\")"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "window.confirm(\"再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。\")",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:18",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "CONF-023",
@@ -8978,9 +9274,16 @@
         "name": "alert",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "alert('未修改，请核对密码后重试')"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "alert('未修改，请核对密码后重试')",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "CONF-024",
@@ -10142,9 +10445,16 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = running"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "button.disabled = running",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:259",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-053",
@@ -10227,9 +10537,16 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2C",
-        "implemented": false,
-        "evidence": [],
-        "detail": "state.refreshBusy = false"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "state.refreshBusy = false",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-058",
@@ -11006,9 +11323,16 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = true"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "button.disabled = true",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:18",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-102",
@@ -11017,9 +11341,16 @@
         "name": "状态/防重复约束",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = false"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "button.disabled = false",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:18",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-103",
@@ -11122,9 +11453,16 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled = true"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "button.disabled = true",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-109",
@@ -11133,9 +11471,16 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "submit.disabled=true"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "submit.disabled=true",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-110",
@@ -11144,9 +11489,16 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "submit.disabled=false"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "submit.disabled=false",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-111",
@@ -11155,9 +11507,16 @@
         "name": "条件门禁",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "!allowed"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "!allowed",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-112",
@@ -11166,9 +11525,16 @@
         "name": "条件门禁",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "!button.disabled"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "!button.disabled",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-113",
@@ -11177,9 +11543,16 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled=true"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "button.disabled=true",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-114",
@@ -11188,9 +11561,16 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "button.disabled=false"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "button.disabled=false",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-115",
@@ -11199,9 +11579,16 @@
         "name": "条件门禁",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/useDashboard.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/useDashboard.ts:197",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-116",
@@ -11210,9 +11597,16 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/useDashboard.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/useDashboard.ts:197",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-117",
@@ -12010,9 +12404,16 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "verify.disabled = true"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "verify.disabled = true",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-163",
@@ -12021,9 +12422,16 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "verify.disabled = false"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "verify.disabled = false",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-164",
@@ -12032,9 +12440,16 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "request.disabled = true"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "request.disabled = true",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-165",
@@ -12043,9 +12458,16 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "request.disabled = false"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "request.disabled = false",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "GUARD-166",
@@ -12053,10 +12475,12 @@
         "line": 8,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "button.disabled = true"
+        "detail": "button.disabled = true",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "GUARD-167",
@@ -12064,10 +12488,12 @@
         "line": 15,
         "name": "状态/防重复约束",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "button.disabled = false"
+        "detail": "button.disabled = false",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       }
     ],
     "elements": [
@@ -12078,9 +12504,16 @@
         "name": "header (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"topbar\" | OP 家庭 AI 视频生产线 监控与安全控制中心 正在"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/App.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"topbar\" | OP 家庭 AI 视频生产线 监控与安全控制中心 正在",
+        "pr": 37,
+        "implementation": "frontend-v2/src/App.tsx:155",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-002",
@@ -12089,9 +12522,16 @@
         "name": "section runtimeGuidance",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"runtimeGuidance\" class=\"runtime-guidance hidden\" aria-live=\"polite\" | 当前项目需要补链<"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"runtimeGuidance\" class=\"runtime-guidance hidden\" aria-live=\"polite\" | 当前项目需要补链<",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:43",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-003",
@@ -12100,9 +12540,16 @@
         "name": "section nextAction",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"nextAction\" class=\"runtime-guidance needs-action hidden\" aria-live=\"polite\" | 当前项目需要补链 -- <div id=\"gapQuickActions\" class=\"gap-quick-acti"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"nextAction\" class=\"runtime-guidance needs-action hidden\" aria-live=\"polite\" | 当前项目需要补链 -- <div id=\"gapQuickActions\" class=\"gap-quick-acti",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:43",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-004",
@@ -12128,9 +12575,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"hero panel\" | 当前生产状态 正在读取生产线 请稍候，Dashboard 正在汇总全部环节状态。 远程总控 可确"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"hero panel\" | 当前生产状态 正在读取生产线 请稍候，Dashboard 正在汇总全部环节状态。 远程总控 可确",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:43",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-006",
@@ -12139,9 +12593,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel taskbox-panel\" aria-label=\"任务箱总览\" | TASK BOX 正在读取任务箱 任务箱 </l"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel taskbox-panel\" aria-label=\"任务箱总览\" | TASK BOX 正在读取任务箱 任务箱 </l",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:29",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-007",
@@ -12150,9 +12611,16 @@
         "name": "select taskBoxSelect",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"taskBoxSelect\" aria-label=\"选择任务箱\" | 本次项目组合：-- 项目进度 0 / 0 </div"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"taskBoxSelect\" aria-label=\"选择任务箱\" | 本次项目组合：-- 项目进度 0 / 0 </div",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:29",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-008",
@@ -12161,9 +12629,16 @@
         "name": "details taskBoxHistory",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"taskBoxHistory\" class=\"taskbox-history hidden\" | 撤回历史 0 <section id=\"healthPanel\" class=\"panel health-pan"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"taskBoxHistory\" class=\"taskbox-history hidden\" | 撤回历史 0 <section id=\"healthPanel\" class=\"panel health-pan",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:29",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-009",
@@ -12172,9 +12647,16 @@
         "name": "section healthPanel",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"healthPanel\" class=\"panel health-panel\" aria-label=\"系统健康\" aria-live=\"polite\" | HEALTH 系统健康 正在读取… <section class=\"metric"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"healthPanel\" class=\"panel health-panel\" aria-label=\"系统健康\" aria-live=\"polite\" | HEALTH 系统健康 正在读取… <section class=\"metric",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:604",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-010",
@@ -12183,9 +12665,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"metrics-grid\" aria-label=\"系统资源\" | C CPU -- 处理器占用 <ar"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"metrics-grid\" aria-label=\"系统资源\" | C CPU -- 处理器占用 <ar",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:604",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-011",
@@ -12194,9 +12683,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"metric-card\" | C CPU -- 处理器占用 <div class="
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"metric-card\" | C CPU -- 处理器占用 <div class=",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:604",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-012",
@@ -12205,9 +12701,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"metric-card\" | M 内存 -- 正在读取 <d"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"metric-card\" | M 内存 -- 正在读取 <d",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:604",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-013",
@@ -12216,9 +12719,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"metric-card\" | G GPU -- 正在检测显卡 <div clas"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"metric-card\" | G GPU -- 正在检测显卡 <div clas",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:604",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-014",
@@ -12227,9 +12737,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"metric-card\" | D 成片磁盘 -- 正在读取 <div cl"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"metric-card\" | D 成片磁盘 -- 正在读取 <div cl",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:604",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-015",
@@ -12238,9 +12755,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"metric-card\" | N 网络 -- 正在检查网卡"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"metric-card\" | N 网络 -- 正在检查网卡",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:604",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-016",
@@ -12249,9 +12773,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel pipeline-panel\" | VIDEO PIPELINE 全流程状态 查看日期 <select id=\"pipeline"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel pipeline-panel\" | VIDEO PIPELINE 全流程状态 查看日期 <select id=\"pipeline",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-017",
@@ -12260,9 +12791,16 @@
         "name": "select pipelineDateSelect",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"pipelineDateSelect\" aria-label=\"全流程查看日期\" | 工作台 · 检查中 语音客户端 · 检查中 <s"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"pipelineDateSelect\" aria-label=\"全流程查看日期\" | 工作台 · 检查中 语音客户端 · 检查中 <s",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-018",
@@ -12271,9 +12809,16 @@
         "name": "article stageDownload",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"stageDownload\" class=\"stage-monitor\" | 下载 / 去字幕 等待 等待工作台状态 0 / 0"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"stageDownload\" class=\"stage-monitor\" | 下载 / 去字幕 等待 等待工作台状态 0 / 0",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-019",
@@ -12282,9 +12827,16 @@
         "name": "article stageVoice",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"stageVoice\" class=\"stage-monitor\" | 批量语音 等待 等待语音任务 0 / 0 <str"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"stageVoice\" class=\"stage-monitor\" | 批量语音 等待 等待语音任务 0 / 0 <str",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-020",
@@ -12293,9 +12845,16 @@
         "name": "article stageStitch",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"stageStitch\" class=\"stage-monitor\" | AI 素材拼接 等待 等待拼接任务 0 / 0 <"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"stageStitch\" class=\"stage-monitor\" | AI 素材拼接 等待 等待拼接任务 0 / 0 <",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-021",
@@ -12304,9 +12863,16 @@
         "name": "article stageCapcut",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"stageCapcut\" class=\"stage-monitor\" | CapCut 自动剪辑 等待 等待第五步任务 0 / 0 <article id=\"stageUpload\" class=\"stage-monitor di"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"stageCapcut\" class=\"stage-monitor\" | CapCut 自动剪辑 等待 等待第五步任务 0 / 0 <article id=\"stageUpload\" class=\"stage-monitor di",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-022",
@@ -12315,9 +12881,16 @@
         "name": "article stageUpload",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"stageUpload\" class=\"stage-monitor disabled\" | 最终成片上传 未配置 上传服务尚未接入 0 / 0 <section id=\"downloadFailurePanel\" class"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"stageUpload\" class=\"stage-monitor disabled\" | 最终成片上传 未配置 上传服务尚未接入 0 / 0 <section id=\"downloadFailurePanel\" class",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-023",
@@ -12326,9 +12899,16 @@
         "name": "section downloadFailurePanel",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"downloadFailurePanel\" class=\"download-failure-panel hidden\" aria-live=\"polite\" | 下载 / 去字幕失败任务 0 条 这些链接未进入后续语音、拼接与剪辑；补链或重试后再继续。"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"downloadFailurePanel\" class=\"download-failure-panel hidden\" aria-live=\"polite\" | 下载 / 去字幕失败任务 0 条 这些链接未进入后续语音、拼接与剪辑；补链或重试后再继续。",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-024",
@@ -12337,9 +12917,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel safety-panel\" aria-label=\"生产安全\" | PRODUCTION SAFETY 生产安全 正在读取确定性检查… <div id=\"safetyGrid\" class=\"safety"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel safety-panel\" aria-label=\"生产安全\" | PRODUCTION SAFETY 生产安全 正在读取确定性检查… <div id=\"safetyGrid\" class=\"safety",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:119",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-025",
@@ -12348,9 +12935,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"safety-card neutral\" | 去字幕质检 正在读取… 自动安全恢复 正在读取… 成片质检 正在读取… </arti"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"safety-card neutral\" | 去字幕质检 正在读取… 自动安全恢复 正在读取… 成片质检 正在读取… </arti",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:119",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-026",
@@ -12359,9 +12953,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"safety-card neutral\" | 自动安全恢复 正在读取… 成片质检 正在读取… 版本与配置 正在读取… </arti"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"safety-card neutral\" | 自动安全恢复 正在读取… 成片质检 正在读取… 版本与配置 正在读取… </arti",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:119",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-027",
@@ -12370,9 +12971,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"safety-card neutral\" | 成片质检 正在读取… 版本与配置 正在读取… 云端对账 正在读取… </articl"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"safety-card neutral\" | 成片质检 正在读取… 版本与配置 正在读取… 云端对账 正在读取… </articl",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:119",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-028",
@@ -12381,9 +12989,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"safety-card neutral\" | 版本与配置 正在读取… 云端对账 正在读取… 磁盘预测 正在读取… </articl"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"safety-card neutral\" | 版本与配置 正在读取… 云端对账 正在读取… 磁盘预测 正在读取… </articl",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:119",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-029",
@@ -12392,9 +13007,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"safety-card neutral\" | 云端对账 正在读取… 磁盘预测 正在读取… 登录状态 正在读取… </article"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"safety-card neutral\" | 云端对账 正在读取… 磁盘预测 正在读取… 登录状态 正在读取… </article",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:119",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-030",
@@ -12403,9 +13025,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"safety-card neutral\" | 磁盘预测 正在读取… 登录状态 正在读取… 任务身份 正在读取… </article"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"safety-card neutral\" | 磁盘预测 正在读取… 登录状态 正在读取… 任务身份 正在读取… </article",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:119",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-031",
@@ -12414,9 +13043,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"safety-card neutral\" | 登录状态 正在读取… 任务身份 正在读取… 故障证据 正在读取… </article"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"safety-card neutral\" | 登录状态 正在读取… 任务身份 正在读取… 故障证据 正在读取… </article",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:119",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-032",
@@ -12425,9 +13061,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"safety-card neutral\" | 任务身份 正在读取… 故障证据 正在读取… 本区域全部来自本机确定性检查，正常查询消耗 0 模型 Token。 <"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"safety-card neutral\" | 任务身份 正在读取… 故障证据 正在读取… 本区域全部来自本机确定性检查，正常查询消耗 0 模型 Token。 <",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:119",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-033",
@@ -12436,9 +13079,16 @@
         "name": "article (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"safety-card neutral\" | 故障证据 正在读取… 本区域全部来自本机确定性检查，正常查询消耗 0 模型 Token。"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"safety-card neutral\" | 故障证据 正在读取… 本区域全部来自本机确定性检查，正常查询消耗 0 模型 Token。",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:119",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-034",
@@ -12447,9 +13097,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"workspace-grid\" | STEP 5 TASKS 第五步任务与进度 <span id=\"t"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"workspace-grid\" | STEP 5 TASKS 第五步任务与进度 <span id=\"t",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:324",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-035",
@@ -12458,9 +13115,16 @@
         "name": "select step5ProjectFilter",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"step5ProjectFilter\" aria-label=\"筛选第五步项目\" | 全部项目 总任务 0"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"step5ProjectFilter\" aria-label=\"筛选第五步项目\" | 全部项目 总任务 0",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:324",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-036",
@@ -12469,9 +13133,16 @@
         "name": "aside (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"side-column\" | CURRENT 当前第五步任务 等待 <"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"side-column\" | CURRENT 当前第五步任务 等待 <",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:268",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-037",
@@ -12480,9 +13151,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel current-card\" | CURRENT 当前第五步任务 等待 日期 -- <d"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel current-card\" | CURRENT 当前第五步任务 等待 日期 -- <d",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:268",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-038",
@@ -12491,9 +13169,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel upload-card\" | ↥ UPLOAD SERVICE 正在读取百度网盘状态 等待工作台上传服务写入状态。 检查中 <di"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel upload-card\" | ↥ UPLOAD SERVICE 正在读取百度网盘状态 等待工作台上传服务写入状态。 检查中 <di",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:268",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-039",
@@ -12536,9 +13221,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel draft-manager-card\" | CAPCUT DRAFTS CapCut 草稿管理 未读取"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel draft-manager-card\" | CAPCUT DRAFTS CapCut 草稿管理 未读取",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:268",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-042",
@@ -12547,9 +13239,16 @@
         "name": "button openDraftManagerButton",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"openDraftManagerButton\" class=\"primary wide\" type=\"button\" | 管理 CapCut 草稿 尚未手动清理 CapCut 草稿"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"openDraftManagerButton\" class=\"primary wide\" type=\"button\" | 管理 CapCut 草稿 尚未手动清理 CapCut 草稿",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:336",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-043",
@@ -12558,9 +13257,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel audio-manager-card\" | AUDIO FILES 音频文件管理 未读取 <p clas"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel audio-manager-card\" | AUDIO FILES 音频文件管理 未读取 <p clas",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:336",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-044",
@@ -12569,9 +13275,16 @@
         "name": "button openAudioManagerButton",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"openAudioManagerButton\" class=\"primary wide\" type=\"button\" | 管理音频文件 尚未手动清理音频"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"openAudioManagerButton\" class=\"primary wide\" type=\"button\" | 管理音频文件 尚未手动清理音频",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:336",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-045",
@@ -12580,9 +13293,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel production-manager-card\" | PRODUCTION FILES 生产文件管理 未读取"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel production-manager-card\" | PRODUCTION FILES 生产文件管理 未读取",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:336",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-046",
@@ -12591,9 +13311,16 @@
         "name": "button openProductionManagerButton",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2C",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"openProductionManagerButton\" class=\"primary wide\" type=\"button\" | 管理生产文件 尚未手动清理生产文件 待删区：读取中… <button id=\"emptyPendingDeleteButton\" clas"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"openProductionManagerButton\" class=\"primary wide\" type=\"button\" | 管理生产文件 尚未手动清理生产文件 待删区：读取中… <button id=\"emptyPendingDeleteButton\" clas",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:336",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-047",
@@ -12602,9 +13329,16 @@
         "name": "button emptyPendingDeleteButton",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2C",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"emptyPendingDeleteButton\" class=\"danger wide hidden\" type=\"button\" | 立即清空待删区 QUEUE CONTROL 任务确认与撤回 <p class=\"queue-contro"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"emptyPendingDeleteButton\" class=\"danger wide hidden\" type=\"button\" | 立即清空待删区 QUEUE CONTROL 任务确认与撤回 <p class=\"queue-contro",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:336",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-048",
@@ -12613,9 +13347,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel queue-control-card\" | QUEUE CONTROL 任务确认与撤回 只影响尚未开始的队列记录；不会删除视频、音频或素材。 <div id=\"queueActionResult\" class=\"act"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel queue-control-card\" | QUEUE CONTROL 任务确认与撤回 只影响尚未开始的队列记录；不会删除视频、音频或素材。 <div id=\"queueActionResult\" class=\"act",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-049",
@@ -12624,9 +13365,16 @@
         "name": "button continueCurrentButton",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2E",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"continueCurrentButton\" class=\"primary wide\" type=\"button\" | 安全继续当前项目 由家里工作台先核对正式清单；已有有效产物会跳过，数量不一致时会安全暂停。 尚未执行安全继续对账"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"continueCurrentButton\" class=\"primary wide\" type=\"button\" | 安全继续当前项目 由家里工作台先核对正式清单；已有有效产物会跳过，数量不一致时会安全暂停。 尚未执行安全继续对账",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-050",
@@ -12635,9 +13383,16 @@
         "name": "section continueResult",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"continueResult\" class=\"reconcile-result neutral\" | 尚未执行安全继续对账 重置全部测试记录 仅把工作台、接收器、Dashboard 与 CapCut 的任务记录备份"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"continueResult\" class=\"reconcile-result neutral\" | 尚未执行安全继续对账 重置全部测试记录 仅把工作台、接收器、Dashboard 与 CapCut 的任务记录备份",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-051",
@@ -12646,9 +13401,16 @@
         "name": "button resetTestRecordsButton",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "id=\"resetTestRecordsButton\" class=\"danger wide\" type=\"button\" | 重置全部测试记录 仅把工作台、接收器、Dashboard 与 CapCut 的任务记录备份后归零；不会删除媒体、素材、配置或校准。 尚未重置测试记录 <details class=\"web-task"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "id=\"resetTestRecordsButton\" class=\"danger wide\" type=\"button\" | 重置全部测试记录 仅把工作台、接收器、Dashboard 与 CapCut 的任务记录备份后归零；不会删除媒体、素材、配置或校准。 尚未重置测试记录 <details class=\"web-task",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-052",
@@ -12657,9 +13419,16 @@
         "name": "details (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"web-task-form\" | 新建项目任务 日期 项目<select id=\"createTemplate\" name=\"templateId\" requi"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"web-task-form\" | 新建项目任务 日期 项目<select id=\"createTemplate\" name=\"templateId\" requi",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:324",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-053",
@@ -12838,9 +13607,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel project-gaps-card\" | PROJECT STATUS 项目状态 正在读取项目状态… <section"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel project-gaps-card\" | PROJECT STATUS 项目状态 正在读取项目状态… <section",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:444",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-064",
@@ -12849,9 +13625,16 @@
         "name": "section (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "class=\"panel events-card\" | RECENT EVENTS 最近事件 正在读取事件… <dialog"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/Dashboard.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "class=\"panel events-card\" | RECENT EVENTS 最近事件 正在读取事件… <dialog",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/Dashboard.tsx:444",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-065",
@@ -13777,9 +14560,16 @@
         "name": "footer (无 id)",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": " | AI视频生产线 OPS · Tailscale安全控制 --"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/App.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": " | AI视频生产线 OPS · Tailscale安全控制 --",
+        "pr": 37,
+        "implementation": "frontend-v2/src/App.tsx:155",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "DOM-117",
@@ -13787,10 +14577,12 @@
         "line": 1,
         "name": "form loginForm",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "id=\"loginForm\" | 登录 用户名 密码 登录 <"
+        "detail": "id=\"loginForm\" | 登录 用户名 密码 登录 <",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "DOM-118",
@@ -13798,10 +14590,12 @@
         "line": 1,
         "name": "input username",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "name=\"username\" autocomplete=\"username\" maxlength=\"64\" required | 密码 登录 注册账号（需要邀请码） 用户名<i"
+        "detail": "name=\"username\" autocomplete=\"username\" maxlength=\"64\" required | 密码 登录 注册账号（需要邀请码） 用户名<i",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "DOM-119",
@@ -13809,10 +14603,12 @@
         "line": 1,
         "name": "input password",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "name=\"password\" type=\"password\" autocomplete=\"current-password\" maxlength=\"256\" required | 登录 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name=\"passw"
+        "detail": "name=\"password\" type=\"password\" autocomplete=\"current-password\" maxlength=\"256\" required | 登录 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name=\"passw",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "DOM-120",
@@ -13820,10 +14616,12 @@
         "line": 1,
         "name": "button (无 id)",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": " | 登录 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name=\"password\" type=\"passw"
+        "detail": " | 登录 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name=\"password\" type=\"passw",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "DOM-121",
@@ -13831,10 +14629,12 @@
         "line": 1,
         "name": "details registration",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "id=\"registration\" | 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name=\"password\" type=\"password\" autocomplete=\"new-password\" minlength=\"1"
+        "detail": "id=\"registration\" | 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name=\"password\" type=\"password\" autocomplete=\"new-password\" minlength=\"1",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "DOM-122",
@@ -13842,10 +14642,12 @@
         "line": 1,
         "name": "form registerForm",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "id=\"registerForm\" | 用户名 密码（至少12个字符） 邀请码<input n"
+        "detail": "id=\"registerForm\" | 用户名 密码（至少12个字符） 邀请码<input n",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "DOM-123",
@@ -13853,10 +14655,12 @@
         "line": 1,
         "name": "input username",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "name=\"username\" autocomplete=\"username\" maxlength=\"64\" required | 密码（至少12个字符） 邀请码"
+        "detail": "name=\"username\" autocomplete=\"username\" maxlength=\"64\" required | 密码（至少12个字符） 邀请码",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "DOM-124",
@@ -13864,10 +14668,12 @@
         "line": 1,
         "name": "input password",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "name=\"password\" type=\"password\" autocomplete=\"new-password\" minlength=\"12\" maxlength=\"256\" required | 邀请码 注册"
+        "detail": "name=\"password\" type=\"password\" autocomplete=\"new-password\" minlength=\"12\" maxlength=\"256\" required | 邀请码 注册",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "DOM-125",
@@ -13875,10 +14681,12 @@
         "line": 1,
         "name": "input invite",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "name=\"invite\" type=\"password\" autocomplete=\"off\" maxlength=\"256\" required | 注册"
+        "detail": "name=\"invite\" type=\"password\" autocomplete=\"off\" maxlength=\"256\" required | 注册",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "DOM-126",
@@ -13886,10 +14694,12 @@
         "line": 1,
         "name": "button (无 id)",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": " | 注册"
+        "detail": " | 注册",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       }
     ],
     "events": [
@@ -14008,9 +14818,16 @@
         "name": "window.setTimeout",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "window.setTimeout(() => controller.abort(), timeoutMs)"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/home-cleanup.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "window.setTimeout(() => controller.abort(), timeoutMs)",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/home-cleanup.ts:105",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-008",
@@ -14093,9 +14910,16 @@
         "name": "$(\"pipelineDateSelect\").addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2C",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"pipelineDateSelect\").addEventListener(\"change\", event => { state.date = event.target.value; state.historyExplicit = true; refresh(); })"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "$(\"pipelineDateSelect\").addEventListener(\"change\", event => { state.date = event.target.value; state.historyExplicit = true; refresh(); })",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:165",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-013",
@@ -14104,9 +14928,16 @@
         "name": "$(\"taskBoxSelect\")?.addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2C",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"taskBoxSelect\")?.addEventListener(\"change\", event => { state.batchId = event.target.value; state.date = \"\"; state.historyExplicit = Boolean(state.batchId); refresh(); })"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "$(\"taskBoxSelect\")?.addEventListener(\"change\", event => { state.batchId = event.target.value; state.date = \"\"; state.historyExplicit = Boolean(state.batchId); refresh(); })",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:29",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-014",
@@ -14115,9 +14946,16 @@
         "name": "$(\"step5ProjectFilter\")?.addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2C",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"step5ProjectFilter\")?.addEventListener(\"change\", event => { state.step5Filter = event.target.value; renderTasks(state.step5Items); })"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/TaskViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "$(\"step5ProjectFilter\")?.addEventListener(\"change\", event => { state.step5Filter = event.target.value; renderTasks(state.step5Items); })",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/TaskViews.tsx:324",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-015",
@@ -14679,9 +15517,16 @@
         "name": "$(\"resetTestRecordsButton\")?.addEventListener",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "$(\"resetTestRecordsButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。\")) return; if (!window.confirm(\"再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。\")) return; button.disabled = true; button.textContent = \"正在备份并重置…\"; try { const result = await postJson(\"/api/controls/testing/reset\", { confirm: \"RESET_TEST_RECORDS\" }); state.da"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "$(\"resetTestRecordsButton\")?.addEventListener(\"click\", async (event) => { const button = event.currentTarget; if (!window.confirm(\"确认把今天的测试任务记录备份后全部归零吗？视频、音频、素材、配置和校准都会保留。\")) return; if (!window.confirm(\"再次确认：Dashboard、工作台、接收器和 CapCut 的任务进度将从空状态重新开始。\")) return; button.disabled = true; button.textContent = \"正在备份并重置…\"; try { const result = await postJson(\"/api/controls/testing/reset\", { confirm: \"RESET_TEST_RECORDS\" }); state.da",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:18",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-047",
@@ -14821,9 +15666,16 @@
         "name": "(() => {\r\n  const original = window.fetch.bind(window);\r\n  window.opsCloudNetwork=original;\r\n  const samples = new Map();\r\n  const inflight = new Map();\r\n  let sourcePanel, dashboardSample;\r\n  const refreshWatchers = new Map();\r\n  const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupButton','confirmAudioCleanupButton','previewProductionCleanupButton','confirmProductionCleanupButton'];\r\n  document.addEventListener('submit', event => {\r\n    if (!event.target.closest('[data-cloud-account]') && !window.opsCloudAcceptForm?.(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); }\r\n  }, true);\r\n  const wait = (ms, signal) => new Promise((resolve, reject) => {\r\n    if (signal?.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }\r\n    const abort = () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); };\r\n    const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, ms);\r\n    signal?.addEventListener('abort', abort, {once: true});\r\n  });\r\n  function observe(url, response) {\r\n    const age = response.headers.get('X-Cache-Age-Seconds');\r\n    if (age !== null) {\r\n      let health={};try{health=JSON.parse(response.headers.get('X-Source-Health')||'{}');}catch{}\r\n      samples.set(url, {age: Number(age), received: performance.now(), scan: response.headers.get('X-Source-Scanned-At') || '源扫描时间未知', sourceAge:typeof health.scanAgeSeconds==='number'?health.scanAgeSeconds:null});\r\n      const path=new URL(url,location.origin).pathname;\r\n      if(path==='/api/dashboard'||path==='/api/dashboard/summary')dashboardSample=samples.get(url);\r\n    }\r\n  }\r\n  function watchRefresh(key, response) {\r\n    if (response.headers.get('X-Cache-Refresh-Pending')!=='true'||refreshWatchers.has(key)) return;\r\n    const url=new URL(key,location.origin);const batch=url.searchParams.get('batchId');\r\n    if(url.pathname!=='/api/dashboard'||!batch)return;\r\n    const previous=response.headers.get('X-Cache-Version');const previousTag=response.headers.get('ETag');\r\n    const watch=(async()=>{\r\n      for(let attempt=0;attempt<60;attempt++){\r\n        await wait(1000);\r\n        if(document.visibilityState!=='visible')return;\r\n        if(typeof state==='undefined'||state.batchId!==batch)return;\r\n        const newer=await original(key,{headers:{'X-Ops-Page-Visible':'true'}});\r\n        if(newer.status===401){location.assign('/login');return;}\r\n        if(newer.status===200&&(newer.headers.get('X-Cache-Version')!==previous||newer.headers.get('ETag')!==previousTag)){\r\n          if(!state.refreshBusy&&typeof refresh==='function'){state.fullDashboardLoaded=false;await refresh();}\r\n          return;\r\n        }\r\n      }\r\n    })().catch(()=>{}).finally(()=>refreshWatchers.delete(key));\r\n    refreshWatchers.set(key,watch);\r\n  }\r\n  window.fetch = async (input, init = {}) => {\r\n    const url = new URL(input instanceof Request ? input.url : input, location.href);\r\n    if (url.origin !== location.origin || !url.pathname.startsWith('/api/')) return original(input, init);\r\n    const method = (init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();\r\n    if (method !== 'GET') {if(window.opsCloudWriteFetch)return window.opsCloudWriteFetch(url.href,init);throw new Error('写命令尚未启用');}\r\n    init={...init,headers:new Headers(init.headers || (input instanceof Request ? input.headers : undefined))};\r\n    init.headers.set('X-Ops-Page-Visible',String(document.visibilityState==='visible'));\r\n    const key = url.pathname + url.search;\r\n    // Coalesce browser retries too; the cloud independently coalesces all devices.\r\n    if (inflight.has(key)) return (await inflight.get(key)).clone();\r\n    const work = (async () => {\r\n      for (let attempt = 0; attempt < 120; attempt++) {\r\n        const response = await original(input, init);\r\n        if (response.status === 401) { location.assign('/login'); throw new Error('请重新登录'); }\r\n        if (response.status !== 202) { observe(key, response); watchRefresh(key,response); return response; }\r\n        // A pending envelope is never delivered to the old business renderer.\r\n        await wait(500, init.signal || (input instanceof Request ? input.signal : undefined));\r\n      }\r\n      throw new Error('正在向家里取数，稍后自动刷新；已有数据显示保留');\r\n    })();\r\n    inflight.set(key, work);\r\n    try { return (await work).clone(); } finally { inflight.delete(key); }\r\n  };\r\n  document.addEventListener('DOMContentLoaded', () => {\r\n    // The home H4 timer measures browser reception. Cloud reception is not a\r\n    // fresh home scan: derive displayed age from cloud cache/source ages.\r\n    const paintCloudAge=()=>{\r\n      if(!dashboardSample||typeof state==='undefined')return;\r\n      const sample=dashboardSample;const since=(performance.now()-sample.received)/1000;\r\n      const age=sample.age+since;const known=sample.sourceAge!==null&&Number.isFinite(sample.sourceAge)&&sample.sourceAge>=0;\r\n      const effective=known?sample.sourceAge+age:null;\r\n      state.freshnessReceivedAt=known?new Date(Date.now()-effective*1000):null;\r\n      state.freshnessReceivedTick=performance.now()-(effective??age)*1000;\r\n      state.freshnessStartedAt=state.freshnessReceivedTick;\r\n      updateDataFreshness();\r\n      const node=document.getElementById('dataFreshness');node.title='云端缓存：年龄包含家里扫描至取数的间隔及云端缓存时间，收到缓存不代表实时';\r\n      if(!known){\r\n        document.getElementById('lastUpdated').textContent='源扫描时间未知';\r\n        document.getElementById('freshnessAge').textContent='（该版本最近取数 '+Math.floor(age)+' 秒前）';\r\n        node.classList.add('warning');document.getElementById('freshnessWarning').hidden=false;\r\n      }\r\n    };\r\n    recordDashboardReception=paintCloudAge;\r\n    paintCloudAge();setInterval(paintCloudAge,1000);\r\n    sourcePanel = document.createElement('details'); sourcePanel.open = true;\r\n    sourcePanel.style.cssText = 'margin:12px;padding:12px;background:#fff5cf;color:#513f00;border-radius:8px';\r\n    const summary = document.createElement('summary'); summary.textContent = '云端只读预览 · 家里代理部署前等待取数 · 写命令尚未启用';\r\n    const explanation=document.createElement('p'); explanation.textContent='列表记录本页读到的各份数据；切换日期后旧条目会保留，请以当前所选看板为准。';\r\n    sourcePanel.append(summary, explanation, document.createElement('ul')); document.body.prepend(sourcePanel);\r\n    const forced=new WeakSet();\r\n    for (const id of writeIds) {\r\n      const button = document.getElementById(id); if (button) { forced.add(button); button.disabled = true; button.title = '当前云端为只读里程碑'; }\r\n    }\r\n    const account = document.createElement('details');\r\n    account.dataset.cloudAccount='true';\r\n    const title = document.createElement('summary'); title.textContent = '账号'; account.append(title);\r\n    const password = document.createElement('button'); password.textContent = '修改密码';\r\n    const logout = document.createElement('button'); logout.textContent = '退出登录';\r\n    async function credentials() { const response = await original('/auth/session'); if (!response.ok) throw new Error(); return response.json(); }\r\n    logout.onclick = async () => { const info = await credentials(); await original('/auth/logout',{method:'POST',headers:{'X-CSRF-Token':info.csrf}}); location.assign('/login'); };\r\n    password.onclick = () => {\r\n      if (account.querySelector('form')) return;\r\n      const form = document.createElement('form');\r\n      for (const [name,label] of [['oldPassword','当前密码'],['newPassword','新密码（至少12个字符）']]) {\r\n        const input = document.createElement('input'); input.type='password'; input.name=name; input.required=true; input.placeholder=label; input.maxLength=256; input.autocomplete=name==='newPassword'?'new-password':'current-password'; if(name==='newPassword') input.minLength=12; form.append(input);\r\n      }\r\n      const submit=document.createElement('button'); submit.textContent='提交修改'; form.append(submit);\r\n      form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;try{const info=await credentials();const response=await original('/auth/password',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(Object.fromEntries(new FormData(form)))});if(response.ok){form.reset();location.assign('/login');}else alert('未修改，请核对密码后重试');}finally{submit.disabled=false;}};\r\n      account.append(form);\r\n    };\r\n    account.append(password,logout); sourcePanel.append(account);\r\n    const disableWrites=()=>{\r\n      const buttons=[...document.querySelectorAll('button[onclick], button[data-cloud-control], #createTaskForm button, #replenishForm button[type=\"submit\"]'),...writeIds.map(id=>document.getElementById(id)).filter(Boolean)];\r\n      for(const button of buttons) {\r\n        const action=/^controlTask\\(this, '(start|cancel)'\\)$/.exec(button.getAttribute('onclick')||'');\r\n        if(action){button.dataset.cloudControl=action[1];button.removeAttribute('onclick');}\r\n        if(button.getAttribute('onclick')==='openReplenishment(this.dataset.taskId)'){button.dataset.cloudControl='replenish-open';button.removeAttribute('onclick');}\r\n        const allowed=window.opsCloudCanWrite?.(button)===true;\r\n        if(!allowed){if(!button.disabled){forced.add(button);button.disabled=true;}button.title='云端执行通道未就绪、数据过期或有待对账命令；清理需新版代理、Dashboard、有效预览和清理开关';}\r\n        else if(forced.has(button)){forced.delete(button);button.disabled=false;button.title='';}\r\n      }\r\n    };\r\n    window.addEventListener('ops-cloud-write-state',disableWrites);\r\n    disableWrites(); new MutationObserver(disableWrites).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});\r\n    async function pollHealth() {\r\n      try {\r\n        const response=await original('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}});\r\n        if(response.status===401){location.assign('/login');return;}\r\n        if(!response.ok)throw new Error();\r\n        const health=await response.json();\r\n        const text=health.heartbeatAgeSeconds===null?'等待家里代理部署/连接':!health.agentOnline?'家里离线，距心跳 '+Math.floor(health.heartbeatAgeSeconds)+' 秒':health.engineState==='healthy'?'家里在线':health.engineState==='busy'?'引擎忙，保留已有数据':'代理在线，旧引擎状态不可用/尚待确认';\r\n        summary.textContent='云端缓存 · '+text+' · '+(health.executorAvailable?(health.commandsPaused?'命令下发已暂停':'命令通道已部署'):'等待 Claude 部署命令代理');\r\n        sourcePanel.style.background=health.agentOnline&&health.engineState==='healthy'?'#e8f5e9':'#fff0ee';\r\n      } catch {summary.textContent='云端连接暂不可用，已有数据可能过期';sourcePanel.style.background='#fff0ee';}\r\n    }\r\n    pollHealth();setInterval(pollHealth,5000);\r\n    // The old page switches to summary-only polling after its first full load.\r\n    // Refresh the full cached page independently so events/templates/history do\r\n    // not silently depend on summary changes. This only requests the cloud.\r\n    setInterval(()=>{\r\n      if(typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'){\r\n        state.fullDashboardLoaded=false;void refresh();\r\n      }\r\n    },60000);\r\n    setInterval(() => {\r\n      const list=sourcePanel.querySelector('ul'); list.replaceChildren();\r\n      for (const [key,sample] of samples) {\r\n        const age=Math.floor(sample.age+(performance.now()-sample.received)/1000); const row=document.createElement('li');\r\n        const parsed=new URL(key,location.origin);\r\n        const names={'/api/health':'递交健康','/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/history':'历史任务箱','/api/controls/tasks':'任务队列','/api/controls/templates':'任务模板','/api/safety':'安全面板','/api/project-gaps':'项目缺口','/api/pipeline':'历史流水线','/api/controls/continue-current/status':'恢复状态','/api/control-commands/current':'命令状态','/api/subtitle-verification/current':'字幕核验'};\r\n        const name=(names[parsed.pathname]||'页面数据')+(parsed.searchParams.get('date')?' '+parsed.searchParams.get('date'):'');\r\n        const stamp=new Date(sample.scan);\r\n        const effective=sample.sourceAge===null?null:sample.sourceAge+age;\r\n        row.textContent=name+'：'+(Number.isNaN(stamp.getTime())||effective===null?'源扫描时间未知，该版本最近取数 '+age+' 秒前':'数据截至 '+stamp.toLocaleTimeString('zh-CN',{hour12:false})+'（'+Math.floor(effective)+' 秒前）；该版本最近取数 '+age+' 秒前');\r\n        row.style.color=age>120||(effective!==null&&effective>120)?'#b42318':age>30||effective===null||effective>30?'#8a5c00':'#38533a'; list.append(row);\r\n      }\r\n    },1000);\r\n  });\r\n})",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "(() => { const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupB"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/client.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "(() => { const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupB",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/client.ts:3",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-055",
@@ -14832,18 +15684,16 @@
         "name": "document.addEventListener",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
-          "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
         ],
         "detail": "document.addEventListener('submit', event => { if (!event.target.closest('[data-cloud-account]') && !window.opsCloudAcceptForm?.(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); } }, true)",
-        "pr": 30,
-        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated"
+        "pr": 37,
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch",
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37"
       },
       {
         "id": "EVENT-056",
@@ -14892,18 +15742,16 @@
         "name": "document.addEventListener",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
+        "implemented": true,
         "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
           "frontend-v2/src/data/client.ts",
-          "frontend-v2/src/data/useDashboard.ts",
-          "frontend-v2/src/components/views/",
-          "frontend-v2/src/test/parity.test.tsx",
-          "frontend-v2/src/data/client.test.ts",
-          "frontend-v2/scripts/readonly-browser-check.cjs"
+          "frontend-v2/src/test/admin.test.tsx"
         ],
         "detail": "document.addEventListener('DOMContentLoaded', () => { // The home H4 timer measures browser reception. Cloud reception is not a // fresh home scan: derive displayed age from cloud cache/source ages. const paintCloudAge=()=>{ if(!dashboardSample||typeof state==='undefined')return; const sample=dashboardSample;const since=(performance.now()-sample.received)/1000; const age=sample.age+since;const known=sample.sourceAge!==null&&Nu",
-        "pr": 30,
-        "verification": "partial: read behavior covered by PR 30; wrapper/write/account behavior not fully migrated"
+        "pr": 37,
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch",
+        "implementation": "frontend-v2/src/data/client.ts:3"
       },
       {
         "id": "EVENT-059",
@@ -14912,9 +15760,16 @@
         "name": "setInterval",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "setInterval(paintCloudAge,1000)"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/client.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "setInterval(paintCloudAge,1000)",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/client.ts:3",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-060",
@@ -14923,9 +15778,16 @@
         "name": "window.addEventListener",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "window.addEventListener('ops-cloud-write-state',disableWrites)"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "window.addEventListener('ops-cloud-write-state',disableWrites)",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-061",
@@ -14934,9 +15796,16 @@
         "name": "new MutationObserver(disableWrites).observe",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "new MutationObserver(disableWrites).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']})"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/upload-writer.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "new MutationObserver(disableWrites).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']})",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/upload-writer.ts:37",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-062",
@@ -14945,9 +15814,16 @@
         "name": "setInterval",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "setInterval(pollHealth,5000)"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/useDashboard.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "setInterval(pollHealth,5000)",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/useDashboard.ts:197",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-063",
@@ -14956,9 +15832,16 @@
         "name": "setInterval",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "setInterval(()=>{ if(typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'){ state.fullDashboardLoaded=false;void refresh(); } },60000)"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/useDashboard.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "setInterval(()=>{ if(typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'){ state.fullDashboardLoaded=false;void refresh(); } },60000)",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/useDashboard.ts:197",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-064",
@@ -14967,9 +15850,16 @@
         "name": "setInterval",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "setInterval(() => { const list=sourcePanel.querySelector('ul'); list.replaceChildren(); for (const [key,sample] of samples) { const age=Math.floor(sample.age+(performance.now()-sample.received)/1000); const row=document.createElement('li'); const parsed=new URL(key,location.origin); const names={'/api/health':'递交健康','/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/histo"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "setInterval(() => { const list=sourcePanel.querySelector('ul'); list.replaceChildren(); for (const [key,sample] of samples) { const age=Math.floor(sample.age+(performance.now()-sample.received)/1000); const row=document.createElement('li'); const parsed=new URL(key,location.origin); const names={'/api/health':'递交健康','/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/histo",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-065",
@@ -15153,9 +16043,16 @@
         "name": "(() => {\r\n  const api = async (path, method = 'GET') => {\r\n    const headers = {};\r\n    if (method !== 'GET') {\r\n      const session = await fetch('/auth/session').then(r => r.json());\r\n      headers['X-CSRF-Token'] = session.csrf;\r\n    }\r\n    const response = await fetch(path, {method, headers});\r\n    if (!response.ok) throw new Error(`请求失败 (${response.status})`);\r\n    return response.json();\r\n  };\r\n  const element = (tag, text) => {\r\n    const node = document.createElement(tag);\r\n    if (text !== undefined) node.textContent = text;\r\n    return node;\r\n  };\r\n  const show = async (body, message) => {\r\n    try {\r\n      const result = await api('/console/backups');\r\n      body.replaceChildren();\r\n      body.append(element('p', `仅台账和配置恢复；视频、草稿不在备份中。已用及预留 ${(result.usedReservedBytes / 1048576).toFixed(1)} MiB / ${(result.quotaBytes / 1e9).toFixed(0)} GB。`));\r\n      const phase = result.agentState?.phase || 'waiting_configuration';\r\n      const phases = {waiting_configuration: '等待本机配置恢复密钥', creating: '正在生成', uploading: '正在上传', completed: '最近一次已上传', failed: '备份失败，请检查代理状态'};\r\n      body.append(element('p', `家里备份：${phases[phase] || phase}。${result.recipientConfigured ? '云端已登记公钥。' : '云端尚未登记公钥。'}`));\r\n      body.append(element('p', `实际保留日期：${result.retainedDates.join('、') || '尚无备份'}`));\r\n      if (!result.items.length) body.append(element('p', '尚无已完成的备份包；未完成上传不会显示为可恢复备份。'));\r\n      for (const item of result.items) {\r\n        const row = element('div');\r\n        row.style.cssText = 'padding:8px 0;border-bottom:1px solid #888';\r\n        row.append(element('p', `${item.kind === 'home' ? '家里台账/配置' : '云端数据库'} · ${item.date} · ${(item.bytes / 1048576).toFixed(2)} MiB · ${item.packageId}`));\r\n        for (const name of ['manifest.json', ...item.manifest.artifacts.map(p => p.name)]) {\r\n          const link = element('a', `下载 ${name}`);\r\n          link.href = `/console/backups/${item.packageId}/${name}`;\r\n          link.download = name; link.style.marginRight = '16px'; row.append(link);\r\n        }\r\n        const verify = element('button', '校验云端文件');\r\n        verify.type = 'button';\r\n        verify.onclick = async () => {\r\n          verify.disabled = true;\r\n          try { const checked = await api(`/console/backups/${item.packageId}/verify`, 'POST'); message.textContent = checked.verified ? `校验通过：${item.packageId}` : `校验失败：${item.packageId}`; }\r\n          catch (error) { message.textContent = error.message; }\r\n          finally { verify.disabled = false; }\r\n        };\r\n        row.append(verify); body.append(row);\r\n      }\r\n      if (result.events.length) body.append(element('p', '保留/容量事件：' + result.events.map(e => `${new Date(e.at * 1000).toLocaleString()} ${e.code}`).join('；')));\r\n    } catch (error) { message.textContent = error.message; }\r\n  };\r\n  document.addEventListener('DOMContentLoaded', () => {\r\n    const panel = element('details'); panel.id = 'cloudBackupPanel';\r\n    panel.style.cssText = 'margin:16px;padding:12px;border:1px solid #888;border-radius:8px;overflow-wrap:anywhere';\r\n    panel.append(element('summary', '异地备份（台账与配置）'));\r\n    const refresh = element('button', '刷新列表'), request = element('button', '请求一次备份');\r\n    refresh.type = request.type = 'button';\r\n    const message = element('p'), body = element('div'); message.setAttribute('role', 'status');\r\n    refresh.onclick = () => show(body, message);\r\n    request.onclick = async () => {\r\n      request.disabled = true;\r\n      try { await api('/console/backups/request', 'POST'); message.textContent = '请求已排队；代理配置就绪后执行。稍后刷新列表查看。'; }\r\n      catch (error) { message.textContent = error.message; }\r\n      finally { request.disabled = false; }\r\n    };\r\n    panel.append(refresh, request, message, body);\r\n    panel.addEventListener('toggle', () => { if (panel.open) show(body, message); });\r\n    document.body.append(panel);\r\n  });\r\n})",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "(() => { const api = async (path, method = 'GET') => { const headers = {}; if (method !== 'GET') { const session = await fetch('/auth/session').then(r => r.json()); headers['X-CSRF-Token'] = session.csrf; } const response = await fetch(path, {method, headers}); if (!response.ok) throw new Error(`请求失败 (${response.status})`); return response.json(); }; const element = (tag, text) => { const node = document.createElement(tag); if"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/console-admin.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "(() => { const api = async (path, method = 'GET') => { const headers = {}; if (method !== 'GET') { const session = await fetch('/auth/session').then(r => r.json()); headers['X-CSRF-Token'] = session.csrf; } const response = await fetch(path, {method, headers}); if (!response.ok) throw new Error(`请求失败 (${response.status})`); return response.json(); }; const element = (tag, text) => { const node = document.createElement(tag); if",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/console-admin.ts:11",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-076",
@@ -15164,9 +16061,16 @@
         "name": "document.addEventListener",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "document.addEventListener('DOMContentLoaded', () => { const panel = element('details'); panel.id = 'cloudBackupPanel'; panel.style.cssText = 'margin:16px;padding:12px;border:1px solid #888;border-radius:8px;overflow-wrap:anywhere'; panel.append(element('summary', '异地备份（台账与配置）')); const refresh = element('button', '刷新列表'), request = element('button', '请求一次备份'); refresh.type = request.type = 'button'; const message = element('p'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "document.addEventListener('DOMContentLoaded', () => { const panel = element('details'); panel.id = 'cloudBackupPanel'; panel.style.cssText = 'margin:16px;padding:12px;border:1px solid #888;border-radius:8px;overflow-wrap:anywhere'; panel.append(element('summary', '异地备份（台账与配置）')); const refresh = element('button', '刷新列表'), request = element('button', '请求一次备份'); refresh.type = request.type = 'button'; const message = element('p'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-077",
@@ -15175,9 +16079,16 @@
         "name": "panel.addEventListener",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "panel.addEventListener('toggle', () => { if (panel.open) show(body, message); })"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "panel.addEventListener('toggle', () => { if (panel.open) show(body, message); })",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "EVENT-078",
@@ -15185,10 +16096,12 @@
         "line": 5,
         "name": "document.getElementById(id).addEventListener",
         "mode": "云端",
-        "planned": "V2-1",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "document.getElementById(id).addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'"
+        "detail": "document.getElementById(id).addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       }
     ],
     "routes": [
@@ -15579,9 +16492,16 @@
         "name": "接口/动态路径",
         "mode": "两者（写操作按模式分流）",
         "planned": "V2-2B",
-        "implemented": false,
-        "evidence": [],
-        "detail": "\"/api/controls/testing/reset\""
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/ResetAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "\"/api/controls/testing/reset\"",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/ResetAction.tsx:18",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-023",
@@ -15687,9 +16607,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/auth/session'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/auth/session'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-029",
@@ -15698,9 +16625,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/auth/logout'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/auth/logout'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-030",
@@ -15709,9 +16643,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/auth/password'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/AccountActions.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/auth/password'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-031",
@@ -15720,9 +16661,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/status'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/useDashboard.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/console/status'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/useDashboard.ts:197",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-032",
@@ -15731,9 +16679,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/health'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/health'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-033",
@@ -15742,9 +16697,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/dashboard'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/dashboard'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-034",
@@ -15753,9 +16715,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/dashboard/summary'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/dashboard/summary'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-035",
@@ -15764,9 +16733,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/task-boxes/current'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/task-boxes/current'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-036",
@@ -15775,9 +16751,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/task-boxes/history'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/task-boxes/history'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-037",
@@ -15786,9 +16769,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/controls/tasks'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/controls/tasks'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-038",
@@ -15797,9 +16787,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/controls/templates'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/controls/templates'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-039",
@@ -15808,9 +16805,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/safety'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/safety'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-040",
@@ -15819,9 +16823,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/project-gaps'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/project-gaps'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-041",
@@ -15830,9 +16841,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/pipeline'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/pipeline'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-042",
@@ -15841,9 +16859,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/controls/continue-current/status'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/controls/continue-current/status'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-043",
@@ -15852,9 +16877,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/control-commands/current'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/control-commands/current'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-044",
@@ -15863,9 +16895,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-1",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/api/subtitle-verification/current'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/api/subtitle-verification/current'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-045",
@@ -16215,9 +17254,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/auth/session'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/data/console-admin.ts",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/auth/session'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/data/console-admin.ts:11",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-066",
@@ -16226,9 +17272,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/backups'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/console/backups'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:215",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-067",
@@ -16237,9 +17290,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "`/console/backups/${item.packageId}/${name}`"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/CloudViews.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "`/console/backups/${item.packageId}/${name}`",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/CloudViews.tsx:215",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-068",
@@ -16248,9 +17308,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "`/console/backups/${item.packageId}/verify`"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "`/console/backups/${item.packageId}/verify`",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-069",
@@ -16259,9 +17326,16 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-2F",
-        "implemented": false,
-        "evidence": [],
-        "detail": "'/console/backups/request'"
+        "implemented": true,
+        "evidence": [
+          "docs/v2/V2-2F_ADMIN_PARITY.md",
+          "frontend-v2/src/components/views/BackupAction.tsx",
+          "frontend-v2/src/test/admin.test.tsx"
+        ],
+        "detail": "'/console/backups/request'",
+        "pr": 37,
+        "implementation": "frontend-v2/src/components/views/BackupAction.tsx:15",
+        "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
       },
       {
         "id": "PATH-070",
@@ -16269,10 +17343,12 @@
         "line": 3,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "'/auth/options'"
+        "detail": "'/auth/options'",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "PATH-071",
@@ -16280,10 +17356,12 @@
         "line": 4,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "'/auth/login'"
+        "detail": "'/auth/login'",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "PATH-072",
@@ -16291,10 +17369,12 @@
         "line": 4,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "'/auth/register'"
+        "detail": "'/auth/register'",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       },
       {
         "id": "PATH-073",
@@ -16302,10 +17382,12 @@
         "line": 12,
         "name": "接口/动态路径",
         "mode": "云端",
-        "planned": "V2-2F",
+        "planned": "V2-4",
         "implemented": false,
         "evidence": [],
-        "detail": "'/auth/login'"
+        "detail": "'/auth/login'",
+        "disposition": "user-deferred-login-registration-2026-10-20",
+        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
       }
     ]
   }

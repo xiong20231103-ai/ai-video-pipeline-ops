@@ -1,3 +1,4 @@
+import ResetAction from "./ResetAction";
 import ContinueActions from "./ContinueActions";
 import FileManagers from "./FileManagers";
 import { uploadWriterFor } from "@/data/upload-writer";
@@ -27,7 +28,7 @@ import {
 import type { View } from "@/lib/preferences";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Panel, Status, Progress, Field, Empty, DisabledWrite } from "./shared";
+import { Panel, Status, Progress, Field, Empty } from "./shared";
 import {
   heroFor,
   metricValues,
@@ -332,12 +333,14 @@ function Upload({
   );
 }
 function ContinueStatus({
+  onReset,
   data,
   snapshot,
   reader,
   onResult,
   refresh,
 }: {
+  onReset: () => void;
   data: Row;
   snapshot: Snapshot;
   reader: ReadClient | null;
@@ -382,7 +385,11 @@ function ContinueStatus({
           onResult={onResult}
           refresh={refresh}
         />
-        <DisabledWrite>重置全部测试记录</DisabledWrite>
+        <ResetAction
+          reader={reader}
+          onReset={onReset}
+          initialResult={o(o(data.controls).resetRecords)}
+        />
       </div>
       <Status state={state}>
         {continueLabels[state] || state}
@@ -431,10 +438,6 @@ function ContinueStatus({
             : ""}
         </p>
       ) : null}
-      <Result
-        result={o(o(data.controls).resetRecords)}
-        fallback="尚未重置测试记录"
-      />
     </Panel>
   );
 }
@@ -561,6 +564,11 @@ export default function Dashboard({ view }: { view: View }) {
                 data={data}
                 snapshot={snapshot}
                 reader={reader.current}
+                onReset={() => {
+                  setDate("");
+                  setBatch("");
+                  refresh();
+                }}
                 onResult={acceptContinueResult}
                 refresh={refresh}
               />
@@ -583,7 +591,7 @@ export default function Dashboard({ view }: { view: View }) {
           )}
           {snapshot.mode === "cloud" && (
             <>
-              <SourcePanel snapshot={snapshot} />
+              <SourcePanel snapshot={snapshot} reader={reader.current} />
               {view === "health" && <BackupPanel reader={reader.current} />}
             </>
           )}

@@ -1,6 +1,6 @@
 {
   "index.html": {
-    "file": "assets/index-CN_pmWLY.js",
+    "file": "assets/index-CBEIi6Il.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -12,7 +12,7 @@
     ]
   },
   "src/components/views/Dashboard.tsx": {
-    "file": "assets/Dashboard-ByzN5-wp.js",
+    "file": "assets/Dashboard-ODgATomz.js",
     "name": "Dashboard",
     "src": "src/components/views/Dashboard.tsx",
     "isDynamicEntry": true,
