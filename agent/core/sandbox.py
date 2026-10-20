@@ -61,6 +61,18 @@ class SandboxIO:
                 parsed=urlsplit(path);mapped=Path(mapped).absolute().as_uri()+('?' + parsed.query if parsed.query else '')
             return original_connect(mapped,*args,**kwargs)
         for owner,name,fn in [(builtins,'open',file_open),(io,'open',io_open),(os,'open',os_open),(sqlite3,'connect',connect)]:self.stack.enter_context(patch.object(owner,name,fn))
+        for name in ('listdir','scandir','walk'):
+            original=getattr(os,name)
+            def directory(path='.',*args,_original=original,**kwargs):
+                if isinstance(path,int):self.deny('directory-descriptor')
+                return _original(self.check(path),*args,**kwargs)
+            self.stack.enter_context(patch.object(os,name,directory))
+        for name in ('exists','isfile','isdir','lexists'):
+            original=getattr(os.path,name)
+            def predicate(path,*args,_original=original,**kwargs):
+                if isinstance(path,int):self.deny('directory-descriptor')
+                return _original(self.check(path),*args,**kwargs)
+            self.stack.enter_context(patch.object(os.path,name,predicate))
         for name in ('resolve','stat','iterdir','glob','rglob'):
             original=getattr(Path,name)
             def wrapped(path,*args,_original=original,_name=name,**kwargs):
@@ -74,9 +86,10 @@ class SandboxIO:
                             return types.SimpleNamespace(st_mode=stat.S_IFDIR if node['kind']=='directory' else stat.S_IFREG,st_size=node.get('size',0),st_mtime=seconds,st_mtime_ns=ns,st_ctime=seconds,st_ctime_ns=ns,st_atime=seconds,st_atime_ns=ns)
                 return _original(Path(mapped),*args,**kwargs)
             self.stack.enter_context(patch.object(Path,name,wrapped))
-        for name in ('mkdir','unlink','rmdir','rename','replace','remove'):
+        for name in ('mkdir','unlink','rmdir','rename','replace','remove','utime','chmod'):
             original=getattr(os,name)
             def mutation(path,*args,_original=original,_name=name,**kwargs):
+                if isinstance(path,int):self.deny('directory-descriptor')
                 if any(kwargs.get(key) is not None for key in ('dir_fd','src_dir_fd','dst_dir_fd')):self.deny('directory-descriptor')
                 mapped=self.check(path,True)
                 if _name in {'rename','replace'}:args=(self.check(args[0],True),*args[1:])

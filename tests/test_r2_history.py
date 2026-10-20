@@ -166,6 +166,47 @@ class HistoryTests(unittest.TestCase):
             self.assertEqual(0,main(['verify-import','--package',str(package),'--new-db',str(database)]))
             with self.assertRaisesRegex(ValueError,'new_isolated'):main(['verify-import','--package',str(package),'--new-db',str(database)])
 
+    def test_ready_retention_supports_more_than_ten_imports_and_releases_quota(self):
+        previous=None;ids=[]
+        for sequence in range(1,16):
+            bundle=build_bundle(self.snapshot(),source='home',sequence=sequence,previous=previous)
+            self.install(bundle);ids.append(bundle['generationId']);previous=bundle
+        with self.store.db() as db:
+            self.assertEqual(set(ids[-3:]),{r[0] for r in db.execute('SELECT id FROM generations')})
+            for table in ('records','chunks','touched','changes'):
+                self.assertEqual(0,db.execute('SELECT count(*) FROM '+table+' WHERE generation=?',(ids[0],)).fetchone()[0])
+            reserved=db.execute('SELECT sum(reserved_bytes) FROM generations').fetchone()[0]
+            self.assertGreater(db.execute('SELECT count(*) FROM selections').fetchone()[0],10)
+        self.assertEqual(ids[-1],self.store.source('home')['active'])
+        with self.assertRaisesRegex(HistoryError,'generation_missing'):self.store.status(ids[0])
+        self.store.quota=reserved+1
+        next_bundle=build_bundle(self.snapshot(),source='home',sequence=16,previous=previous)
+        with self.assertRaisesRegex(HistoryError,'quota_exceeded'):self.store.begin(next_bundle['manifest'])
+    def test_retention_preserves_selected_old_generation_and_staging_base(self):
+        previous=None;bundles=[]
+        for sequence in range(1,5):
+            value=build_bundle(self.snapshot(),source='home',sequence=sequence,previous=previous)
+            self.install(value);bundles.append(value);previous=value
+        old=bundles[1]['generationId']
+        self.store.select('home',old,'ROLLBACK_HISTORY_SOURCE')
+        self.store.retain_ready=1
+        with self.store.db(True) as db:self.store._prune_ready(db,'home')
+        self.assertEqual('ready',self.store.status(old)['state'])
+        self.store.select('home',previous['generationId'],'ROLLBACK_HISTORY_SOURCE')
+        staged=build_bundle(self.snapshot(),source='home',sequence=20,previous=previous)
+        self.store.begin(staged['manifest'])
+        for sequence in range(21,26):
+            value=build_bundle(self.snapshot(),source='home',sequence=sequence,previous=previous)
+            self.install(value);previous=value
+        self.assertEqual('ready',self.store.status(bundles[-1]['generationId'])['state'])
+        self.assertEqual('staging',self.store.status(staged['generationId'])['state'])
+        self.store.discard_staging(staged['generationId'],'DISCARD_UNSELECTED_STAGING')
+        with self.store.db(True) as db:self.store._prune_ready(db,'home')
+        with self.assertRaisesRegex(HistoryError,'generation_missing'):self.store.status(bundles[-1]['generationId'])
+    def test_retention_setting_is_bounded(self):
+        for value in (0,9,True,'3'):
+            with self.assertRaises(ValueError):HistoryStore(self.root/'invalid.db',retain_ready=value)
+
 class TimelineTests(unittest.TestCase):
     def setUp(self):
         self.identity={'batchId':'fixture-batch','projectId':'fixture-project','videoId':'fixture-video','stage':'capcut','attemptId':'attempt-1','manifestId':'manifest-1'}
