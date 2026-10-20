@@ -56,13 +56,15 @@ def safe_json(body):
 
 def no_credentials(value):
     safe_facts(value)
-    if isinstance(value,dict):
-        for key,item in value.items():
-            if re.search(r'token|secret|password|webhook|authorization|cookie|invitation|authkey|api.?key',str(key),re.I):
-                raise SnapshotError('credential_field_forbidden')
-            no_credentials(item)
-    elif isinstance(value,list):
-        for item in value:no_credentials(item)
+    def walk(node):
+        if isinstance(node,dict):
+            for key,item in node.items():
+                if re.search(r'token|secret|password|webhook|authorization|cookie|invitation|authkey|api.?key',str(key),re.I):
+                    raise SnapshotError('credential_field_forbidden')
+                walk(item)
+        elif isinstance(node,list):
+            for item in node:walk(item)
+    walk(value)
 
 def ops_projection(path,output):
     # Copy the main DB/WAL while stable. SQLite may write shared-memory even in
