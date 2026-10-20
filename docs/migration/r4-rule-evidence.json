@@ -1,0 +1,612 @@
+{
+  "schema": 1,
+  "module": "R4",
+  "scope": "isolated-test-index-not-production-acceptance",
+  "rules": [
+    {
+      "id": "R4-01",
+      "rule": "只能通过允许的本地/Tailnet 入口操作；迁移后由云端登录和代理认证承担新边界，家里不接受任意 URL",
+      "source": "A:2790–2806、2840–2862",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_01_network_boundary_local_tailnet_and_public"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-02",
+      "rule": "接收器 schema≥3 且 reconciliationState=healthy 才有控制资格；不可用时保留可信展示，但禁用控制",
+      "source": "A:3684–3733、6339–6347、6380–6386",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_02_03_no_control_when_receiver_or_active_context_missing"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-03",
+      "rule": "当前任务首先服从工作台 current context；无明确 context 不把最新历史任务提升为控制对象；旧 context 指向终态时只允许唯一非终态箱的窄回退",
+      "source": "A:5067–5124",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_02_03_no_control_when_receiver_or_active_context_missing",
+        "ops:CandidateCompatibility.test_candidate_safe_continue_prefers_workbench_owned_older_unfinished_batch",
+        "ops:CandidateCompatibility.test_candidate_safe_continue_ignores_terminal_workbench_context"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-04",
+      "rule": "目标签名包括 batch/task/date/manifest/attempt/runGroup/batchKind/selectedProjects；选中项目集合规范化、去重排序",
+      "source": "A:316–340",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_04_05_scope_signatures_and_legacy_manifest_compatibility"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-05",
+      "rule": "旧命令缺 manifest/attempt 时保留兼容比较；批次/任务/日期及范围身份变化要区分，不能归为同一恢复",
+      "source": "A:343–365",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_04_05_scope_signatures_and_legacy_manifest_compatibility"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-06",
+      "rule": "归档副本保留原命令及原因、时间；过期邮箱兼容旧消费者；区分 helper 存在和当前入口实际调用",
+      "source": "A:368–398；当前路由 A:6339–6377、6401–6412",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_06_archive_preserves_original_and_retired_mailbox"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-07",
+      "rule": "相同 clientRequestId 返回原命令；同目标、未过期在途命令合流；重试不能生成新生产尝试",
+      "source": "A:459–472",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_07_08_inflight_and_legacy_mailbox_converge_without_second_request",
+        "ops:CandidateCompatibility.test_candidate_reused_request_id_for_another_project_is_rejected"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-08",
+      "rule": "与当前目标相同、未结束且近 300 秒的旧 requested/accepted/running/recovering 邮箱可导入队列，保持本地 ID",
+      "source": "A:473–494",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_07_08_inflight_and_legacy_mailbox_converge_without_second_request"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-09",
+      "rule": "新命令先落盘，再请求工作台；提交失败保留命令，不冒称执行成功",
+      "source": "A:495–530",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_09_request_failure_keeps_persisted_command_and_original_identity"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-10",
+      "rule": "提交借助工作台 RecoveryControl.enqueue_request，不直接覆盖生产邮箱；模块缺失/控制锁失败时返回错误",
+      "source": "A:426–456；RC:470–484",
+      "tests": [
+        "ops:CandidateCompatibility.test_candidate_missing_shared_recovery_module_rejects_before_receiver_start",
+        "workbench:RecoveryRequestTests.test_cancel_before_delivery_is_durable_idempotent_and_blocks_claim"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-11",
+      "rule": "工作台由接收器单实例启动路径管理，等待就绪最长 28 秒；启动失败保留结构化 code/log/error，不覆盖已由工作台推进的状态",
+      "source": "A:244–313",
+      "tests": [
+        "ops:CandidateCompatibility.test_candidate_continue_keeps_structured_receiver_startup_error",
+        "ops:CandidateCompatibility.test_candidate_continue_keeps_command_when_receiver_cannot_launch_workbench"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-12",
+      "rule": "邮箱只有 ID 匹配才合并；requested→receiver_acknowledged、accepted→workbench_acknowledged、running/recovering→executing、failed→blocked、cancelled→expired",
+      "source": "A:2126–2161",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_12_mailbox_mapping_requires_exact_command_id"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-13",
+      "rule": "persisted/receiver_acknowledged 超过 90 秒未领取过期；相应未执行态超过 300 秒过期；不能把执行中统一按 TTL 终止",
+      "source": "A:39–40、2162–2179",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_13_14_15_ttl_does_not_terminate_running_or_fresh_recovery"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-14",
+      "rule": "执行中的第1/2步过期需匹配任务、resumeInterrupted、相关状态更新时间晚于命令；旧阶段状态不能误杀新阶段恢复",
+      "source": "A:2217–2254",
+      "tests": [
+        "ops:CandidateCompatibility.test_candidate_executing_step12_command_expires_after_bridge_failure",
+        "ops:CandidateCompatibility.test_candidate_fresh_step12_session_keeps_executing_command_locked"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-15",
+      "rule": "第1/2步显式运行失败，或状态超过90秒且明确中断，才能解锁；新鲜子会话不能因工作台/云端猜测被解锁；失效要写回匹配邮箱，避免下一轮复活",
+      "source": "A:2179–2214、2256–2265",
+      "tests": [
+        "ops:CandidateCompatibility.test_candidate_executing_step12_command_expires_after_bridge_failure",
+        "ops:CandidateCompatibility.test_candidate_fresh_step12_session_keeps_executing_command_locked"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-16",
+      "rule": "兼容 accepted 无心跳超120秒；带 finishedAt 的 requested/running 不继续显示在途",
+      "source": "A:2268–2286",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_16_17_fish_terminal_requires_task_and_nonolder_timestamp"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-17",
+      "rule": "Fish 终态失败要匹配 canonicalTaskIds/failedItems 中任务，并判断终态时间不早于本命令；解除旧继续锁，不覆盖成功音频",
+      "source": "A:2290–2325",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_16_17_fish_terminal_requires_task_and_nonolder_timestamp"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-18",
+      "rule": "CapCut running/recovering 只在 blocked_capcut/capcut_pending/capcut_failed 且无运行计数、无 capcut_running 阶段时判断失效；活跃客户端/心跳优先；超120秒或明确安全停点",
+      "source": "A:401–423、2326–2329",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_18_19_capcut_liveness_heartbeat_and_every_safe_stop_fingerprint"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-19",
+      "rule": "安全草稿重开判据保留 waiting/waiting_capcut/waiting_client/stopped +已知指纹/明确文本；兼容旧 Failed 精确文案，不把普通失败都当安全重开",
+      "source": "A:90–114",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_18_19_capcut_liveness_heartbeat_and_every_safe_stop_fingerprint"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-20",
+      "rule": "已结束 blocked/failed/cancelled 命令在任务进入可恢复下游阶段后作为历史，不永久锁住按钮",
+      "source": "A:2330–2341",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_20_21_22_terminal_history_and_public_fields"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-21",
+      "rule": "公开状态保留 boundManifest/Attempt/Status、clientPid、operationGeneration、boundOperationState、bridge、启动结果、终态观察时间等字段",
+      "source": "A:2342–2399",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_20_21_22_terminal_history_and_public_fields"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-22",
+      "rule": "项目更新时间晚于命令完成时标记历史/陈旧；不同当前目标的旧命令在展示中归档，不拿旧命令标签冒充新任务",
+      "source": "A:2400–2406、5432–5444",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_22_23_27_reconciliation_archives_other_target_and_uses_task_scoped_steps"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-23",
+      "rule": "跨午夜的当前配音/拼接只用当前 canonical task 的实时事实，不借用同日其他项目累计数",
+      "source": "A:5445–5458",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_22_23_27_reconciliation_archives_other_target_and_uses_task_scoped_steps"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-24",
+      "rule": "缺权威目标/未对账则 allowed=false；blocked 配音对已经在途的继续命令只更新提示，不覆盖其执行生命周期",
+      "source": "A:5476–5512",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_24_25_26_inflight_blocked_and_bound_states"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-25",
+      "rule": "其他 blocked 阶段也不能覆写新命令；实际存活 CapCut 且绑定操作未进入可重试终态时才持续锁定",
+      "source": "A:5513–5554",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_24_25_26_inflight_blocked_and_bound_states"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-26",
+      "rule": "boundOperationState 为 failed/stopped/completed_with_errors/expired/recoverable_failed 或安全停点时可按资格重试；其余接收核对期保持锁定",
+      "source": "A:5533–5560",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_24_25_26_inflight_blocked_and_bound_states"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-27",
+      "rule": "对账步骤 actual/expected 必须按当前任务关联；上传计数与第五步任务关联，不能用全日数",
+      "source": "A:5459–5475、5561–5567",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_22_23_27_reconciliation_archives_other_target_and_uses_task_scoped_steps"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-28",
+      "rule": "查询不存在命令返回404；按ID查询对账匹配邮箱；executing 禁止撤回；仅修改匹配且 requested 的邮箱",
+      "source": "A:6422–6447；独立请求取消缺口见必改6",
+      "tests": [
+        "ops:RecoveryBoundaryTests.test_r4_28_get_and_legacy_cancel_never_touch_another_mailbox",
+        "ops:Protocol2AdapterTests.test_cancel_refusal_or_lost_ack_never_claims_success",
+        "workbench:RecoveryRequestTests.test_cancel_and_delivery_race_never_leaves_deliverable_request"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-29",
+      "rule": "旧 continue-current 安全停点可将同任务旧邮箱标为 expired；新入口仍只取调用时当前目标，不能声称已经检查请求中的目标",
+      "source": "A:6339–6412；原子目标缺口见必改5",
+      "tests": [
+        "ops:CandidateCompatibility.test_candidate_recoverable_draft_waiting_expires_command_immediately"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "R4-30",
+      "rule": "健康面板只展示明确开放恢复命令与近期错误，不据此重新花费恢复预算或自动生成新继续请求",
+      "source": "A:2453–2519",
+      "tests": [
+        "ops:CandidateCompatibility.test_candidate_health_reports_open_commands_and_recent_log_errors"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-01",
+      "rule": "恢复身份必须有 runGroup、batch、canonical；仅支持 step12/step3/step5 的规范化身份",
+      "source": "RC:209–227",
+      "tests": [
+        "workbench:RecoveryRuleBoundaryTests.test_rc01_rc02_exact_production_and_child_contracts_required"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-02",
+      "rule": "step12 需要下载子任务与 URL 合同哈希；step3 单语音需子任务/产品/语言/文本哈希/音色合同，批量语音需完整聚合合同；step5 需输出子任务、源身份哈希及输出身份",
+      "source": "RC:228–304",
+      "tests": [
+        "workbench:RecoveryRuleBoundaryTests.test_rc01_rc02_exact_production_and_child_contracts_required",
+        "workbench:RecoveryControlTests.test_multi_language_audio_batch_contract_is_verified_without_pending_copy_hash"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-03",
+      "rule": "OS文件锁和原子写是权威；状态schema/collections/预算/时间/commandId/stableRecoveryKey损坏时失败关闭，不初始化成可执行空白状态",
+      "source": "RC:312–421、461–468",
+      "tests": [
+        "workbench:RecoveryRuleBoundaryTests.test_rc03_corrupt_budget_schema_and_identity_do_not_reset_authority"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-04",
+      "rule": "请求ID只允许规定字符；同ID的 task/runGroup/batch 变化拒绝；重复请求返回已有记录",
+      "source": "RC:470–484",
+      "tests": [
+        "workbench:RecoveryRequestTests.test_request_ids_cannot_escape_transport_directory",
+        "workbench:RecoveryRequestTests.test_repeated_id_cannot_extend_deadline_or_change_attempt"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-05",
+      "rule": "邮箱占用时不覆盖；同稳定身份已有在途请求记为 observed；同阶段不同子任务等待；身份不明保守阻断；已存在命令ID不另发",
+      "source": "RC:545–690",
+      "tests": [
+        "workbench:RecoveryRuleBoundaryTests.test_rc05_occupied_mailbox_and_active_same_key_do_not_double_deliver",
+        "workbench:RecoveryControlTests.test_different_step5_child_request_survives_old_command_reconciliation"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-06",
+      "rule": "只在旧阻断命令确切failed、执行回执failed且进程exited/pid_reused，且是同阶段不同稳定身份时，才允许重排曾observed的独立请求",
+      "source": "RC:568–598",
+      "tests": [
+        "workbench:RecoveryRuleBoundaryTests.test_rc06_observed_request_is_not_rearmed_without_exact_failed_and_exited_proof",
+        "workbench:RecoveryControlTests.test_legacy_observed_request_is_rearmed_after_different_child_failed"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-07",
+      "rule": "request alias不能跨稳定身份；同稳定任务已有在途/reconciliation_required时合流；终态旧ID不再产生执行",
+      "source": "RC:729–790",
+      "tests": [
+        "workbench:RecoveryRuleBoundaryTests.test_rc07_alias_never_crosses_key_and_terminal_never_claims_again"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-08",
+      "rule": "资源guard忙或不可确认都不执行；其他同阶段/身份不明的预留阻断，明确不同阶段的事实独立恢复按现有规则处理",
+      "source": "RC:791–796、815–828",
+      "tests": [
+        "workbench:RecoveryRuleBoundaryTests.test_rc08_resource_busy_and_unverifiable_never_spend_budget_or_write_mailbox"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-09",
+      "rule": "自动恢复必须绑定真实验收证据与构建哈希；预算最多2次、同失败事件只花一次、manualPause、至少30秒延时及有效时间全部保留",
+      "source": "RC:66–71、433–459、797–814",
+      "tests": [
+        "workbench:RecoveryRuleBoundaryTests.test_rc09_absent_acceptance_pause_and_delay_all_fail_closed",
+        "workbench:RecoveryControlTests.test_failure_waits_thirty_seconds_and_two_claims_are_distinct",
+        "workbench:RecoveryControlTests.test_same_failure_event_cannot_spend_a_second_budget_slot"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-10",
+      "rule": "claim与预算先持久化，再写邮箱；邮箱失败不回滚预算也不换ID",
+      "source": "RC:829–860",
+      "tests": [
+        "workbench:RecoveryControlTests.test_mailbox_write_failure_keeps_claim_for_reconciliation"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-11",
+      "rule": "accept时终态只观察、reconciliation_required不执行、已接受/执行中只观察；记录消费者进程身份；终态回执单向，迟到running不复活",
+      "source": "RC:862–919",
+      "tests": [
+        "workbench:RecoveryRuleBoundaryTests.test_rc11_reconciliation_required_and_terminal_never_execute_again",
+        "workbench:RecoveryControlTests.test_accept_is_single_execution_and_terminal_cannot_regress"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    },
+    {
+      "id": "RC-12",
+      "rule": "手动初始交接有匹配邮箱120秒宽限；alive/completed/failed分别处理；重投须允许、资源可确认、未暂停、自动验收有效，且只重投 claimed/dispatched同ID；未知进入对账，不盲重试",
+      "source": "RC:921–993",
+      "tests": [
+        "workbench:RecoveryRuleBoundaryTests.test_rc12_manual_grace_then_unknown_is_reconciliation_without_retry",
+        "workbench:RecoveryRuleBoundaryTests.test_rc12_redispatch_checks_allow_flag_pause_resources_and_same_id"
+      ],
+      "coverageReview": "pending-positive-negative-completeness-review",
+      "realShadow": {
+        "status": "not-run",
+        "caseCount": 0,
+        "mismatchCount": null
+      }
+    }
+  ]
+}
