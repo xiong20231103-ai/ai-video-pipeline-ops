@@ -7994,14 +7994,21 @@
         "name": "匿名回调@3",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
-        "detail": "response => response.json()",
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
+        "detail": "response => { if (!response.ok) throw new Error('options_unavailable'); return response.json(); }",
         "excerptStartLine": 3,
         "excerptStartColumn": 29,
         "excerptEndLine": 3,
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "FN-367",
@@ -8010,14 +8017,21 @@
         "name": "匿名回调@3",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
-        "detail": "data => { document.getElementById('registration').hidden = !data.registrationOpen; }",
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
+        "detail": "data => { document.getElementById('registration').hidden = data.registrationOpen !== true; }",
         "excerptStartLine": 3,
-        "excerptStartColumn": 63,
+        "excerptStartColumn": 133,
         "excerptEndLine": 3,
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "FN-368",
@@ -8026,14 +8040,21 @@
         "name": "匿名回调@5",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
-        "detail": "async event => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'; return; } if (route === '/auth/login') location.assig",
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
+        "detail": "async event => { event.preventDefault(); const form = event.currentTarget; if (form.getAttribute('aria-busy') === 'true') return; busy(true); message.textContent = ''; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'; return; } if (route === '/aut",
         "excerptStartLine": 5,
         "excerptStartColumn": 58,
         "excerptEndLine": 16,
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       }
     ],
     "interfaces": [
@@ -8964,11 +8985,18 @@
         "name": "fetch",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "fetch('/auth/options')",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "NET-052",
@@ -8977,11 +9005,18 @@
         "name": "fetch",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))})",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       }
     ],
     "confirmations": [
@@ -12641,11 +12676,18 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "button.disabled = true",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "GUARD-167",
@@ -12654,11 +12696,18 @@
         "name": "状态/防重复约束",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "button.disabled = false",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       }
     ],
     "elements": [
@@ -14913,11 +14962,18 @@
         "name": "form loginForm",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "id=\"loginForm\" | 登录 用户名 密码 登录 <",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "DOM-118",
@@ -14926,11 +14982,18 @@
         "name": "input username",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "name=\"username\" autocomplete=\"username\" maxlength=\"64\" required | 密码 登录 注册账号（需要邀请码） 用户名<i",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "DOM-119",
@@ -14939,11 +15002,18 @@
         "name": "input password",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "name=\"password\" type=\"password\" autocomplete=\"current-password\" maxlength=\"256\" required | 登录 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name=\"passw",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "DOM-120",
@@ -14952,11 +15022,18 @@
         "name": "button (无 id)",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": " | 登录 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name=\"password\" type=\"passw",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "DOM-121",
@@ -14965,11 +15042,18 @@
         "name": "details registration",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "id=\"registration\" | 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name=\"password\" type=\"password\" autocomplete=\"new-password\" minlength=\"1",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "DOM-122",
@@ -14978,11 +15062,18 @@
         "name": "form registerForm",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "id=\"registerForm\" | 用户名 密码（至少12个字符） 邀请码<input n",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "DOM-123",
@@ -14991,11 +15082,18 @@
         "name": "input username",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "name=\"username\" autocomplete=\"username\" maxlength=\"64\" required | 密码（至少12个字符） 邀请码",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "DOM-124",
@@ -15004,11 +15102,18 @@
         "name": "input password",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "name=\"password\" type=\"password\" autocomplete=\"new-password\" minlength=\"12\" maxlength=\"256\" required | 邀请码 注册",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "DOM-125",
@@ -15017,11 +15122,18 @@
         "name": "input invite",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "name=\"invite\" type=\"password\" autocomplete=\"off\" maxlength=\"256\" required | 注册",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "DOM-126",
@@ -15030,11 +15142,18 @@
         "name": "button (无 id)",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": " | 注册",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       }
     ],
     "events": [
@@ -16481,11 +16600,18 @@
         "name": "document.getElementById(id).addEventListener",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "document.getElementById(id).addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       }
     ],
     "routes": [
@@ -17775,11 +17901,18 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "'/auth/options'",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "PATH-071",
@@ -17788,11 +17921,18 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "'/auth/login'",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "PATH-072",
@@ -17801,11 +17941,18 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "'/auth/register'",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       },
       {
         "id": "PATH-073",
@@ -17814,20 +17961,27 @@
         "name": "接口/动态路径",
         "mode": "云端",
         "planned": "V2-4",
-        "implemented": false,
-        "evidence": [],
+        "implemented": true,
+        "evidence": [
+          "cloud/login.html",
+          "cloud/login.js",
+          "cloud/login-helpers.js",
+          "tests/test_v2_entry.py",
+          "frontend-v2/scripts/entry-browser-check.cjs",
+          "docs/v2/V2-4_ENTRY.md"
+        ],
         "detail": "'/auth/login'",
-        "disposition": "user-deferred-login-registration-2026-10-20",
-        "verification": "User explicitly keeps existing /login incl invitation registration; 401 redirects unchanged. Deferred to separately approved V2-4 cloud PR, not an omission."
+        "verification": "Implemented in V2-4 isolated cloud entry PR; exact public assets/auth contracts/return allowlist and headless login-registration tested; no production switch accepted.",
+        "pr": 39
       }
     ]
   },
   "scopeDecision": {
     "date": "2026-10-20",
-    "implemented": 878,
+    "implemented": 900,
     "total": 900,
-    "deferred": 22,
-    "deferredReason": "User keeps existing /login including invitation registration and 401 redirect; V2-4 requires separate approved cloud PR",
+    "deferred": 0,
+    "deferredReason": "All source inventory entries implemented with isolated evidence; real production trial and entry switch still require user/Claude approval.",
     "productionShadowPassed": false,
     "defaultEntrySwitched": false
   }

@@ -29,7 +29,7 @@
 - [x] K-10：云端 canCleanup=false 保持入口禁用；testing/reset 原本不在云端白名单，云端继续禁用，不新增后端。
 - [x] K-11：安全继续原有运行中锁、故障两次后离线锁、期望目标、10秒资格证明及指定 commandId 查询保留。
 - [x] K-12：备份仅台账/配置，密文下载，request/verify 走本云端CSRF，不经过家里命令通道。
-- [ ] K-13：登录/注册/改密/退出有原字段长度、registrationOpen、禁用/防重复及错误说明；不保存密码或邀请。
+- [x] K-13：登录/注册/改密/退出有原字段长度、registrationOpen、禁用/防重复及错误说明；不保存密码或邀请。
 - [x] K-14：新旧同数据逐项比对（家里/云端），状态/数字/原消息零差异；每个写类有双模式负例/超时/重复/回执测试。
 - [x] K-15：动效只在首次或数值变化时触发，减少动态效果关闭；10分钟轮询无持续内存增长；CSP/八尺寸截图。
 
@@ -769,12 +769,12 @@
   - 原实现：`async () => { request.disabled = true; try { await api('/console/backups/request', 'POST'); message.textContent = '请求已排队；代理配置就绪后执行。稍后刷新列表查看。'; } catch (error) { message.textContent = error.message; } finally { request.disabled = false; } }`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（请求一次备份、排队反馈；目录按需展开和刷新）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
 - [x] **FN-365** `匿名回调@65` — 云端；计划 **V2-1**；来源 [cloud/backups.js:65](../../cloud/backups.js#L65)。
   - 原实现：`() => { if (panel.open) show(body, message); }`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（请求一次备份、排队反馈；目录按需展开和刷新）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
-- [ ] **FN-366** `匿名回调@3` — 云端；计划 **V2-4**；来源 [cloud/login.js:3](../../cloud/login.js#L3)。
-  - 原实现：`response => response.json()`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **FN-367** `匿名回调@3` — 云端；计划 **V2-4**；来源 [cloud/login.js:3](../../cloud/login.js#L3)。
-  - 原实现：`data => { document.getElementById('registration').hidden = !data.registrationOpen; }`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **FN-368** `匿名回调@5` — 云端；计划 **V2-4**；来源 [cloud/login.js:5](../../cloud/login.js#L5)。
-  - 原实现：`async event => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'; return; } if (route === '/auth/login') location.assig`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
+- [x] **FN-366** `匿名回调@3` — 云端；计划 **V2-4**；来源 [cloud/login.js:3](../../cloud/login.js#L3)。
+  - 原实现：`response => { if (!response.ok) throw new Error('options_unavailable'); return response.json(); }`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **FN-367** `匿名回调@3` — 云端；计划 **V2-4**；来源 [cloud/login.js:3](../../cloud/login.js#L3)。
+  - 原实现：`data => { document.getElementById('registration').hidden = data.registrationOpen !== true; }`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **FN-368** `匿名回调@5` — 云端；计划 **V2-4**；来源 [cloud/login.js:5](../../cloud/login.js#L5)。
+  - 原实现：`async event => { event.preventDefault(); const form = event.currentTarget; if (form.getAttribute('aria-busy') === 'true') return; busy(true); message.textContent = ''; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'; return; } if (route === '/aut`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
 
 ## interfaces（52 项）
 
@@ -878,10 +878,10 @@
   - 原实现：`api(ˋ/console/backups/${item.packageId}/verifyˋ, 'POST')`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（逐包校验与失败提示、防重复）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
 - [x] **NET-050** `api` — 云端；计划 **V2-2F**；来源 [cloud/backups.js:60](../../cloud/backups.js#L60)。
   - 原实现：`api('/console/backups/request', 'POST')`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（请求一次备份、排队反馈；目录按需展开和刷新）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
-- [ ] **NET-051** `fetch` — 云端；计划 **V2-4**；来源 [cloud/login.js:3](../../cloud/login.js#L3)。
-  - 原实现：`fetch('/auth/options')`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **NET-052** `fetch` — 云端；计划 **V2-4**；来源 [cloud/login.js:10](../../cloud/login.js#L10)。
-  - 原实现：`fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))})`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
+- [x] **NET-051** `fetch` — 云端；计划 **V2-4**；来源 [cloud/login.js:3](../../cloud/login.js#L3)。
+  - 原实现：`fetch('/auth/options')`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **NET-052** `fetch` — 云端；计划 **V2-4**；来源 [cloud/login.js:10](../../cloud/login.js#L10)。
+  - 原实现：`fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))})`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
 
 ## confirmations（36 项）
 
@@ -1290,10 +1290,10 @@
   - 原实现：`request.disabled = true`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（请求一次备份、排队反馈；目录按需展开和刷新）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
 - [x] **GUARD-165** `状态/防重复约束` — 云端；计划 **V2-2F**；来源 [cloud/backups.js:62](../../cloud/backups.js#L62)。
   - 原实现：`request.disabled = false`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（请求一次备份、排队反馈；目录按需展开和刷新）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
-- [ ] **GUARD-166** `状态/防重复约束` — 云端；计划 **V2-4**；来源 [cloud/login.js:8](../../cloud/login.js#L8)。
-  - 原实现：`button.disabled = true`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **GUARD-167** `状态/防重复约束` — 云端；计划 **V2-4**；来源 [cloud/login.js:15](../../cloud/login.js#L15)。
-  - 原实现：`button.disabled = false`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
+- [x] **GUARD-166** `状态/防重复约束` — 云端；计划 **V2-4**；来源 [cloud/login.js:8](../../cloud/login.js#L8)。
+  - 原实现：`button.disabled = true`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **GUARD-167** `状态/防重复约束` — 云端；计划 **V2-4**；来源 [cloud/login.js:15](../../cloud/login.js#L15)。
+  - 原实现：`button.disabled = false`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
 
 ## elements（126 项）
 
@@ -1529,26 +1529,26 @@
   - 原实现：`id="replenishDialog" class="replenish-dialog" ¦ AI视频生产线 OPS · Tailscale安全控制 -- <`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **DOM-116** `footer (无 id)` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/index.html:400](../../static/index.html#L400)。
   - 原实现：` ¦ AI视频生产线 OPS · Tailscale安全控制 --`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/App.tsx:155（等价页头/导航/页尾、主题与独立旧页入口）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
-- [ ] **DOM-117** `form loginForm` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
-  - 原实现：`id="loginForm" ¦ 登录 用户名 密码 登录 <`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **DOM-118** `input username` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
-  - 原实现：`name="username" autocomplete="username" maxlength="64" required ¦ 密码 登录 注册账号（需要邀请码） 用户名<i`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **DOM-119** `input password` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
-  - 原实现：`name="password" type="password" autocomplete="current-password" maxlength="256" required ¦ 登录 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name="passw`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **DOM-120** `button (无 id)` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
-  - 原实现：` ¦ 登录 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name="password" type="passw`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **DOM-121** `details registration` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
-  - 原实现：`id="registration" ¦ 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name="password" type="password" autocomplete="new-password" minlength="1`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **DOM-122** `form registerForm` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
-  - 原实现：`id="registerForm" ¦ 用户名 密码（至少12个字符） 邀请码<input n`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **DOM-123** `input username` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
-  - 原实现：`name="username" autocomplete="username" maxlength="64" required ¦ 密码（至少12个字符） 邀请码`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **DOM-124** `input password` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
-  - 原实现：`name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256" required ¦ 邀请码 注册`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **DOM-125** `input invite` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
-  - 原实现：`name="invite" type="password" autocomplete="off" maxlength="256" required ¦ 注册`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **DOM-126** `button (无 id)` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
-  - 原实现：` ¦ 注册`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
+- [x] **DOM-117** `form loginForm` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
+  - 原实现：`id="loginForm" ¦ 登录 用户名 密码 登录 <`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **DOM-118** `input username` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
+  - 原实现：`name="username" autocomplete="username" maxlength="64" required ¦ 密码 登录 注册账号（需要邀请码） 用户名<i`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **DOM-119** `input password` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
+  - 原实现：`name="password" type="password" autocomplete="current-password" maxlength="256" required ¦ 登录 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name="passw`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **DOM-120** `button (无 id)` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
+  - 原实现：` ¦ 登录 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name="password" type="passw`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **DOM-121** `details registration` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
+  - 原实现：`id="registration" ¦ 注册账号（需要邀请码） 用户名 密码（至少12个字符）<input name="password" type="password" autocomplete="new-password" minlength="1`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **DOM-122** `form registerForm` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
+  - 原实现：`id="registerForm" ¦ 用户名 密码（至少12个字符） 邀请码<input n`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **DOM-123** `input username` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
+  - 原实现：`name="username" autocomplete="username" maxlength="64" required ¦ 密码（至少12个字符） 邀请码`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **DOM-124** `input password` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
+  - 原实现：`name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256" required ¦ 邀请码 注册`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **DOM-125** `input invite` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
+  - 原实现：`name="invite" type="password" autocomplete="off" maxlength="256" required ¦ 注册`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **DOM-126** `button (无 id)` — 云端；计划 **V2-4**；来源 [cloud/login.html:1](../../cloud/login.html#L1)。
+  - 原实现：` ¦ 注册`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
 
 ## events（78 项）
 
@@ -2123,8 +2123,8 @@
   - 原实现：`document.addEventListener('DOMContentLoaded', () => { const panel = element('details'); panel.id = 'cloudBackupPanel'; panel.style.cssText = 'margin:16px;padding:12px;border:1px solid #888;border-radius:8px;overflow-wrap:anywhere'; panel.append(element('summary', '异地备份（台账与配置）')); const refresh = element('button', '刷新列表'), request = element('button', '请求一次备份'); refresh.type = request.type = 'button'; const message = element('p'`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（请求一次备份、排队反馈；目录按需展开和刷新）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
 - [x] **EVENT-077** `panel.addEventListener` — 云端；计划 **V2-1**；来源 [cloud/backups.js:65](../../cloud/backups.js#L65)。
   - 原实现：`panel.addEventListener('toggle', () => { if (panel.open) show(body, message); })`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（请求一次备份、排队反馈；目录按需展开和刷新）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
-- [ ] **EVENT-078** `document.getElementById(id).addEventListener` — 云端；计划 **V2-4**；来源 [cloud/login.js:5](../../cloud/login.js#L5)。
-  - 原实现：`document.getElementById(id).addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
+- [x] **EVENT-078** `document.getElementById(id).addEventListener` — 云端；计划 **V2-4**；来源 [cloud/login.js:5](../../cloud/login.js#L5)。
+  - 原实现：`document.getElementById(id).addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; try { const response = await fetch(route, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(form)))}); if (!response.ok) { message.textContent = '未成功，请核对填写内容或稍后重试。'`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
 
 ## routes（73 项）
 
@@ -2266,14 +2266,14 @@
   - 原实现：`ˋ/console/backups/${item.packageId}/verifyˋ`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（逐包校验与失败提示、防重复）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
 - [x] **PATH-069** `接口/动态路径` — 云端；计划 **V2-2F**；来源 [cloud/backups.js:60](../../cloud/backups.js#L60)。
   - 原实现：`'/console/backups/request'`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/components/views/BackupAction.tsx:15（请求一次备份、排队反馈；目录按需展开和刷新）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
-- [ ] **PATH-070** `接口/动态路径` — 云端；计划 **V2-4**；来源 [cloud/login.js:3](../../cloud/login.js#L3)。
-  - 原实现：`'/auth/options'`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **PATH-071** `接口/动态路径` — 云端；计划 **V2-4**；来源 [cloud/login.js:4](../../cloud/login.js#L4)。
-  - 原实现：`'/auth/login'`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **PATH-072** `接口/动态路径` — 云端；计划 **V2-4**；来源 [cloud/login.js:4](../../cloud/login.js#L4)。
-  - 原实现：`'/auth/register'`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
-- [ ] **PATH-073** `接口/动态路径` — 云端；计划 **V2-4**；来源 [cloud/login.js:12](../../cloud/login.js#L12)。
-  - 原实现：`'/auth/login'`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。
+- [x] **PATH-070** `接口/动态路径` — 云端；计划 **V2-4**；来源 [cloud/login.js:3](../../cloud/login.js#L3)。
+  - 原实现：`'/auth/options'`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **PATH-071** `接口/动态路径` — 云端；计划 **V2-4**；来源 [cloud/login.js:4](../../cloud/login.js#L4)。
+  - 原实现：`'/auth/login'`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **PATH-072** `接口/动态路径` — 云端；计划 **V2-4**；来源 [cloud/login.js:4](../../cloud/login.js#L4)。
+  - 原实现：`'/auth/register'`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
+- [x] **PATH-073** `接口/动态路径` — 云端；计划 **V2-4**；来源 [cloud/login.js:12](../../cloud/login.js#L12)。
+  - 原实现：`'/auth/login'`；实现/测试证据：待补。 用户2026-10-20明确延后：本轮沿用/login含邀请码注册及401跳转；V2-4随单独cloud PR迁移，不算遗漏。；实现：PR #39（cloud/login.html、cloud/login.js、cloud/login-helpers.js；tests/test_v2_entry.py、frontend-v2/scripts/entry-browser-check.cjs）。仅隔离，未切换。
 
 ## 原文件完整性
 
@@ -2289,3 +2289,7 @@
 机器可读逐项账本见 [inventory.json](inventory.json)。任何未勾选、未覆盖的分支都必须保留为待办，不能以通用占位面板记为完成。
 
 最终范围核对：878/900有实现与隔离证据，22项登录注册由用户明确延期V2-4。K-13的未登录部分同样延期；其它关键契约已给出隔离证据。V2-3十分钟实采及动效/减弱动态效果/不重播见V2-3_POLISH.md；没有将真实生产影子、默认入口切换或安全继续合并批准记为完成。
+
+## V2-4 实现补齐（PR #39）
+
+原22条登录/注册延期项已补实现及隔离证据：900/900。默认入口仍未切换，真实生产试用、真实影子和切换验收未通过；此前延期记录是历史决策，不再代表当前实现缺失。

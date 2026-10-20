@@ -14,6 +14,7 @@ from fastapi import FastAPI,HTTPException,Request
 from fastapi.responses import HTMLResponse,JSONResponse,RedirectResponse,Response
 from fastapi.staticfiles import StaticFiles
 from contracts.cache import cache_key
+from cloud.entry import login_location
 from cloud.store import Store
 from cloud.backups import BackupVault,BackupError
 from cloud.backup_routes import mount_backups
@@ -65,6 +66,8 @@ def create_app(config=None,store=None,static_root=None):
         raise RuntimeError('Console setup incomplete; use the local setup command without sharing credentials')
     store=store or Store(Path(config.get('state_dir','/var/lib/ops-console'))/'console.db')
     static_root=Path(static_root or Path(__file__).parents[1]/'static')
+    if config.get('v2_default_enabled') is True and not (static_root/'v2'/'index.html').is_file():
+        raise RuntimeError('V2 entry missing; keep v2_default_enabled false until deployment is complete')
     vault=BackupVault(Path(store.path).parent/'backups',clock=store.clock)
     backup_worker=CloudBackupWorker(vault,store.path,config)
     commands=CommandQueue(store,enabled=config.get('command_queue_enabled') is True,h3=config.get('h3_target_contract') is True,cleanup=config.get('cleanup_enabled') is True)
@@ -106,6 +109,9 @@ def create_app(config=None,store=None,static_root=None):
         if request.method=='POST' and request.headers.get('content-length','').isdigit() and int(request.headers['content-length'])>MAX_BODY:
             return JSONResponse({'detail':'request_too_large'},status_code=413)
         if request.url.path.startswith('/static/') and not store.session(request.cookies.get(COOKIE,'')):
+            if request.method=='GET' and request.url.path=='/static/v2/index.html':
+                target=request.url.path+('?' + request.url.query if request.url.query else '')
+                return RedirectResponse(login_location(target),status_code=303,headers={'Cache-Control':'no-store'})
             return JSONResponse({'detail':'login_required'},status_code=401)
         # Login screen, anonymous submitter health and agent traffic never keep a viewer alive.
         if request.method=='GET' and (request.url.path=='/' or request.url.path=='/console/status' or request.url.path.startswith('/api/')) and request.headers.get('x-ops-page-visible','true')=='true' and store.session(request.cookies.get(COOKIE,'')):
@@ -117,16 +123,36 @@ def create_app(config=None,store=None,static_root=None):
     @application.exception_handler(Exception)
     async def error_handler(request,exc):
         return JSONResponse({'detail':'internal_error'},status_code=500)
+    @application.get('/static/index.html')
+    def legacy_static(request:Request):
+        if not store.session(request.cookies.get(COOKIE,'')):
+            raise HTTPException(401,'login_required')
+        return legacy_page()
     application.mount('/static',StaticFiles(directory=static_root),name='static')
     @application.get('/login')
     def login_page():
         return HTMLResponse((Path(__file__).parent/'login.html').read_text(encoding='utf-8'))
+    @application.get('/login.css')
+    def login_style():
+        return Response((Path(__file__).parent/'login.css').read_bytes(),media_type='text/css')
+    @application.get('/login-helpers.js')
+    def login_helpers():
+        return Response((Path(__file__).parent/'login-helpers.js').read_bytes(),media_type='application/javascript')
     @application.get('/login.js')
     def login_script():
         return Response((Path(__file__).parent/'login.js').read_bytes(),media_type='application/javascript')
     @application.get('/')
     def index(request:Request):
-        if not store.session(request.cookies.get(COOKIE,'')): return RedirectResponse('/login',status_code=303)
+        if not store.session(request.cookies.get(COOKIE,'')): return RedirectResponse(login_location('/'),status_code=303)
+        if config.get('v2_default_enabled') is True:
+            return RedirectResponse('/static/v2/index.html',status_code=303)
+        return legacy_page()
+    @application.get('/legacy')
+    def legacy(request:Request):
+        if not store.session(request.cookies.get(COOKIE,'')):
+            return RedirectResponse(login_location('/legacy'),status_code=303)
+        return legacy_page()
+    def legacy_page():
         page=(static_root/'index.html').read_text(encoding='utf-8')
         # Insert before app.js executes, while leaving the home static files intact.
         page=page.replace('<head>','<head><script src="/cloud-readonly.js"></script><script src="/cloud-commands.js"></script><script src="/cloud-cleanup.js"></script><script defer src="/cloud-backups.js"></script>',1)
