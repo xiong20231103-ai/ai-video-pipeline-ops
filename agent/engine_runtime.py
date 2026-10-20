@@ -170,6 +170,10 @@ class DeferredEngine:
             'reviewSha256':review_digest,'settingsSha256':settings_digest,'opsConfigSha256':config_digest}
         identity=ledger_identity(self.state_dir/'execution.db',require_empty=activation is None)
         expected_activation['ledgerId']=identity
+        from .core.transition import r5_record,digest as transition_digest
+        transition=r5_record(self.state_dir,review,build=build,ledger_id=identity)
+        expected_activation['migrationSha256']=transition_digest(transition)
+        if (self.state_dir/'migration-settings.json').exists():raise ValueError('transition_pointer_not_parked')
         if activation is None:
             blockers=switch_blockers(review,report,build=build,ledger_id=identity,now=time.time())
             blockers+=pre_retirement_blockers(review,now=time.time())
@@ -272,6 +276,10 @@ class DeferredEngine:
 
 
 def configured_engine(state,origin):
+    staged=Path(state)/'migration-settings.json'
     path=Path(state)/'engine-settings.json'
+    if staged.exists():
+        from .staged_runtime import StagedBackend
+        return StagedBackend(state,conflict=path.exists())
     if not path.exists():return None
     return DeferredEngine(state,origin)

@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 import app
 from cleanup_tickets import CleanupTickets
-from agent.cutover import stage,rollback,sqlite_backup,digest
+from agent.cutover import stage,rollback,sqlite_backup,digest,park_transition
 from agent.engine_runtime import state_inventory
 from agent.execution import ExecutionLedger
 from agent.core.composed import ComposedSession
@@ -74,6 +74,41 @@ class CutoverTests(unittest.TestCase):
         wrong={**self.settings,'stateRoot':str(self.legacy/'data/new')}
         with self.assertRaisesRegex(ValueError,'not_independent'):stage(wrong,'R6_STAGE_REVIEWED',quiet=lambda _:True,tasks_disabled=lambda _:True)
         with self.assertRaisesRegex(ValueError,'must_be_stopped'):stage(self.settings,'R6_STAGE_REVIEWED',quiet=lambda _:False,tasks_disabled=lambda _:True)
+
+    def test_park_and_rollback_restore_staged_pointer_and_reset_r5_observation(self):
+        # Simulate only temp mode pointers. Tasks/process probes are inert;
+        # this does not assert any Windows or production acceptance.
+        (self.state/'engine-settings.json').unlink()
+        source=self.root/'staged-plan.json';source.write_text('{"fixture":"no-service"}')
+        pointer=dict(schema=1,plan=str(source),sha256=hashlib.sha256(source.read_bytes()).hexdigest())
+        record=dict(schema=1,stage='R5',phase='active',build='fixture',ledgerId=self.ledger.identity,
+            installedModules=['R0','R1','R2','R3','R4','R5'],sharedState=True,legacyRetired=False,
+            planSha256=digest(json.loads(source.read_text())),acceptedAt='1969-01-01T00:00:00+00:00')
+        from contracts.state_files import atomic_json
+        atomic_json(self.state/'migration/active.json',record);atomic_json(self.state/'migration-settings.json',pointer)
+        review=dict(self.plan,action='R6_PARK',build='fixture',autoRecoveryDisabled=True,cleanupEnabled=False,
+            migrationSha256=digest(record),r5AcceptedAt=record['acceptedAt'],r5ContinuousCandidateUse=True,
+            r5NoRollbackDuringObservation=True,legacyAvailableThroughObservation=True)
+        with self.assertRaisesRegex(ValueError,'stopped_before_parking'):
+            park_transition(review,'R6_PARK_REVIEWED',quiet=lambda _:False,tasks_disabled=lambda _:True,
+                clock=lambda:1000,maintenance=self.maintenance)
+        self.assertFalse((self.state/'maintenance.json').exists())
+        parked=park_transition(review,'R6_PARK_REVIEWED',quiet=lambda _:True,tasks_disabled=lambda _:True,
+            clock=lambda:1000,maintenance=self.maintenance)
+        self.assertTrue(parked['maintenanceRetained']);self.assertFalse((self.state/'migration-settings.json').exists())
+        self.assertTrue((self.state/'maintenance.json').exists())
+        self.assertEqual(record,json.loads((self.state/'migration/active.json').read_text()))
+        # The later reviewed native startup clears this exact preparation
+        # request; rollback itself must not bypass another maintenance owner.
+        journal=json.loads((Path(parked['backup'])/'journal.json').read_text())
+        self.maintenance.finish(self.state,journal['requestId'])
+        atomic_json(self.state/'engine-settings.json',self.settings)
+        result=self.run_rollback(dict(self.plan,transitionBackup=parked['backup']))
+        self.assertTrue(result['completed'])
+        self.assertEqual(pointer,json.loads((self.state/'migration-settings.json').read_text()))
+        reset=json.loads((self.state/'migration/active.json').read_text())
+        self.assertEqual('prepared',reset['phase']);self.assertIsNone(reset['acceptedAt'])
+        self.assertEqual(record['planSha256'],reset['planSha256'])
     def test_one_command_rollback_preserves_receipts_history_identity_and_private_config(self):
         secret=self.state/'config.json';original=Path.read_bytes
         def no_private_read(path):

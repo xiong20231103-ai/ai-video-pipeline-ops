@@ -43,9 +43,15 @@ def switch_blockers(review,report,*,build,ledger_id,now):
         'autoRecoveryDisabled':True,'cleanupEnabled':False,'rollbackVerified':True}
     for key,value in expected.items():
         if type(review.get(key)) is not type(value) or review[key]!=value:blockers.append('review_missing:'+key)
+    return blockers+shadow_blockers(report,('R0','R1','R2','R3','R4','R5'),RULES)
+
+
+def shadow_blockers(report,required_modules,required_rules=()):
+    blockers=[]
+    if not isinstance(report,dict):return ['shadow_report_missing']
     modules=report.get('modules',{})
     if not isinstance(modules,dict):modules={}
-    for module in ('R0','R1','R2','R3','R4','R5'):
+    for module in required_modules:
         evidence=modules.get(module)
         if not isinstance(evidence,dict):blockers.append('real_shadow_missing:'+module);continue
         if not isinstance(evidence.get('batchId'),str) or not evidence['batchId'].strip():
@@ -64,7 +70,7 @@ def switch_blockers(review,report,*,build,ledger_id,now):
         blockers.extend(module+':'+item for item in result)
     rules=report.get('rules',{})
     if not isinstance(rules,dict):rules={}
-    for rule in RULES:
+    for rule in required_rules:
         row=rules.get(rule,{})
         if (not isinstance(row,dict) or row.get('reviewed') is not True
             or type(row.get('positiveCases')) is not int or row['positiveCases']<1

@@ -20,6 +20,8 @@ from contracts.state_files import atomic_json,read_json
 from .engine_runtime import state_inventory,legacy_processes_stopped,legacy_tasks_disabled,ledger_identity
 from .core.ordinary_fence import OrdinaryFence
 from .core.projection_store import require_plain_path
+from .core.transition import r5_record
+from .core.retirement_gate import pre_retirement_blockers
 
 
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode()).hexdigest()
@@ -73,6 +75,57 @@ def stage(settings,confirmation,*,quiet=legacy_processes_stopped,tasks_disabled=
     return result
 
 
+def park_transition(plan,confirmation,*,quiet=legacy_processes_stopped,tasks_disabled=legacy_tasks_disabled,
+                    clock=time.time,maintenance=None):
+    """Explicit Claude-only R6 preparation; leaves the agent in maintenance.
+
+    It neither stops the retained host nor selects candidate ownership. Those
+    are separately reviewed actions. No native engine can start with both mode
+    pointers present. Every failure after stopping leaves maintenance intact.
+    """
+    if (confirmation!='R6_PARK_REVIEWED' or not isinstance(plan,dict)
+        or type(plan.get('schema')) is not int or plan['schema']!=1 or plan.get('action')!='R6_PARK'):
+        raise ValueError('park_review_required')
+    if not isinstance(plan.get('approvedBy'),str) or not plan['approvedBy'].strip():raise ValueError('park_review_required')
+    expires=plan.get('expiresAt')
+    if type(expires) not in (int,float) or not clock()<expires<=clock()+3600:raise ValueError('park_review_expired')
+    required={'commandsPaused':True,'pipelineIdle':True,'drained':True,'leased':0,'sent':0,'unknown':0,
+        'unreconciledRecovery':0,'autoRecoveryDisabled':True,'cleanupEnabled':False}
+    if any(type(plan.get(k)) is not type(v) or plan[k]!=v for k,v in required.items()):raise ValueError('park_queue_not_reviewed_empty')
+    if pre_retirement_blockers(plan,now=clock()):raise ValueError('r5_observation_incomplete')
+    state=require_plain_path(plan['agentState']);backup=require_plain_path(plan['backupRoot'])/('r6-transition-'+uuid.uuid4().hex)
+    disjoint(state,backup)
+    if (state/'engine-settings.json').exists():raise ValueError('native_pointer_already_present')
+    identity=ledger_identity(state/'execution.db',require_empty=True)
+    if identity!=plan.get('ledgerId'):raise ValueError('park_ledger_identity_changed')
+    record=r5_record(state,plan,build=plan['build'],ledger_id=identity)
+    pointer=read_json(require_plain_path(state/'migration-settings.json'))
+    if not isinstance(pointer,dict) or set(pointer)!={'schema','plan','sha256'} or type(pointer['schema']) is not int or pointer['schema']!=1:
+        raise ValueError('transition_pointer_invalid')
+    raw=require_plain_path(pointer['plan']).read_bytes()
+    if len(raw)>2*1024*1024 or hashlib.sha256(raw).hexdigest()!=pointer['sha256'] or digest(json.loads(raw))!=record['planSha256']:
+        raise ValueError('transition_plan_changed')
+    if not quiet(plan['legacyScripts']) or not tasks_disabled(plan['legacyTasks']):raise ValueError('legacy_must_be_stopped_before_parking')
+    if maintenance is None:
+        from deploy import agent_source_update as maintenance
+    request_id=uuid.uuid4().hex;maintenance.begin_stop(state,request_id)
+    result=maintenance.wait_stopped(state,request_id,timeout=930)
+    if not result.get('lockFree') or not result.get('cooperativeAck'):raise ValueError('park_agent_not_cooperatively_stopped')
+    with maintenance.exclusive_agent_lock(state):
+        maintenance.verify_maintenance(state,request_id)
+        if ledger_identity(state/'execution.db',require_empty=True)!=identity or r5_record(state,plan,build=plan['build'],ledger_id=identity)!=record:
+            raise ValueError('park_state_changed')
+        if read_json(state/'migration-settings.json')!=pointer:raise ValueError('transition_pointer_changed')
+        if not quiet(plan['legacyScripts']) or not tasks_disabled(plan['legacyTasks']):raise ValueError('legacy_restarted_during_parking')
+        backup.mkdir(parents=True,exist_ok=False)
+        atomic_copy(state/'migration-settings.json',backup/'migration-settings.json')
+        atomic_copy(state/'migration/active.json',backup/'active.json')
+        atomic_json(backup/'journal.json',{'schema':1,'phase':'parked','migrationSha256':digest(record),'commandsRemainPaused':True,'requestId':request_id})
+        (state/'migration-settings.json').unlink()
+    return {'schema':1,'completed':True,'backup':str(backup),'maintenanceRetained':True,'commandsRemainPaused':True,
+        'nativeEnabled':False,'ledgerIdentityPreserved':True}
+
+
 def windows_tasks(tasks,action):
     if os.name!='nt' or action not in {'snapshot','enable','start'}:raise ValueError('windows_task_action_invalid')
     if not isinstance(tasks,list) or not tasks:raise ValueError('windows_tasks_missing')
@@ -108,6 +161,14 @@ def rollback(plan,confirmation,*,task_control=windows_tasks,quiet=legacy_process
     backup=require_plain_path(plan['backupRoot'])/('r6-rollback-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex[:8])
     disjoint(backup,legacy);disjoint(backup,candidate)
     state=require_plain_path(plan['agentState'])
+    staged_backup=None
+    if (state/'migration/active.json').exists():
+        staged_backup=require_plain_path(plan['transitionBackup'])
+        saved=read_json(staged_backup/'active.json');marker=read_json(state/'migration/active.json')
+        pointer=read_json(staged_backup/'migration-settings.json')
+        raw=require_plain_path(pointer['plan']).read_bytes()
+        if (saved!=marker or pointer.get('sha256')!=hashlib.sha256(raw).hexdigest()
+            or digest(json.loads(raw))!=marker.get('planSha256')):raise ValueError('rollback_transition_identity_changed')
     previous_runtime=read_json(state/'agent-runtime.json') if (state/'agent-runtime.json').exists() else {}
     if plan.get('agentTask',{}).get('name')!='OpsConsoleReadonlyAgent':raise ValueError('rollback_agent_task_identity_invalid')
     if not quiet(plan['legacyScripts']):raise ValueError('legacy_already_running')
@@ -157,6 +218,12 @@ def rollback(plan,confirmation,*,task_control=windows_tasks,quiet=legacy_process
         # Removal is ONLY the owned mode pointer; agent secrets/config and its
         # durable execution.db stay exactly where they were, with the same ID.
         (state/'engine-settings.json').unlink()
+        if staged_backup is not None:
+            atomic_copy(staged_backup/'migration-settings.json',state/'migration-settings.json')
+            # A native-to-retained rollback starts a NEW R5 observation. It must
+            # not reuse the old two-week clock for another retirement attempt.
+            marker.update(phase='prepared',acceptedAt=None)
+            atomic_json(state/'migration/active.json',marker)
         atomic_json(backup/'journal.json',{'schema':1,'phase':'legacy-starting','commandsRemainPaused':True})
         task_control(legacy_tasks,'enable');task_control(legacy_tasks,'start')
         if health is None:
@@ -192,10 +259,10 @@ def rollback(plan,confirmation,*,task_control=windows_tasks,quiet=legacy_process
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['stage','rollback'])
+    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['stage','rollback','park-transition'])
     parser.add_argument('--plan',required=True);parser.add_argument('--confirm',required=True);args=parser.parse_args()
     plan=read_json(require_plain_path(args.plan))
-    try:result=stage(plan,args.confirm) if args.action=='stage' else rollback(plan,args.confirm)
+    try:result={'stage':stage,'rollback':rollback,'park-transition':park_transition}[args.action](plan,args.confirm)
     except (OSError,ValueError,KeyError,TypeError,sqlite3.Error) as error:
         reason=str(error)
         if not reason.replace('_','').isalnum() or len(reason)>100:reason='cutover_failed_manual_review_required'

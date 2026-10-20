@@ -8,6 +8,8 @@ import argparse
 import hashlib
 import importlib.util
 import re
+import json
+import sqlite3
 from pathlib import Path
 from fastapi import HTTPException
 from starlette.concurrency import run_in_threadpool
@@ -18,6 +20,8 @@ from .core.authority_lease import AuthorityLease
 from .core.ordinary_fence import OrdinaryFence,FenceRejected
 from .core.projection_store import require_plain_path
 from .core.recovery_transport import RecoveryTransport
+from .core.dispatch_claim import DispatchClaims,DispatchRejected
+from contracts.commands import MAX_PAYLOAD
 
 
 class LegacyBackgroundGuard:
@@ -68,8 +72,8 @@ class LegacyBackgroundGuard:
 
 
 class LegacyRecoveryApp:
-    def __init__(self,application,namespace,controller,lease):
-        self.application=application;self.namespace=namespace;self.lease=lease
+    def __init__(self,application,namespace,controller,lease,*,dispatcher=None):
+        self.application=application;self.namespace=namespace;self.lease=lease;self.dispatcher=dispatcher
         self.transport=RecoveryTransport(controller,namespace)
         namespace['request_workbench_continue']=self.transport.submit
     async def __call__(self,scope,receive,send):
@@ -79,6 +83,34 @@ class LegacyRecoveryApp:
         except (OSError,ValueError):return await JSONResponse({'detail':'legacy_authority_unavailable'},status_code=503)(scope,receive,send)
         try:
             path=scope['path']
+            if scope['method']!='GET' and self.dispatcher is not None:
+                if scope['method']!='POST':return await JSONResponse({'detail':'cloud_queue_required'},status_code=405)(scope,receive,send)
+                headers={}
+                for key,value in scope.get('headers',[]):headers.setdefault(key.lower(),[]).append(value)
+                ids=headers.get(b'x-ops-execution-id',[]);ledgers=headers.get(b'x-ops-execution-ledger',[])
+                if len(ids)!=1 or len(ledgers)!=1:
+                    return await JSONResponse({'detail':'cloud_queue_required'},status_code=403)(scope,receive,send)
+                raw=bytearray()
+                while True:
+                    message=await receive()
+                    if message['type']!='http.request':return await JSONResponse({'detail':'incomplete_request'},status_code=400)(scope,receive,send)
+                    raw.extend(message.get('body',b''))
+                    if len(raw)>MAX_PAYLOAD:return await JSONResponse({'detail':'request_too_large'},status_code=413)(scope,receive,send)
+                    if not message.get('more_body',False):break
+                try:
+                    body=json.loads(raw)
+                    target=path+('?' + scope['query_string'].decode() if scope.get('query_string') else '')
+                    await run_in_threadpool(self.dispatcher.claim,ids[0].decode('ascii'),ledgers[0].decode('ascii'),target,body)
+                except DispatchRejected as error:
+                    return await JSONResponse({'detail':str(error)},status_code=409 if str(error)=='execution_already_dispatched' else 403)(scope,receive,send)
+                except (ValueError,UnicodeError):return await JSONResponse({'detail':'execution_contract_rejected'},status_code=400)(scope,receive,send)
+                except sqlite3.Error:return await JSONResponse({'detail':'execution_admission_unavailable'},status_code=503)(scope,receive,send)
+                received=False
+                async def replay_body():
+                    nonlocal received
+                    if received:return {'type':'http.disconnect'}
+                    received=True;return {'type':'http.request','body':bytes(raw),'more_body':False}
+                receive=replay_body
             match=re.fullmatch('/api/control-commands/([^/]+)/cancel',path)
             if scope['method']=='POST' and match:
                 try:response=JSONResponse(await run_in_threadpool(self.transport.cancel,match[1],Request(scope,receive)))
@@ -108,10 +140,21 @@ def make_app(plan):
     lease=AuthorityLease(fence,lambda:{**state,'protocol':1,'candidateWritesBlocked':True},owner='legacy')
     # Importing app.py initializes its Store before lifespan starts. Ownership
     # must therefore span import AND wrapper installation, not only HTTP/scan.
-    with lease.guard():return _load_legacy_app(plan,root,lease)
+    with lease.guard():
+        transition=None
+        if 'transition' in plan:
+            from .core.transition import Transition,digest
+            from .engine_runtime import build_digest,ledger_identity
+            ledger=require_plain_path(plan['agentState'])/'execution.db'
+            marker=require_plain_path(plan['agentState'])/'migration/active.json'
+            previous=read_json(marker) if marker.exists() else {}
+            if not isinstance(previous,dict):raise ValueError('transition_marker_invalid')
+            identity=ledger_identity(ledger,require_empty=previous.get('planSha256')!=digest(plan))
+            transition=Transition(plan,build=build_digest(Path(__file__).resolve().parents[1]),ledger_id=identity)
+        return _load_legacy_app(plan,root,lease,transition=transition)
 
 
-def _load_legacy_app(plan,root,lease):
+def _load_legacy_app(plan,root,lease,*,transition=None):
     module=load_verified(root/'app.py',plan['legacyAppSha256'],'retained_legacy_dashboard')
     workbench=module.resolve_path(str(module.CONFIG['workbench_dir']))
     if (workbench/'workbench').is_dir():workbench=workbench/'workbench'
@@ -120,8 +163,15 @@ def _load_legacy_app(plan,root,lease):
     recovery=load_verified(plan['recoveryModule'],plan['recoveryModuleSha256'],'retained_legacy_recovery')
     control=require_plain_path(plan['recoveryControlDir'])
     controller=recovery.RecoveryControl(control/'automatic_recovery.json',control/'automatic_recovery.lock',control/'continue_current_project.json')
+    dispatcher=None
+    if transition is not None:
+        transition.bind(vars(module),module.app)
+        dispatcher=DispatchClaims(require_plain_path(plan['agentState'])/'execution.db',transition.identity)
+        dispatcher.initialize()
     LegacyBackgroundGuard(vars(module),lease).install()
-    return LegacyRecoveryApp(module.app,vars(module),controller,lease),module.CONFIG
+    application=LegacyRecoveryApp(module.app,vars(module),controller,lease,dispatcher=dispatcher)
+    if transition is not None:transition.commit()
+    return application,module.CONFIG
 
 
 def main():

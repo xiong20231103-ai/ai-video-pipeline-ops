@@ -277,6 +277,12 @@ class BootstrapTests(unittest.TestCase):
         config=self.root/'private-config.json'
         config_digest=write(config,{'simulation_enabled':False,'workbench_dir':str(workbench)})
         review,report=attestation_fixture('f'*64,ledger.identity)
+        from agent.core.transition import digest as transition_digest
+        marker=dict(schema=1,stage='R5',phase='active',build='f'*64,ledgerId=ledger.identity,
+            installedModules=['R0','R1','R2','R3','R4','R5'],sharedState=True,legacyRetired=False,
+            acceptedAt=review['r5AcceptedAt'],planSha256='isolated-plan')
+        write(state/'migration/active.json',marker)
+        review['migrationSha256']=transition_digest(marker)
         report_path=self.root/'shadow.json';report_digest=write(report_path,report)
         review_path=self.root/'review.json'
         settings=dict(schema=1,enabled=True,stateRoot=str(owned),legacyRoot=str(legacy),

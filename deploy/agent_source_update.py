@@ -20,6 +20,7 @@ BACKUP_FILES=CURRENT_FILES+tuple('agent/'+name for name in ('backup_crypto.py','
 
 FILES=BACKUP_FILES+('agent/execution.py','contracts/commands.py')
 R6_FILES=FILES+(
+    'agent/staged_runtime.py','agent/core/staged_modules.py','agent/core/transition.py','agent/core/dispatch_claim.py',
     'agent/engine_runtime.py','agent/legacy_host.py','agent/cutover.py','pending_delete.py','cleanup_tickets.py',
     'agent/core/__init__.py','agent/core/authority_lease.py','agent/core/cleanup.py',
     'agent/core/cleanup_logic.py','agent/core/collection.py','agent/core/collection_logic.py',

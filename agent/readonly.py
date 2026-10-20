@@ -177,6 +177,7 @@ class ReadOnlyAgent:
         self.full_read_at={}
         # No environment proxy and no redirected bearer token or off-host home GET.
         self.transport=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
+        if self.engine is not None and hasattr(self.engine,'bind_agent'):self.engine.bind_agent(self)
     @property
     def ledger(self):
         with self.ledger_lock:
@@ -399,7 +400,7 @@ def main():
         return
     config=json.loads((state/'config.json').read_text(encoding='utf-8'))
     engine=None
-    if (state/'engine-settings.json').exists():
+    if (state/'engine-settings.json').exists() or (state/'migration-settings.json').exists():
         from agent.engine_runtime import configured_engine
         engine=configured_engine(state,config['cloud_origin'])
     ReadOnlyAgent(config['cloud_origin'],config['agent_token'],state,engine=engine).run()
