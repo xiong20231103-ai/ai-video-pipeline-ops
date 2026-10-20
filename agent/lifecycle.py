@@ -48,7 +48,7 @@ class Lifecycle:
     def stop_request(self):
         return request_identity(self.state_dir/STOP_FILE) or request_identity(self.state_dir/MAINTENANCE_FILE)
     def record_worker_failure(self,worker,error):
-        if worker not in {'heartbeat','collection','upload','demand','foreground','backup','commands'}:raise ValueError('Unknown worker')
+        if worker not in {'heartbeat','collection','upload','demand','foreground','backup','commands','engine','engine-compatibility','engine-retention'}:raise ValueError('Unknown worker')
         def identifier(value):
             return value if isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9_.-]{1,128}',value) else 'other'
         frames=[];trace=error.__traceback__

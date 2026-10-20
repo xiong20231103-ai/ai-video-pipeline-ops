@@ -1,0 +1,613 @@
+{
+  "schema": 1,
+  "legacyCommit": "f78db5a4bfd32eb5ebeab2c63f6dea48cc26f061",
+  "legacySha256": "f4d754cd86c524933d3f87da1006167c2fd698e288fcda09992115dc0e1c044e",
+  "functions": [
+    {
+      "name": "task_box_receipt_path",
+      "legacyStart": 626,
+      "legacyEnd": 627,
+      "candidateStart": 8,
+      "candidateEnd": 9
+    },
+    {
+      "name": "load_task_box_receipt",
+      "legacyStart": 630,
+      "legacyEnd": 639,
+      "candidateStart": 12,
+      "candidateEnd": 21
+    },
+    {
+      "name": "persist_task_box_receipt",
+      "legacyStart": 642,
+      "legacyEnd": 727,
+      "candidateStart": 24,
+      "candidateEnd": 109
+    },
+    {
+      "name": "load_test_reset_state",
+      "legacyStart": 2516,
+      "legacyEnd": 2517,
+      "candidateStart": 112,
+      "candidateEnd": 113
+    },
+    {
+      "name": "local_recovery_status",
+      "legacyStart": 2957,
+      "legacyEnd": 2997,
+      "candidateStart": 116,
+      "candidateEnd": 156
+    },
+    {
+      "name": "process_status",
+      "legacyStart": 4519,
+      "legacyEnd": 4537,
+      "candidateStart": 159,
+      "candidateEnd": 177
+    },
+    {
+      "name": "gpu_metrics",
+      "legacyStart": 4540,
+      "legacyEnd": 4566,
+      "candidateStart": 180,
+      "candidateEnd": 206
+    },
+    {
+      "name": "system_metrics",
+      "legacyStart": 4569,
+      "legacyEnd": 4596,
+      "candidateStart": 209,
+      "candidateEnd": 236
+    },
+    {
+      "name": "archived_task_payloads",
+      "legacyStart": 5234,
+      "legacyEnd": 5250,
+      "candidateStart": 239,
+      "candidateEnd": 255
+    },
+    {
+      "name": "dashboard_summary_etag",
+      "legacyStart": 6086,
+      "legacyEnd": 6107,
+      "candidateStart": 258,
+      "candidateEnd": 279
+    },
+    {
+      "name": "health",
+      "legacyStart": 6154,
+      "legacyEnd": 6161,
+      "candidateStart": 282,
+      "candidateEnd": 289
+    },
+    {
+      "name": "overview",
+      "legacyStart": 6165,
+      "legacyEnd": 6166,
+      "candidateStart": 292,
+      "candidateEnd": 293
+    },
+    {
+      "name": "dashboard",
+      "legacyStart": 6170,
+      "legacyEnd": 6172,
+      "candidateStart": 296,
+      "candidateEnd": 298
+    },
+    {
+      "name": "dashboard_summary",
+      "legacyStart": 6176,
+      "legacyEnd": 6187,
+      "candidateStart": 301,
+      "candidateEnd": 312
+    },
+    {
+      "name": "task_boxes_current",
+      "legacyStart": 6191,
+      "legacyEnd": 6194,
+      "candidateStart": 315,
+      "candidateEnd": 318
+    },
+    {
+      "name": "task_boxes_history",
+      "legacyStart": 6198,
+      "legacyEnd": 6204,
+      "candidateStart": 321,
+      "candidateEnd": 327
+    },
+    {
+      "name": "task_box_completion_receipt",
+      "legacyStart": 6208,
+      "legacyEnd": 6213,
+      "candidateStart": 330,
+      "candidateEnd": 335
+    },
+    {
+      "name": "reconcile_task_box",
+      "legacyStart": 6217,
+      "legacyEnd": 6237,
+      "candidateStart": 338,
+      "candidateEnd": 358
+    },
+    {
+      "name": "compact_safety_payload",
+      "legacyStart": 6240,
+      "legacyEnd": 6291,
+      "candidateStart": 361,
+      "candidateEnd": 412
+    },
+    {
+      "name": "production_safety",
+      "legacyStart": 6295,
+      "legacyEnd": 6390,
+      "candidateStart": 415,
+      "candidateEnd": 510
+    },
+    {
+      "name": "project_gaps",
+      "legacyStart": 6394,
+      "legacyEnd": 6398,
+      "candidateStart": 513,
+      "candidateEnd": 517
+    },
+    {
+      "name": "control_tasks",
+      "legacyStart": 6402,
+      "legacyEnd": 6405,
+      "candidateStart": 520,
+      "candidateEnd": 523
+    },
+    {
+      "name": "control_templates",
+      "legacyStart": 6409,
+      "legacyEnd": 6411,
+      "candidateStart": 526,
+      "candidateEnd": 528
+    },
+    {
+      "name": "subtitle_verification_current",
+      "legacyStart": 6664,
+      "legacyEnd": 6672,
+      "candidateStart": 531,
+      "candidateEnd": 539
+    },
+    {
+      "name": "subtitle_verification_audit",
+      "legacyStart": 6676,
+      "legacyEnd": 6678,
+      "candidateStart": 542,
+      "candidateEnd": 544
+    },
+    {
+      "name": "subtitle_verification_retry_preview",
+      "legacyStart": 6682,
+      "legacyEnd": 6696,
+      "candidateStart": 547,
+      "candidateEnd": 561
+    },
+    {
+      "name": "control_upload_verify_history_status",
+      "legacyStart": 6726,
+      "legacyEnd": 6728,
+      "candidateStart": 564,
+      "candidateEnd": 566
+    },
+    {
+      "name": "pipeline",
+      "legacyStart": 6944,
+      "legacyEnd": 6952,
+      "candidateStart": 569,
+      "candidateEnd": 577
+    },
+    {
+      "name": "tasks",
+      "legacyStart": 6956,
+      "legacyEnd": 6973,
+      "candidateStart": 580,
+      "candidateEnd": 597
+    },
+    {
+      "name": "events",
+      "legacyStart": 6977,
+      "legacyEnd": 6978,
+      "candidateStart": 600,
+      "candidateEnd": 601
+    }
+  ],
+  "requiredPorts": [
+    "COLLECTOR",
+    "CONFIG",
+    "HTTPException",
+    "Path",
+    "Query",
+    "Response",
+    "SAFETY_CACHE",
+    "SAFETY_CACHE_LOCK",
+    "SAFETY_CACHE_TTL_SECONDS",
+    "STORE",
+    "TASK_BOX_RECEIPT_DIR",
+    "TASK_BOX_RECONCILIATION_DIR",
+    "TEST_RESET_STATE_PATH",
+    "_stable_file_id",
+    "_write_json_atomic",
+    "authoritative_active_task_box",
+    "control_plane_json",
+    "csv",
+    "current_date_label",
+    "dashboard_payload",
+    "dashboard_summary_payload",
+    "hashlib",
+    "historical_cloud_verification_status",
+    "is_test_history_task",
+    "json",
+    "now_iso",
+    "os",
+    "overview_payload",
+    "parse_time",
+    "pipeline_dates",
+    "pipeline_for_date",
+    "production_capcut_tasks",
+    "psutil",
+    "public_task_items",
+    "read_json_object",
+    "receiver_json",
+    "require_control_permission",
+    "resolve_path",
+    "safe_int",
+    "sanitize_public_value",
+    "subprocess",
+    "subtitle_verification_inventory",
+    "task_box_payloads",
+    "task_category",
+    "time",
+    "upload_task_index"
+  ],
+  "deferredBoundaries": [
+    "control_plane_json"
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "handler": "health",
+      "disabled": false,
+      "legacyLine": 6154
+    },
+    {
+      "method": "GET",
+      "path": "/api/overview",
+      "handler": "overview",
+      "disabled": false,
+      "legacyLine": 6165
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard",
+      "handler": "dashboard",
+      "disabled": false,
+      "legacyLine": 6170
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/summary",
+      "handler": "dashboard_summary",
+      "disabled": false,
+      "legacyLine": 6176
+    },
+    {
+      "method": "GET",
+      "path": "/api/task-boxes/current",
+      "handler": "task_boxes_current",
+      "disabled": false,
+      "legacyLine": 6191
+    },
+    {
+      "method": "GET",
+      "path": "/api/task-boxes/history",
+      "handler": "task_boxes_history",
+      "disabled": false,
+      "legacyLine": 6198
+    },
+    {
+      "method": "GET",
+      "path": "/api/task-boxes/{batch_id}/completion-receipt",
+      "handler": "task_box_completion_receipt",
+      "disabled": false,
+      "legacyLine": 6208
+    },
+    {
+      "method": "POST",
+      "path": "/api/task-boxes/{batch_id}/reconcile",
+      "handler": "reconcile_task_box",
+      "disabled": false,
+      "legacyLine": 6217
+    },
+    {
+      "method": "GET",
+      "path": "/api/safety",
+      "handler": "production_safety",
+      "disabled": false,
+      "legacyLine": 6295
+    },
+    {
+      "method": "GET",
+      "path": "/api/project-gaps",
+      "handler": "project_gaps",
+      "disabled": false,
+      "legacyLine": 6394
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/tasks",
+      "handler": "control_tasks",
+      "disabled": false,
+      "legacyLine": 6402
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/templates",
+      "handler": "control_templates",
+      "disabled": false,
+      "legacyLine": 6409
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/tasks/create",
+      "handler": "control_create_task",
+      "disabled": false,
+      "legacyLine": 6415
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/tasks/{task_id}/replenish",
+      "handler": "control_replenish_task",
+      "disabled": false,
+      "legacyLine": 6427
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/tasks/{task_id}/start",
+      "handler": "control_start_task",
+      "disabled": false,
+      "legacyLine": 6439
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/tasks/{task_id}/cancel",
+      "handler": "control_cancel_task",
+      "disabled": false,
+      "legacyLine": 6445
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/continue-current",
+      "handler": "control_continue_current",
+      "disabled": false,
+      "legacyLine": 6451
+    },
+    {
+      "method": "POST",
+      "path": "/api/control-commands",
+      "handler": "create_control_command",
+      "disabled": false,
+      "legacyLine": 6513
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-commands/current",
+      "handler": "current_control_command",
+      "disabled": false,
+      "legacyLine": 6574
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-commands/{command_id}",
+      "handler": "get_control_command",
+      "disabled": false,
+      "legacyLine": 6580
+    },
+    {
+      "method": "POST",
+      "path": "/api/control-commands/{command_id}/cancel",
+      "handler": "cancel_control_command",
+      "disabled": false,
+      "legacyLine": 6592
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/continue-current/status",
+      "handler": "control_continue_current_status",
+      "disabled": false,
+      "legacyLine": 6610
+    },
+    {
+      "method": "GET",
+      "path": "/api/subtitle-verification/current",
+      "handler": "subtitle_verification_current",
+      "disabled": false,
+      "legacyLine": 6664
+    },
+    {
+      "method": "GET",
+      "path": "/api/subtitle-verification/audit",
+      "handler": "subtitle_verification_audit",
+      "disabled": false,
+      "legacyLine": 6676
+    },
+    {
+      "method": "POST",
+      "path": "/api/subtitle-verification/retry/preview",
+      "handler": "subtitle_verification_retry_preview",
+      "disabled": false,
+      "legacyLine": 6682
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/upload/rescan",
+      "handler": "control_upload_rescan",
+      "disabled": false,
+      "legacyLine": 6700
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/upload/verify-history",
+      "handler": "control_upload_verify_history",
+      "disabled": false,
+      "legacyLine": 6713
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/upload/verify-history/status",
+      "handler": "control_upload_verify_history_status",
+      "disabled": false,
+      "legacyLine": 6726
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/capcut-drafts",
+      "handler": "control_capcut_drafts",
+      "disabled": false,
+      "legacyLine": 6732
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/capcut-drafts/preview",
+      "handler": "control_capcut_drafts_preview",
+      "disabled": false,
+      "legacyLine": 6738
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/capcut-drafts/cleanup",
+      "handler": "control_capcut_drafts_cleanup",
+      "disabled": false,
+      "legacyLine": 6750
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/capcut-drafts/cleanup/status",
+      "handler": "control_capcut_drafts_cleanup_status",
+      "disabled": false,
+      "legacyLine": 6771
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/audio-files",
+      "handler": "control_audio_files",
+      "disabled": false,
+      "legacyLine": 6778
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/audio-files/preview",
+      "handler": "control_audio_files_preview",
+      "disabled": false,
+      "legacyLine": 6784
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/audio-files/recycle",
+      "handler": "control_audio_files_recycle",
+      "disabled": false,
+      "legacyLine": 6796
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/audio-files/recycle/status",
+      "handler": "control_audio_files_recycle_status",
+      "disabled": false,
+      "legacyLine": 6813
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/production-files",
+      "handler": "control_production_files",
+      "disabled": false,
+      "legacyLine": 6820
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/production-files/preview",
+      "handler": "control_production_files_preview",
+      "disabled": false,
+      "legacyLine": 6826
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/production-files/recycle",
+      "handler": "control_production_files_recycle",
+      "disabled": false,
+      "legacyLine": 6838
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/pending-delete",
+      "handler": "control_pending_delete_status",
+      "disabled": false,
+      "legacyLine": 6858
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/pending-delete/empty",
+      "handler": "control_pending_delete_empty",
+      "disabled": false,
+      "legacyLine": 6865
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/production-files/recycle/status",
+      "handler": "control_production_files_recycle_status",
+      "disabled": false,
+      "legacyLine": 6882
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/testing/reset",
+      "handler": "control_reset_testing_records",
+      "disabled": true,
+      "legacyLine": 6889
+    },
+    {
+      "method": "GET",
+      "path": "/api/pipeline",
+      "handler": "pipeline",
+      "disabled": false,
+      "legacyLine": 6944
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks",
+      "handler": "tasks",
+      "disabled": false,
+      "legacyLine": 6956
+    },
+    {
+      "method": "GET",
+      "path": "/api/events",
+      "handler": "events",
+      "disabled": false,
+      "legacyLine": 6977
+    },
+    {
+      "method": "GET",
+      "path": "/api/controls/cloud-cleanup/capabilities",
+      "handler": "control_cloud_cleanup_capabilities",
+      "disabled": false,
+      "legacyLine": 7075
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/cloud-cleanup/preview",
+      "handler": "control_cloud_cleanup_preview",
+      "disabled": false,
+      "legacyLine": 7081
+    },
+    {
+      "method": "POST",
+      "path": "/api/controls/cloud-cleanup/execute",
+      "handler": "control_cloud_cleanup_execute",
+      "disabled": false,
+      "legacyLine": 7091
+    }
+  ]
+}

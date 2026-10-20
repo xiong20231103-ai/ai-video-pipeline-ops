@@ -25,7 +25,7 @@ def _class(original,namespace):
     return type(original.__name__,(),attributes)
 
 class CollectionSession:
-    def __init__(self,ports,*,seed=None,max_bytes=50*1024*1024,max_rows=200000):
+    def __init__(self,ports,*,seed=None,max_bytes=50*1024*1024,max_rows=200000,store_factory=None):
         provenance=json.loads((Path(__file__).parents[2]/'docs/migration/r1-provenance.json').read_text(encoding='utf-8'))
         required=set(provenance['requiredPorts'])-{'STORE','COLLECTOR'}
         missing=required-set(ports)
@@ -56,13 +56,16 @@ class CollectionSession:
                 with self.lock:
                     try:yield self.db;self.db.commit()
                     except BaseException:self.db.rollback();raise
-        self.namespace=namespace;self.store=MemoryStore();namespace['STORE']=self.store
+        self.namespace=namespace
+        self.store=MemoryStore() if store_factory is None else store_factory(namespace['Store'],seed=seed,max_bytes=max_bytes)
+        namespace['STORE']=self.store
         try:
             self.collector=namespace['Collector'](namespace['CONFIG'],self.store);namespace['COLLECTOR']=self.collector
             self.max_rows=max_rows;self._bounded();self.valid=True
-        except BaseException:self.store.db.close();raise
+        except BaseException:self.close();raise
     def _bounded(self):
-        count=sum(self.store.db.execute('SELECT count(*) FROM '+table).fetchone()[0] for table in ('tasks','task_history','events','heartbeats','source_health'))
+        with self.store.connection() as db:
+            count=sum(db.execute('SELECT count(*) FROM '+table).fetchone()[0] for table in ('tasks','task_history','events','heartbeats','source_health'))
         if count>self.max_rows:raise CollectionError('projection_row_limit')
     def scan(self):
         self.valid=False
@@ -74,11 +77,14 @@ class CollectionSession:
         value=self.namespace[name](*args,**kwargs);self._bounded();return value
     def rows(self):
         result={}
-        for row in self.store.db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"):
-            table=row[0];result[table]=[dict(v) for v in self.store.db.execute('SELECT * FROM '+table)]
+        with self.store.connection() as db:
+            for row in db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"):
+                table=row[0];result[table]=[dict(v) for v in db.execute('SELECT * FROM '+table)]
         # Same relational ordering contract as the R0 snapshot reader.
         from .snapshot import canonical
         return {k:sorted(v,key=canonical) for k,v in result.items()}
-    def close(self):self.store.db.close()
+    def close(self):
+        if hasattr(self.store,'close'):self.store.close()
+        else:self.store.db.close()
     def __enter__(self):return self
     def __exit__(self,*args):self.close()

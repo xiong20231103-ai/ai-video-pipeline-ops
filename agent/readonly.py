@@ -158,7 +158,7 @@ class SingleInstance:
         if self.file: self.file.close()
 
 class ReadOnlyAgent:
-    def __init__(self,origin,token,state_dir):
+    def __init__(self,origin,token,state_dir,*,engine=None):
         parsed=urllib.parse.urlsplit(origin)
         if parsed.scheme!='https' or not parsed.hostname or not parsed.hostname.endswith('.ts.net') or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in {'','/'}:
             raise ValueError('Cloud origin must be the configured Tailnet HTTPS node')
@@ -169,7 +169,8 @@ class ReadOnlyAgent:
         self.lifecycle=Lifecycle(self.state_dir)
         self.authenticated=threading.Event()
         self.backup=BackupWorker(self)
-        self.execution=ExecutionWorker(self)
+        self.engine=engine
+        self.execution=ExecutionWorker(self,ordinary_backend=engine)
         self.demands=queue.PriorityQueue(maxsize=128); self.pending_demands=set(); self.prefetch_targets=[]; self.slow_demands=[]; self.force_reads=set(); self.paused_targets=set()
         # The old summary ETag omits scan clocks and its 304 has no scan header.
         # Periodically read the existing response body, without adding a GET.
@@ -204,6 +205,11 @@ class ReadOnlyAgent:
         if timeout>=60: self.engine_state='busy'
         started=time.monotonic(); mode='active' if self.schedule.active() else 'idle'; failed=True
         try:
+            if self.engine is not None and port==8765:
+                status,body,etag=self.engine.get(target,headers)
+                failed=False
+                if status==200:self.full_read_at[identity]=time.monotonic()
+                return status,body,etag
             with self.transport.open(request,timeout=timeout) as response:
                 raw=response.read(8*1024*1024+1)
                 if len(raw)>8*1024*1024: raise ValueError('Source response exceeded limit')
@@ -344,6 +350,7 @@ class ReadOnlyAgent:
                 self.lifecycle.publish('stopped',requested)
                 return
             self.ledger  # Migrate only after owning the single-instance lock.
+            if self.engine is not None and hasattr(self.engine,'activate'):self.engine.activate()
             self.lifecycle.publish('starting')
             failure_lock=threading.Lock()
             def supervise(worker,method):
@@ -357,6 +364,12 @@ class ReadOnlyAgent:
                                 except Exception:pass # Diagnostics failure must never print the original exception.
                     finally:self.engine_state='unavailable';self.stop.set()
             methods=(('heartbeat',self.heartbeat_loop),('collection',self.collection_loop),('upload',self.upload_loop),('demand',self.demand_loop),('foreground',self.foreground_loop),('backup',self.backup.loop),('commands',self.execution.loop))
+            if self.engine is not None:
+                methods=(('engine',lambda:self.engine.collection_loop(self.stop)),)+methods
+                if hasattr(self.engine,'compatibility_loop'):
+                    methods=(('engine-compatibility',lambda:self.engine.compatibility_loop(self.stop)),)+methods
+                if hasattr(self.engine,'retention_loop'):
+                    methods=(('engine-retention',lambda:self.engine.retention_loop(self.stop)),)+methods
             threads=[threading.Thread(target=supervise,args=(worker,method),daemon=True) for worker,method in methods]
             for thread in threads: thread.start()
             requested=None;published=0
@@ -385,6 +398,10 @@ def main():
         except RuntimeError: pass  # Another live instance owns its status/lock.
         return
     config=json.loads((state/'config.json').read_text(encoding='utf-8'))
-    ReadOnlyAgent(config['cloud_origin'],config['agent_token'],state).run()
+    engine=None
+    if (state/'engine-settings.json').exists():
+        from agent.engine_runtime import configured_engine
+        engine=configured_engine(state,config['cloud_origin'])
+    ReadOnlyAgent(config['cloud_origin'],config['agent_token'],state,engine=engine).run()
 
 if __name__=='__main__': main()
