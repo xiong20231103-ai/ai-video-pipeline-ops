@@ -53,7 +53,7 @@ class ExecutionLedger:
         with self.db() as db:db.execute("UPDATE executions SET state='acknowledged',job=NULL,result=NULL,updated=? WHERE id=?",(time.time(),identifier))
 
 class ExecutionWorker:
-    def __init__(self,agent):self.agent=agent;self.state=agent.state_dir;self._ledger=None;self.lock=threading.Lock();self.clock=time.time;self.active=threading.Event();self.home_busy=threading.Event();self.retry_after=0.0;self.rejection_path=self.state/'execution-rejections.jsonl'
+    def __init__(self,agent,*,ordinary_backend=None):self.ordinary_backend=ordinary_backend;self.agent=agent;self.state=agent.state_dir;self._ledger=None;self.lock=threading.Lock();self.clock=time.time;self.active=threading.Event();self.home_busy=threading.Event();self.retry_after=0.0;self.rejection_path=self.state/'execution-rejections.jsonl'
     def enabled(self):
         path=self.state/'command-settings.json'
         if not path.exists():return False
@@ -70,7 +70,12 @@ class ExecutionWorker:
     def report(self,phase):atomic_json(self.state/'execution-runtime.json',{'schema':1,'phase':phase,'observedAt':time.time()})
     def stopped(self):return self.agent.stop.is_set() or bool(self.agent.lifecycle.stop_request())
     def home_post(self,job):
-        spec=command(job['target'],job['body']);port=8766 if spec['source']=='receiver' else 8765
+        spec=command(job['target'],job['body'])
+        # Opt-in injection only. ReadOnlyAgent still constructs the default
+        # legacy worker; the same ledger/permit/expiry path guards both backends.
+        if self.ordinary_backend is not None and self.ordinary_backend.supports(spec['target']):
+            return self.ordinary_backend.send(job)
+        port=8766 if spec['source']=='receiver' else 8765
         # Receiver permits tokenless writes only from loopback (existing contract).
         host='127.0.0.1' if spec['source']=='receiver' else '100.92.17.9'
         request=urllib.request.Request('http://'+host+':'+str(port)+spec['target'],data=canonical(spec['body']).encode(),

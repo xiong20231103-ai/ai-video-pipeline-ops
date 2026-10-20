@@ -1,0 +1,572 @@
+[
+  {
+    "id": "create-ok",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "ok"
+  },
+  {
+    "id": "create-http400",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "http400"
+  },
+  {
+    "id": "create-http409",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "http409"
+  },
+  {
+    "id": "create-http500",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "http500"
+  },
+  {
+    "id": "create-timeout",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "timeout"
+  },
+  {
+    "id": "create-incomplete",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "incomplete"
+  },
+  {
+    "id": "create-malformed",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "malformed"
+  },
+  {
+    "id": "create-wrong-shape",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "wrong-shape"
+  },
+  {
+    "id": "create-untrusted",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "untrusted"
+  },
+  {
+    "id": "create-unexpected",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "unexpected"
+  },
+  {
+    "id": "create-invalid-json",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "invalid-json"
+  },
+  {
+    "id": "create-invalid-body",
+    "target": "/api/controls/tasks/create",
+    "body": {
+      "date": "10.20",
+      "templateId": "fixture",
+      "material": "fixture",
+      "audioBatch": "fixture",
+      "voicePlan": {},
+      "expectedCount": 1,
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "invalid-body"
+  },
+  {
+    "id": "replenish-ok",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "ok"
+  },
+  {
+    "id": "replenish-http400",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "http400"
+  },
+  {
+    "id": "replenish-http409",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "http409"
+  },
+  {
+    "id": "replenish-http500",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "http500"
+  },
+  {
+    "id": "replenish-timeout",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "timeout"
+  },
+  {
+    "id": "replenish-incomplete",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "incomplete"
+  },
+  {
+    "id": "replenish-malformed",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "malformed"
+  },
+  {
+    "id": "replenish-wrong-shape",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "wrong-shape"
+  },
+  {
+    "id": "replenish-untrusted",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "untrusted"
+  },
+  {
+    "id": "replenish-unexpected",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "unexpected"
+  },
+  {
+    "id": "replenish-invalid-json",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "invalid-json"
+  },
+  {
+    "id": "replenish-invalid-body",
+    "target": "/api/controls/tasks/fixture/replenish",
+    "body": {
+      "urls": [
+        "https://fixture.invalid/video"
+      ],
+      "startNow": false
+    },
+    "scenario": "invalid-body"
+  },
+  {
+    "id": "start-ok",
+    "target": "/api/controls/tasks/fixture/start",
+    "body": {},
+    "scenario": "ok"
+  },
+  {
+    "id": "start-http400",
+    "target": "/api/controls/tasks/fixture/start",
+    "body": {},
+    "scenario": "http400"
+  },
+  {
+    "id": "start-http409",
+    "target": "/api/controls/tasks/fixture/start",
+    "body": {},
+    "scenario": "http409"
+  },
+  {
+    "id": "start-http500",
+    "target": "/api/controls/tasks/fixture/start",
+    "body": {},
+    "scenario": "http500"
+  },
+  {
+    "id": "start-timeout",
+    "target": "/api/controls/tasks/fixture/start",
+    "body": {},
+    "scenario": "timeout"
+  },
+  {
+    "id": "start-incomplete",
+    "target": "/api/controls/tasks/fixture/start",
+    "body": {},
+    "scenario": "incomplete"
+  },
+  {
+    "id": "start-malformed",
+    "target": "/api/controls/tasks/fixture/start",
+    "body": {},
+    "scenario": "malformed"
+  },
+  {
+    "id": "start-wrong-shape",
+    "target": "/api/controls/tasks/fixture/start",
+    "body": {},
+    "scenario": "wrong-shape"
+  },
+  {
+    "id": "start-untrusted",
+    "target": "/api/controls/tasks/fixture/start",
+    "body": {},
+    "scenario": "untrusted"
+  },
+  {
+    "id": "start-unexpected",
+    "target": "/api/controls/tasks/fixture/start",
+    "body": {},
+    "scenario": "unexpected"
+  },
+  {
+    "id": "cancel-ok",
+    "target": "/api/controls/tasks/fixture/cancel",
+    "body": {},
+    "scenario": "ok"
+  },
+  {
+    "id": "cancel-http400",
+    "target": "/api/controls/tasks/fixture/cancel",
+    "body": {},
+    "scenario": "http400"
+  },
+  {
+    "id": "cancel-http409",
+    "target": "/api/controls/tasks/fixture/cancel",
+    "body": {},
+    "scenario": "http409"
+  },
+  {
+    "id": "cancel-http500",
+    "target": "/api/controls/tasks/fixture/cancel",
+    "body": {},
+    "scenario": "http500"
+  },
+  {
+    "id": "cancel-timeout",
+    "target": "/api/controls/tasks/fixture/cancel",
+    "body": {},
+    "scenario": "timeout"
+  },
+  {
+    "id": "cancel-incomplete",
+    "target": "/api/controls/tasks/fixture/cancel",
+    "body": {},
+    "scenario": "incomplete"
+  },
+  {
+    "id": "cancel-malformed",
+    "target": "/api/controls/tasks/fixture/cancel",
+    "body": {},
+    "scenario": "malformed"
+  },
+  {
+    "id": "cancel-wrong-shape",
+    "target": "/api/controls/tasks/fixture/cancel",
+    "body": {},
+    "scenario": "wrong-shape"
+  },
+  {
+    "id": "cancel-untrusted",
+    "target": "/api/controls/tasks/fixture/cancel",
+    "body": {},
+    "scenario": "untrusted"
+  },
+  {
+    "id": "cancel-unexpected",
+    "target": "/api/controls/tasks/fixture/cancel",
+    "body": {},
+    "scenario": "unexpected"
+  },
+  {
+    "id": "rescan-ok",
+    "target": "/api/controls/upload/rescan",
+    "body": {},
+    "scenario": "ok"
+  },
+  {
+    "id": "rescan-no-eligible",
+    "target": "/api/controls/upload/rescan",
+    "body": {},
+    "scenario": "no-eligible"
+  },
+  {
+    "id": "rescan-already-verifying",
+    "target": "/api/controls/upload/rescan",
+    "body": {},
+    "scenario": "already-verifying"
+  },
+  {
+    "id": "rescan-worker-missing",
+    "target": "/api/controls/upload/rescan",
+    "body": {},
+    "scenario": "worker-missing"
+  },
+  {
+    "id": "rescan-startup-failed",
+    "target": "/api/controls/upload/rescan",
+    "body": {},
+    "scenario": "startup-failed"
+  },
+  {
+    "id": "rescan-startup-timeout",
+    "target": "/api/controls/upload/rescan",
+    "body": {},
+    "scenario": "startup-timeout"
+  },
+  {
+    "id": "rescan-worker-running",
+    "target": "/api/controls/upload/rescan",
+    "body": {},
+    "scenario": "worker-running"
+  },
+  {
+    "id": "rescan-untrusted",
+    "target": "/api/controls/upload/rescan",
+    "body": {},
+    "scenario": "untrusted"
+  },
+  {
+    "id": "rescan-unexpected",
+    "target": "/api/controls/upload/rescan",
+    "body": {},
+    "scenario": "unexpected"
+  },
+  {
+    "id": "rescan-backlog",
+    "target": "/api/controls/upload/rescan",
+    "body": {},
+    "scenario": "backlog"
+  },
+  {
+    "id": "verify-ok",
+    "target": "/api/controls/upload/verify-history",
+    "body": {},
+    "scenario": "ok"
+  },
+  {
+    "id": "verify-no-eligible",
+    "target": "/api/controls/upload/verify-history",
+    "body": {},
+    "scenario": "no-eligible"
+  },
+  {
+    "id": "verify-already-verifying",
+    "target": "/api/controls/upload/verify-history",
+    "body": {},
+    "scenario": "already-verifying"
+  },
+  {
+    "id": "verify-worker-missing",
+    "target": "/api/controls/upload/verify-history",
+    "body": {},
+    "scenario": "worker-missing"
+  },
+  {
+    "id": "verify-startup-failed",
+    "target": "/api/controls/upload/verify-history",
+    "body": {},
+    "scenario": "startup-failed"
+  },
+  {
+    "id": "verify-startup-timeout",
+    "target": "/api/controls/upload/verify-history",
+    "body": {},
+    "scenario": "startup-timeout"
+  },
+  {
+    "id": "verify-worker-running",
+    "target": "/api/controls/upload/verify-history",
+    "body": {},
+    "scenario": "worker-running"
+  },
+  {
+    "id": "verify-untrusted",
+    "target": "/api/controls/upload/verify-history",
+    "body": {},
+    "scenario": "untrusted"
+  },
+  {
+    "id": "verify-unexpected",
+    "target": "/api/controls/upload/verify-history",
+    "body": {},
+    "scenario": "unexpected"
+  }
+]
