@@ -189,6 +189,7 @@ class HistoryTests(unittest.TestCase):
             self.install(value);bundles.append(value);previous=value
         old=bundles[1]['generationId']
         self.store.select('home',old,'ROLLBACK_HISTORY_SOURCE')
+        self.store.retain_ready=1
         with self.store.db(True) as db:self.store._prune_ready(db,'home')
         self.assertEqual('ready',self.store.status(old)['state'])
         self.store.select('home',previous['generationId'],'ROLLBACK_HISTORY_SOURCE')
