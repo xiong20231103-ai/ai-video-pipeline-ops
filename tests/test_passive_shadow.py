@@ -52,7 +52,9 @@ class PassiveTests(unittest.TestCase):
     db.execute("insert into events(message) values('first')")
     db.execute('insert into events(message) values(?)',('{"snapshotToken":"must-not-store"}',));db.commit()
    m.record(base/'out',roots)
-   with closing(sqlite3.connect(path)) as db:db.execute("insert into events(message) values('second')");db.commit()
+   with closing(sqlite3.connect(path)) as db:
+    db.execute("insert into events(message) values('second')")
+    db.execute('insert into events(message) values(?)',('{"snapshotToken":"must-not-store"}',));db.commit()
    m.record(base/'out',roots)
    objects=[p.read_bytes() for p in (base/'out'/'objects').iterdir()]
    self.assertFalse(any(b'must-not-store' in body for body in objects))

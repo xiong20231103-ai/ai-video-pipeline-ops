@@ -12,6 +12,7 @@ from agent.core.snapshot import safe_facts,SnapshotError,TABLES
 
 MAX_FILE=32*1024*1024
 MAX_TOTAL=2*1024*1024*1024
+APPEND_TABLES={'events','task_history','heartbeats'}
 
 def encoded(value):return json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
 def atomic(path,body):
@@ -95,7 +96,10 @@ def ops_projection(path,output,prior=None):
             result={};cursors={};rejected=0;prior=prior or {}
             for name in sorted(names):
                 maximum=db.execute('select coalesce(max(rowid),0) from "'+name+'"').fetchone()[0]
-                start=prior.get(name,0) if name in {'events','task_history'} else 0
+                # Do not backfill months of history on the home machine: first
+                # observation establishes a cursor; later samples capture new
+                # rows for the upcoming batches. Historical replay is separate.
+                start=prior.get(name,maximum) if name in APPEND_TABLES else 0
                 if not isinstance(start,int) or start<0 or start>maximum:start=0
                 cursor=db.execute('select * from "'+name+'" where rowid>?',(start,))
                 columns=[c[0] for c in cursor.description]
@@ -105,8 +109,8 @@ def ops_projection(path,output,prior=None):
                     try:no_credentials(row)
                     except SnapshotError:rejected+=1;continue
                     rows.append(row)
-                result[name]=dict(mode='append-delta' if name in {'events','task_history'} else 'full-projection',afterRowId=start,throughRowId=maximum,rows=sorted(rows,key=encoded))
-                if name in {'events','task_history'}:cursors[name]=maximum
+                result[name]=dict(mode=('append-delta' if name in prior else 'baseline-cursor') if name in APPEND_TABLES else 'full-projection',afterRowId=start,throughRowId=maximum,rows=sorted(rows,key=encoded))
+                if name in APPEND_TABLES:cursors[name]=maximum
             return encoded(result),cursors,rejected
         finally:db.close()
     finally:
