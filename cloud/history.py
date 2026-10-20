@@ -5,8 +5,10 @@ from pathlib import Path
 from contracts.history import HistoryError,canonical,sha,manifest,record,summary,identifier,safe_facts,MAX_CHUNK,MAX_BYTES,KINDS
 
 class HistoryStore:
-    def __init__(self,path,*,clock=time.time,quota_bytes=512*1024*1024):
-        self.path=Path(path);self.clock=clock;self.quota=quota_bytes
+    def __init__(self,path,*,clock=time.time,quota_bytes=512*1024*1024,retain_ready=3):
+        if type(retain_ready) is not int or not 1<=retain_ready<=8:
+            raise ValueError('retain_ready must be between 1 and 8')
+        self.path=Path(path);self.clock=clock;self.quota=quota_bytes;self.retain_ready=retain_ready
         self.path.parent.mkdir(parents=True,exist_ok=True)
         with self.db() as db:
             db.executescript("""
@@ -42,6 +44,7 @@ class HistoryStore:
             current=self._active(db,source)
             if descriptor['sequence']<=current['highwater']:raise HistoryError('history_sequence_stale',409)
             if descriptor['baseGeneration']!=current['active']:raise HistoryError('history_base_changed',409)
+            self._prune_ready(db,source)
             if db.execute('SELECT count(*) FROM generations WHERE source=?',(source,)).fetchone()[0]>=10:raise HistoryError('history_generation_limit',413)
             reserve_bytes=descriptor['summary']['bytes'];reserve_rows=descriptor['summary']['rowCount']
             if descriptor['mode']=='delta':
@@ -56,6 +59,24 @@ class HistoryStore:
             except sqlite3.IntegrityError:raise HistoryError('history_sequence_conflict',409) from None
             if descriptor['mode']=='delta':db.execute('INSERT INTO records SELECT ?,kind,record_key,body,digest,byte_count FROM records WHERE generation=?',(generation,current['active']))
             return self._status(db,generation)
+    def _prune_ready(self,db,source):
+        """Keep recent ready generations plus active/staging dependencies.
+
+        Selection audit rows remain intact. Deleting a generation intentionally
+        invalidates old pinned cursors; callers get history_generation_missing.
+        SQLite reuses freed pages; no VACUUM or live source access is performed.
+        """
+        rows=db.execute("SELECT id FROM generations WHERE source=? AND state='ready' ORDER BY seq DESC",(source,)).fetchall()
+        protected={row['id'] for row in rows[:self.retain_ready]}
+        protected.add(self._active(db,source)['active'])
+        for row in db.execute("SELECT descriptor FROM generations WHERE source=? AND state='staging'",(source,)):
+            protected.add(json.loads(row['descriptor'])['baseGeneration'])
+        for row in rows:
+            generation=row['id']
+            if generation in protected:continue
+            for table in ('records','chunks','touched','changes'):
+                db.execute('DELETE FROM '+table+' WHERE generation=?',(generation,))
+            db.execute('DELETE FROM generations WHERE id=?',(generation,))
     def _status(self,db,generation):
         row=self._generation(db,generation);descriptor=json.loads(row['descriptor'])
         received=[r[0] for r in db.execute('SELECT position FROM chunks WHERE generation=? ORDER BY position',(generation,))]
@@ -138,6 +159,7 @@ class HistoryStore:
             db.execute("UPDATE generations SET state='ready',reserved_bytes=?,reserved_rows=? WHERE id=?",(descriptor['summary']['bytes'],descriptor['summary']['rowCount'],generation))
             db.execute('INSERT OR REPLACE INTO sources VALUES(?,?,?)',(row['source'],generation,row['seq']))
             db.execute('INSERT INTO selections(source,previous,target,reason,created) VALUES(?,?,?,?,?)',(row['source'],previous,generation,'verified-import',self.clock()))
+            self._prune_ready(db,row['source'])
             return self._status(db,generation)
     def source(self,source):
         identifier(source)
