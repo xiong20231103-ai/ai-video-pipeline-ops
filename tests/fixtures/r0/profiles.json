@@ -1,0 +1,1690 @@
+{
+  "running": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "planned": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 0,
+              "failed": 0,
+              "status": "pending_confirmation",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 0,
+              "failed": 0,
+              "status": "pending_confirmation",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "completed_with_historical_failure": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 3,
+              "failed": 1,
+              "status": "completed",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 3,
+              "failed": 1,
+              "status": "completed",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "missing_links": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 2,
+              "failed": 1,
+              "status": "blocked_missing_links",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "error": "MISSING_LINKS"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 2,
+              "failed": 1,
+              "status": "blocked_missing_links",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "error": "MISSING_LINKS"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "voice_login_failure": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "pipelineStatus": "voice_failed",
+              "error": "VOICE_LOGIN_REQUIRED"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "pipelineStatus": "voice_failed",
+              "error": "VOICE_LOGIN_REQUIRED"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "voice_partial": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 1,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "pipelineStatus": "voice_partial"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 1,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "pipelineStatus": "voice_partial"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "generation_failure": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "pipelineStatus": "generation_failed",
+              "error": "FFMPEG_FAILED"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "pipelineStatus": "generation_failed",
+              "error": "FFMPEG_FAILED"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "capcut_safe_checkpoint": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "pipelineStatus": "blocked_capcut",
+              "currentPhase": "waiting_client",
+              "failureFingerprint": "draft_checkpoint_current_lease_files_missing"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "pipelineStatus": "blocked_capcut",
+              "currentPhase": "waiting_client",
+              "failureFingerprint": "draft_checkpoint_current_lease_files_missing"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "upload_failure": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "pipelineStatus": "upload_failed",
+              "error": "UPLOAD_FAILED"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "pipelineStatus": "upload_failed",
+              "error": "UPLOAD_FAILED"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "denor": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "batchKind": "denor"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "batchKind": "denor"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "selected_scope": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "runGroupId": "fixture-run-1",
+              "selectedProjects": [
+                "fixture-project"
+              ],
+              "unselectedProjects": [
+                "fixture-deferred"
+              ]
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00",
+              "runGroupId": "fixture-run-1",
+              "selectedProjects": [
+                "fixture-project"
+              ],
+              "unselectedProjects": [
+                "fixture-deferred"
+              ]
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "legacy_schema": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 1,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": {},
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": {}
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "bad_local_json": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": "{invalid-json"
+    }
+  },
+  "missing_local_json": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": null
+    }
+  },
+  "late_manifest_overlay": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {
+          "fixture-task-1": {
+            "manifestId": "fixture-old-manifest",
+            "attemptId": "fixture-old-attempt",
+            "pipelineStatus": "blocked_capcut"
+          }
+        }
+      }
+    }
+  },
+  "after_midnight": {
+    "frozenAt": "2026-10-17T00:00:01+08:00",
+    "facts": {
+      "machineName": "fixture-machine",
+      "http": {
+        "receiver:/api/pipeline/summary": {
+          "schemaVersion": 3,
+          "reconciliationState": "healthy",
+          "reconciledAt": "2026-10-16T23:59:59+08:00",
+          "updatedAt": "2026-10-16T23:59:59+08:00",
+          "projects": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ],
+          "archivedProjects": []
+        },
+        "receiver:/api/tasks": {
+          "items": [
+            {
+              "taskId": "fixture-task-1",
+              "batchId": "fixture-batch-1",
+              "date": "10.16",
+              "project": "fixture-project",
+              "expectedCount": 3,
+              "completed": 1,
+              "failed": 0,
+              "status": "running",
+              "updatedAt": "2026-10-16T23:59:59+08:00"
+            }
+          ]
+        },
+        "receiver:/api/templates": {
+          "items": []
+        },
+        "control:/api/quality/current": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/versions": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/cloud/reconciliation": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/disk/forecast": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/credentials/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/task-integrity": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/incidents/latest/evidence": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        },
+        "control:/api/auto-recovery/status": {
+          "ok": true,
+          "enabled": false,
+          "items": [],
+          "state": "healthy"
+        }
+      },
+      "metrics": {},
+      "collectorAlive": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": {
+        "items": {}
+      }
+    }
+  },
+  "empty_sources": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "scan": true
+    },
+    "files": {}
+  },
+  "broken_json": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "scan": true
+    },
+    "files": {
+      "workbench/handoff/download/project_status.json": "{broken"
+    }
+  },
+  "reset_midnight": {
+    "frozenAt": "2026-10-17T00:00:01+08:00",
+    "facts": {
+      "scan": true
+    },
+    "files": {
+      "repository/data/test_reset_state.json": {
+        "resetAt": "2026-10-17T00:00:00+08:00"
+      }
+    }
+  },
+  "health_logs_and_process_identity": {
+    "frozenAt": "2026-10-16T23:59:59+08:00",
+    "facts": {
+      "scan": false,
+      "processRecords": [
+        {
+          "pid": 424242,
+          "name": "CapCut.exe",
+          "cmdline": [
+            "CapCut.exe"
+          ],
+          "create_time": 100.0
+        }
+      ]
+    },
+    "files": {
+      "workbench/handoff/logs/workbench-20261016.log": "2026-10-16T23:59:00 [pid 424242] synthetic failure 失败：fixture-only\n2026-10-16T23:59:01 [pid 424242] synthetic success 成功 3，失败 0\n",
+      "workbench/handoff/control/automatic_recovery.json": {
+        "commands": {
+          "synthetic-command": {
+            "commandId": "synthetic-command",
+            "taskId": "fixture-task",
+            "state": "reconciling",
+            "acceptedAt": "2026-10-16T23:59:00+08:00"
+          }
+        }
+      }
+    }
+  }
+}

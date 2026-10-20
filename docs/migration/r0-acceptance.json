@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "module": "R0",
+  "isolation": {
+    "status": "local-passed-ci-pending",
+    "profiles": 20,
+    "readTargets": 28,
+    "responses": 560,
+    "testCount": 387,
+    "skipped": 1
+  },
+  "realShadow": {
+    "status": "not-run",
+    "fullBatchId": null,
+    "mismatchCount": null
+  },
+  "switch": {
+    "status": "not-started",
+    "executed": false
+  },
+  "productionFilesChanged": false,
+  "homeProgramsRestarted": false,
+  "safeContinueRequested": false
+}
