@@ -43,6 +43,14 @@ with tempfile.TemporaryDirectory(prefix="ops-isolated-") as scratch:
         if isinstance(path, int):
             return True
         try:
+            if isinstance(path, str) and path.startswith('file:'):
+                from urllib.parse import urlsplit, unquote
+                parsed = urlsplit(path)
+                if parsed.netloc not in {'', 'localhost'}:
+                    return False
+                path = unquote(parsed.path)
+                if os.name == 'nt' and len(path) > 3 and path[0] == '/' and path[2] == ':':
+                    path = path[1:]
             resolved = Path(path).resolve()
             return any(resolved.is_relative_to(base) for base in write_roots)
         except (ValueError, TypeError):
@@ -92,4 +100,3 @@ with tempfile.TemporaryDirectory(prefix="ops-isolated-") as scratch:
         result = unittest.TextTestRunner(verbosity=1).run(suite)
     print("Isolation: worktree/temp writes only; live HTTP and process launches blocked.")
     sys.exit(0 if result.wasSuccessful() else 1)
-
