@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "module": "R2",
+  "isolated": {
+    "status": "local-passed-ci-pending",
+    "testCount": 432,
+    "skipped": 1,
+    "seconds": 136.72
+  },
+  "realShadow": {
+    "status": "not-run",
+    "fullBatchId": null,
+    "mismatchCount": null
+  },
+  "switch": {
+    "status": "not-started",
+    "executed": false
+  },
+  "historyEnabledDefault": false,
+  "productionExported": false,
+  "homeProgramsRestarted": false,
+  "legacyReadsReplaced": false,
+  "legacyWritesReplaced": false,
+  "timelineRecipes": "synthetic-only-not-production-verified"
+}
