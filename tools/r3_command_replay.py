@@ -55,6 +55,11 @@ class FrozenDateTime(datetime):
     def now(cls, tz=None):
         return cls(2026, 10, 20, 12, 0, tzinfo=timezone(timedelta(hours=8))).astimezone(tz or timezone(timedelta(hours=8)))
 
+    def astimezone(self, tz=None):
+        # Legacy now_iso calls .astimezone() again. Freeze local timezone too;
+        # CI's UTC and a home machine's +08:00 must replay the same source time.
+        return datetime.astimezone(self, tz or timezone(timedelta(hours=8)))
+
 
 class CaseEnvironment:
     """Explicit native I/O ports which can only simulate external effects."""

@@ -32,6 +32,7 @@
 
 - prepare 仅能初始化一次，初始 owner=legacy；缺失、损坏、链接/目录联接、锁占用均拒绝写入，不自动重建。
 - `FencedDashboard` 包装原 ASGI 应用，所有六类旧 POST 全程持 legacy 锁；candidate owner 时 409，门禁不可用时 503。旧 GET、R4/R5 与其他路由继续交给旧应用。
+- 原草稿/音频/生产清理、cloud-cleanup execute、测试reset也写共享 control_actions.json 和固定 .tmp 文件。这五个旧入口全程使用同一锁的 shared_write，不要求 owner=legacy，因此 R3 candidate 时仍由旧实现执行，但不能与候选上传写索引并行。锁忙返回503。这里只序列化共享文件，不将清理/reset纳入候选，不改变原操作资格或算法；本轮不会调用这些入口。
 - 候选先核对包装器的只读 capability：协议、相同 fenceId、owner=candidate、legacyWritesBlocked=true；再持 candidate 锁执行。证明不符直接 not_sent，绝不走旧 POST。
 - select 只在同一原生锁内修改 owner。需显式人工审查确认、相同 fenceId、云端暂停/排空、leased/sent/unknown 均为零、旧侧门禁安装与完整影子已审。证据字段是操作员声明，不能冒称独立证明或用测试中的合成值申请切换。没有 worker/CLI 自动调用 select。
 

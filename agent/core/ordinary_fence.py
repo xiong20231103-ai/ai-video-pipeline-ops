@@ -1,6 +1,6 @@
 """Explicit R3 writer ownership; no process start, listener or auto-initialization."""
 from contextlib import contextmanager
-import json,os,threading,time,uuid
+import json,math,os,re,threading,time,uuid
 from pathlib import Path
 from contracts.state_files import atomic_json,read_json
 
@@ -20,7 +20,11 @@ class OrdinaryFence:
         self._paths()
         try:value=read_json(self.path)
         except (OSError,ValueError):raise FenceRejected('r3_fence_state_unavailable') from None
-        if not isinstance(value,dict) or set(value)!={'schema','fenceId','owner','updatedAt'} or value['schema']!=1 or value['owner'] not in {'legacy','candidate'} or not isinstance(value['fenceId'],str) or len(value['fenceId'])!=32:raise FenceRejected('r3_fence_state_invalid')
+        if not isinstance(value,dict) or set(value)!={'schema','fenceId','owner','updatedAt'}:raise FenceRejected('r3_fence_state_invalid')
+        if (type(value['schema']) is not int or value['schema']!=1
+            or not isinstance(value['owner'],str) or value['owner'] not in {'legacy','candidate'}
+            or not isinstance(value['fenceId'],str) or not re.fullmatch('[0-9a-f]{32}',value['fenceId'])
+            or type(value['updatedAt']) not in (int,float) or not math.isfinite(value['updatedAt'])):raise FenceRejected('r3_fence_state_invalid')
         return value
     def prepare(self):
         self._paths()
@@ -70,6 +74,12 @@ class OrdinaryFence:
             state=self._read()
             if owner not in {'legacy','candidate'} or state['owner']!=owner:raise FenceRejected('r3_owner_mismatch')
             yield state
+    @contextmanager
+    def shared_write(self):
+        # Legacy cleanup/reset still owns its own behavior during R3. It shares
+        # control_actions.json (including its .tmp file) with upload commands,
+        # so those handlers must serialize even while ordinary owner=candidate.
+        with self._lock():yield self._read()
     def status(self):
         with self._lock():return self._read()
     def select(self,owner,*,expected_id,confirmation,evidence):

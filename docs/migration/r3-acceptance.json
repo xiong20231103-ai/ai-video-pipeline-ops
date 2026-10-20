@@ -5,9 +5,11 @@
     "status": "local-passed-ci-pending",
     "syntheticCases": 63,
     "businessDifferences": 0,
-    "testCount": 462,
+    "testCount": 465,
     "skipped": 1,
-    "seconds": 187.146
+    "seconds": 182.957,
+    "targetedTests": 32,
+    "targetedSeconds": 12.390
   },
   "realShadow": {
     "status": "not-run",

@@ -13,10 +13,10 @@ from unittest.mock import Mock, patch
 from starlette.responses import JSONResponse
 from agent.core import ordinary, ordinary_logic
 from agent.core.ordinary_fence import OrdinaryFence, FenceRejected
-from agent.core.ordinary_ingress import FencedDashboard, CAPABILITY
+from agent.core.ordinary_ingress import FencedDashboard, CAPABILITY, SHARED_LEGACY_WRITES
 from agent.execution import ExecutionLedger, ExecutionWorker
 from contracts.commands import command
-from tools.r3_command_replay import ROOT, ROUTES, CaseEnvironment, replay_case
+from tools.r3_command_replay import ROOT, ROUTES, CaseEnvironment, FrozenDateTime, replay_case
 
 
 class R3TestCase(unittest.TestCase):
@@ -114,6 +114,12 @@ class ReplayTests(R3TestCase):
         replay_case(self.source,case,self.root/'old')
         with self.assertRaisesRegex(ValueError,'scratch_must_be_new'):
             replay_case(self.source,case,self.root/'old')
+
+    def test_replay_local_timezone_is_fixed_even_after_explicit_utc_conversion(self):
+        from datetime import timezone
+        value = FrozenDateTime.now(timezone.utc)
+        self.assertEqual('2026-10-20T04:00:00+00:00',value.isoformat())
+        self.assertEqual('2026-10-20T12:00:00+08:00',value.astimezone().isoformat())
 
 
 class CandidateTests(R3TestCase):
@@ -280,9 +286,11 @@ class FenceTests(R3TestCase):
         with fence.guard('legacy'):pass
 
     def test_corrupt_state_is_fail_closed(self):
-        fence = self.fence('legacy'); fence.path.write_text('{}',encoding='utf-8')
-        with self.assertRaisesRegex(FenceRejected,'state_invalid'):
-            with fence.guard('legacy'):self.fail('corrupt owner')
+        fence = self.fence('legacy'); valid = fence.status()
+        for corrupt in ({},dict(valid,owner=[]),dict(valid,schema=True),dict(valid,fenceId='x'*32),dict(valid,updatedAt='wrong')):
+            fence.path.write_text(json.dumps(corrupt),encoding='utf-8')
+            with self.assertRaisesRegex(FenceRejected,'state_invalid'):
+                with fence.guard('legacy'):self.fail('corrupt owner')
 
 
 class IngressTests(R3TestCase):
@@ -325,6 +333,22 @@ class IngressTests(R3TestCase):
         with self.assertRaisesRegex(RuntimeError,'fixture'):
             self.call(FencedDashboard(broken,fence),'/api/controls/upload/rescan')
         with fence.guard('legacy'):pass
+
+    def test_shared_cleanup_and_reset_stay_legacy_while_ordinary_owner_is_candidate(self):
+        wrapper = self.wrapper(self.fence())
+        for target in SHARED_LEGACY_WRITES:
+            self.assertEqual(200,self.call(wrapper,target)[0])
+        self.assertEqual(set(SHARED_LEGACY_WRITES),set(self.calls))
+
+    def test_shared_control_action_writers_cannot_overlap_a_candidate_write(self):
+        fence = self.fence(); wrapper = self.wrapper(fence)
+        with fence.guard('candidate'):
+            for target in SHARED_LEGACY_WRITES:
+                self.assertEqual(503,self.call(wrapper,target)[0])
+        self.assertEqual([],self.calls)
+        with fence.shared_write():
+            with self.assertRaisesRegex(FenceRejected,'busy'):
+                with fence.guard('candidate'):self.fail('shared index writers overlap')
 
 
 if __name__ == '__main__':unittest.main()
