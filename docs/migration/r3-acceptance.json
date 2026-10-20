@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "module": "R3",
+  "isolation": {
+    "status": "local-passed-ci-pending",
+    "syntheticCases": 63,
+    "businessDifferences": 0,
+    "testCount": 462,
+    "skipped": 1,
+    "seconds": 187.146
+  },
+  "realShadow": {
+    "status": "not-run",
+    "fullBatchId": null,
+    "mismatchCount": null
+  },
+  "switch": {
+    "status": "not-started",
+    "candidateInjected": false,
+    "legacyWrapperInstalled": false,
+    "executed": false
+  },
+  "productionFilesChanged": false,
+  "homeProgramsRestarted": false,
+  "safeContinueRequested": false,
+  "cleanupEnabled": false
+}

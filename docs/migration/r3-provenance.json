@@ -1,0 +1,212 @@
+{
+  "schema": 1,
+  "legacyCommit": "f78db5a4bfd32eb5ebeab2c63f6dea48cc26f061",
+  "legacySha256": "f4d754cd86c524933d3f87da1006167c2fd698e288fcda09992115dc0e1c044e",
+  "functions": [
+    {
+      "name": "now_iso",
+      "legacyStart": 183,
+      "legacyEnd": 184,
+      "candidateStart": 8,
+      "candidateEnd": 9
+    },
+    {
+      "name": "safe_int",
+      "legacyStart": 196,
+      "legacyEnd": 200,
+      "candidateStart": 12,
+      "candidateEnd": 16
+    },
+    {
+      "name": "sanitize_public_value",
+      "legacyStart": 203,
+      "legacyEnd": 214,
+      "candidateStart": 19,
+      "candidateEnd": 30
+    },
+    {
+      "name": "resolve_path",
+      "legacyStart": 217,
+      "legacyEnd": 219,
+      "candidateStart": 33,
+      "candidateEnd": 35
+    },
+    {
+      "name": "receiver_base_url",
+      "legacyStart": 272,
+      "legacyEnd": 278,
+      "candidateStart": 38,
+      "candidateEnd": 44
+    },
+    {
+      "name": "read_json_object",
+      "legacyStart": 593,
+      "legacyEnd": 602,
+      "candidateStart": 47,
+      "candidateEnd": 56
+    },
+    {
+      "name": "_write_json_atomic",
+      "legacyStart": 613,
+      "legacyEnd": 617,
+      "candidateStart": 59,
+      "candidateEnd": 63
+    },
+    {
+      "name": "load_control_actions",
+      "legacyStart": 2503,
+      "legacyEnd": 2504,
+      "candidateStart": 66,
+      "candidateEnd": 67
+    },
+    {
+      "name": "save_control_action",
+      "legacyStart": 2507,
+      "legacyEnd": 2513,
+      "candidateStart": 70,
+      "candidateEnd": 76
+    },
+    {
+      "name": "workbench_runtime_dir",
+      "legacyStart": 2527,
+      "legacyEnd": 2531,
+      "candidateStart": 79,
+      "candidateEnd": 83
+    },
+    {
+      "name": "inspect_upload_backlog",
+      "legacyStart": 2615,
+      "legacyEnd": 2673,
+      "candidateStart": 86,
+      "candidateEnd": 144
+    },
+    {
+      "name": "_ensure_upload_service_running",
+      "legacyStart": 2676,
+      "legacyEnd": 2723,
+      "candidateStart": 147,
+      "candidateEnd": 194
+    },
+    {
+      "name": "historical_cloud_verification_status",
+      "legacyStart": 2726,
+      "legacyEnd": 2756,
+      "candidateStart": 197,
+      "candidateEnd": 227
+    },
+    {
+      "name": "request_historical_cloud_verification",
+      "legacyStart": 2759,
+      "legacyEnd": 2829,
+      "candidateStart": 230,
+      "candidateEnd": 300
+    },
+    {
+      "name": "request_upload_rescan",
+      "legacyStart": 2832,
+      "legacyEnd": 2859,
+      "candidateStart": 303,
+      "candidateEnd": 330
+    },
+    {
+      "name": "_is_tailnet_or_local",
+      "legacyStart": 2883,
+      "legacyEnd": 2894,
+      "candidateStart": 333,
+      "candidateEnd": 344
+    },
+    {
+      "name": "require_control_permission",
+      "legacyStart": 2897,
+      "legacyEnd": 2899,
+      "candidateStart": 347,
+      "candidateEnd": 349
+    },
+    {
+      "name": "receiver_json",
+      "legacyStart": 2902,
+      "legacyEnd": 2930,
+      "candidateStart": 352,
+      "candidateEnd": 380
+    },
+    {
+      "name": "control_create_task",
+      "legacyStart": 6415,
+      "legacyEnd": 6423,
+      "candidateStart": 383,
+      "candidateEnd": 391
+    },
+    {
+      "name": "control_replenish_task",
+      "legacyStart": 6427,
+      "legacyEnd": 6435,
+      "candidateStart": 394,
+      "candidateEnd": 402
+    },
+    {
+      "name": "control_start_task",
+      "legacyStart": 6439,
+      "legacyEnd": 6441,
+      "candidateStart": 405,
+      "candidateEnd": 407
+    },
+    {
+      "name": "control_cancel_task",
+      "legacyStart": 6445,
+      "legacyEnd": 6447,
+      "candidateStart": 410,
+      "candidateEnd": 412
+    },
+    {
+      "name": "control_upload_rescan",
+      "legacyStart": 6700,
+      "legacyEnd": 6709,
+      "candidateStart": 415,
+      "candidateEnd": 424
+    },
+    {
+      "name": "control_upload_verify_history",
+      "legacyStart": 6713,
+      "legacyEnd": 6722,
+      "candidateStart": 427,
+      "candidateEnd": 436
+    },
+    {
+      "name": "unhandled_error",
+      "legacyStart": 6982,
+      "legacyEnd": 6984,
+      "candidateStart": 439,
+      "candidateEnd": 441
+    }
+  ],
+  "requiredPorts": [
+    "BASE_DIR",
+    "CONFIG",
+    "CONTROL_ACTIONS_PATH",
+    "DATA_DIR",
+    "HTTPException",
+    "JSONResponse",
+    "LOCAL_PATH_PATTERN",
+    "Path",
+    "SENSITIVE_KEY_PARTS",
+    "STORE",
+    "_CLEANUP_SOURCE_STRICT",
+    "datetime",
+    "ipaddress",
+    "json",
+    "os",
+    "psutil",
+    "subprocess",
+    "time",
+    "urllib",
+    "uuid"
+  ],
+  "routes": {
+    "/api/controls/tasks/create": "control_create_task",
+    "/api/controls/tasks/{task_id}/replenish": "control_replenish_task",
+    "/api/controls/tasks/{task_id}/start": "control_start_task",
+    "/api/controls/tasks/{task_id}/cancel": "control_cancel_task",
+    "/api/controls/upload/rescan": "control_upload_rescan",
+    "/api/controls/upload/verify-history": "control_upload_verify_history"
+  }
+}

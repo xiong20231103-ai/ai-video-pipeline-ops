@@ -1,0 +1,5136 @@
+{
+  "create-ok": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "36",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "taskId": "fixture"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/create",
+          "method": "POST",
+          "body": {
+            "audioBatch": "fixture",
+            "date": "10.20",
+            "expectedCount": 1,
+            "material": "fixture",
+            "startNow": false,
+            "templateId": "fixture",
+            "urls": [
+              "https://fixture.invalid/video"
+            ],
+            "voicePlan": {}
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-http400": {
+    "mode": "isolated",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/create",
+          "method": "POST",
+          "body": {
+            "audioBatch": "fixture",
+            "date": "10.20",
+            "expectedCount": 1,
+            "material": "fixture",
+            "startNow": false,
+            "templateId": "fixture",
+            "urls": [
+              "https://fixture.invalid/video"
+            ],
+            "voicePlan": {}
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-http409": {
+    "mode": "isolated",
+    "response": {
+      "status": 409,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/create",
+          "method": "POST",
+          "body": {
+            "audioBatch": "fixture",
+            "date": "10.20",
+            "expectedCount": 1,
+            "material": "fixture",
+            "startNow": false,
+            "templateId": "fixture",
+            "urls": [
+              "https://fixture.invalid/video"
+            ],
+            "voicePlan": {}
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-http500": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/create",
+          "method": "POST",
+          "body": {
+            "audioBatch": "fixture",
+            "date": "10.20",
+            "expectedCount": 1,
+            "material": "fixture",
+            "startNow": false,
+            "templateId": "fixture",
+            "urls": [
+              "https://fixture.invalid/video"
+            ],
+            "voicePlan": {}
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-timeout": {
+    "mode": "isolated",
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-length": "55",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器不可用：fixture-timeout"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/create",
+          "method": "POST",
+          "body": {
+            "audioBatch": "fixture",
+            "date": "10.20",
+            "expectedCount": 1,
+            "material": "fixture",
+            "startNow": false,
+            "templateId": "fixture",
+            "urls": [
+              "https://fixture.invalid/video"
+            ],
+            "voicePlan": {}
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-incomplete": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "45",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "Dashboard暂时无法读取数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/create",
+          "method": "POST",
+          "body": {
+            "audioBatch": "fixture",
+            "date": "10.20",
+            "expectedCount": 1,
+            "material": "fixture",
+            "startNow": false,
+            "templateId": "fixture",
+            "urls": [
+              "https://fixture.invalid/video"
+            ],
+            "voicePlan": {}
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [
+        [
+          "ApiError",
+          "ERROR",
+          "Dashboard接口异常",
+          {
+            "error": "IncompleteRead(7 bytes read, 40 more expected)"
+          }
+        ]
+      ],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-malformed": {
+    "mode": "isolated",
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-length": "115",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器不可用：Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/create",
+          "method": "POST",
+          "body": {
+            "audioBatch": "fixture",
+            "date": "10.20",
+            "expectedCount": 1,
+            "material": "fixture",
+            "startNow": false,
+            "templateId": "fixture",
+            "urls": [
+              "https://fixture.invalid/video"
+            ],
+            "voicePlan": {}
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-wrong-shape": {
+    "mode": "isolated",
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-length": "46",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器返回无效数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/create",
+          "method": "POST",
+          "body": {
+            "audioBatch": "fixture",
+            "date": "10.20",
+            "expectedCount": 1,
+            "material": "fixture",
+            "startNow": false,
+            "templateId": "fixture",
+            "urls": [
+              "https://fixture.invalid/video"
+            ],
+            "voicePlan": {}
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-untrusted": {
+    "mode": "isolated",
+    "response": {
+      "status": 403,
+      "headers": {
+        "content-length": "78",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "控制操作仅允许通过 Tailscale 或家里电脑本机执行"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-unexpected": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "45",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "Dashboard暂时无法读取数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/create",
+          "method": "POST",
+          "body": {
+            "audioBatch": "fixture",
+            "date": "10.20",
+            "expectedCount": 1,
+            "material": "fixture",
+            "startNow": false,
+            "templateId": "fixture",
+            "urls": [
+              "https://fixture.invalid/video"
+            ],
+            "voicePlan": {}
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [
+        [
+          "ApiError",
+          "ERROR",
+          "Dashboard接口异常",
+          {
+            "error": "fixture-unexpected-http-failure"
+          }
+        ]
+      ],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-invalid-json": {
+    "mode": "isolated",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-length": "36",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务不是有效 JSON"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "create-invalid-body": {
+    "mode": "isolated",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-length": "36",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务不是有效 JSON"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-ok": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "36",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "taskId": "fixture"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/replenish/fixture",
+          "method": "POST",
+          "body": {
+            "startNow": false,
+            "urls": [
+              "https://fixture.invalid/video"
+            ]
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-http400": {
+    "mode": "isolated",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/replenish/fixture",
+          "method": "POST",
+          "body": {
+            "startNow": false,
+            "urls": [
+              "https://fixture.invalid/video"
+            ]
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-http409": {
+    "mode": "isolated",
+    "response": {
+      "status": 409,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/replenish/fixture",
+          "method": "POST",
+          "body": {
+            "startNow": false,
+            "urls": [
+              "https://fixture.invalid/video"
+            ]
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-http500": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/replenish/fixture",
+          "method": "POST",
+          "body": {
+            "startNow": false,
+            "urls": [
+              "https://fixture.invalid/video"
+            ]
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-timeout": {
+    "mode": "isolated",
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-length": "55",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器不可用：fixture-timeout"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/replenish/fixture",
+          "method": "POST",
+          "body": {
+            "startNow": false,
+            "urls": [
+              "https://fixture.invalid/video"
+            ]
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-incomplete": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "45",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "Dashboard暂时无法读取数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/replenish/fixture",
+          "method": "POST",
+          "body": {
+            "startNow": false,
+            "urls": [
+              "https://fixture.invalid/video"
+            ]
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [
+        [
+          "ApiError",
+          "ERROR",
+          "Dashboard接口异常",
+          {
+            "error": "IncompleteRead(7 bytes read, 40 more expected)"
+          }
+        ]
+      ],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-malformed": {
+    "mode": "isolated",
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-length": "115",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器不可用：Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/replenish/fixture",
+          "method": "POST",
+          "body": {
+            "startNow": false,
+            "urls": [
+              "https://fixture.invalid/video"
+            ]
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-wrong-shape": {
+    "mode": "isolated",
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-length": "46",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器返回无效数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/replenish/fixture",
+          "method": "POST",
+          "body": {
+            "startNow": false,
+            "urls": [
+              "https://fixture.invalid/video"
+            ]
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-untrusted": {
+    "mode": "isolated",
+    "response": {
+      "status": 403,
+      "headers": {
+        "content-length": "78",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "控制操作仅允许通过 Tailscale 或家里电脑本机执行"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-unexpected": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "45",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "Dashboard暂时无法读取数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/replenish/fixture",
+          "method": "POST",
+          "body": {
+            "startNow": false,
+            "urls": [
+              "https://fixture.invalid/video"
+            ]
+          },
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [
+        [
+          "ApiError",
+          "ERROR",
+          "Dashboard接口异常",
+          {
+            "error": "fixture-unexpected-http-failure"
+          }
+        ]
+      ],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-invalid-json": {
+    "mode": "isolated",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-length": "36",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "补链不是有效 JSON"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "replenish-invalid-body": {
+    "mode": "isolated",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-length": "36",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "补链不是有效 JSON"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "start-ok": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "36",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "taskId": "fixture"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/start",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "start-http400": {
+    "mode": "isolated",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/start",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "start-http409": {
+    "mode": "isolated",
+    "response": {
+      "status": 409,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/start",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "start-http500": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/start",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "start-timeout": {
+    "mode": "isolated",
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-length": "55",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器不可用：fixture-timeout"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/start",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "start-incomplete": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "45",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "Dashboard暂时无法读取数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/start",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [
+        [
+          "ApiError",
+          "ERROR",
+          "Dashboard接口异常",
+          {
+            "error": "IncompleteRead(7 bytes read, 40 more expected)"
+          }
+        ]
+      ],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "start-malformed": {
+    "mode": "isolated",
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-length": "115",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器不可用：Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/start",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "start-wrong-shape": {
+    "mode": "isolated",
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-length": "46",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器返回无效数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/start",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "start-untrusted": {
+    "mode": "isolated",
+    "response": {
+      "status": 403,
+      "headers": {
+        "content-length": "78",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "控制操作仅允许通过 Tailscale 或家里电脑本机执行"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "start-unexpected": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "45",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "Dashboard暂时无法读取数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/start",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [
+        [
+          "ApiError",
+          "ERROR",
+          "Dashboard接口异常",
+          {
+            "error": "fixture-unexpected-http-failure"
+          }
+        ]
+      ],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "cancel-ok": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "36",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "taskId": "fixture"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/cancel",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "cancel-http400": {
+    "mode": "isolated",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/cancel",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "cancel-http409": {
+    "mode": "isolated",
+    "response": {
+      "status": 409,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/cancel",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "cancel-http500": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "29",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "fixture-rejected"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/cancel",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "cancel-timeout": {
+    "mode": "isolated",
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-length": "55",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器不可用：fixture-timeout"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/cancel",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "cancel-incomplete": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "45",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "Dashboard暂时无法读取数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/cancel",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [
+        [
+          "ApiError",
+          "ERROR",
+          "Dashboard接口异常",
+          {
+            "error": "IncompleteRead(7 bytes read, 40 more expected)"
+          }
+        ]
+      ],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "cancel-malformed": {
+    "mode": "isolated",
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-length": "115",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器不可用：Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/cancel",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "cancel-wrong-shape": {
+    "mode": "isolated",
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-length": "46",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "任务接收器返回无效数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/cancel",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "cancel-untrusted": {
+    "mode": "isolated",
+    "response": {
+      "status": 403,
+      "headers": {
+        "content-length": "78",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "控制操作仅允许通过 Tailscale 或家里电脑本机执行"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "cancel-unexpected": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "45",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "Dashboard暂时无法读取数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [
+        {
+          "url": "http://receiver.fixture.invalid/api/tasks/fixture/cancel",
+          "method": "POST",
+          "body": null,
+          "timeout": 3
+        }
+      ],
+      "launches": [],
+      "events": [
+        [
+          "ApiError",
+          "ERROR",
+          "Dashboard接口异常",
+          {
+            "error": "fixture-unexpected-http-failure"
+          }
+        ]
+      ],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "rescan-ok": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "293",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "running": true,
+        "candidates": 0,
+        "missing": 0,
+        "verificationState": "requested",
+        "verificationEligible": 1,
+        "message": "对账完成：发现 0 条可补传，0 条成片不存在；上传服务正在运行。上传服务会自动去重，并继续核验尚未完成的安全清理。"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "requested",
+            "commandId": "verify-history-000000000000",
+            "requestedAt": "2026-10-20T12:00:00+08:00",
+            "eligible": 1,
+            "total": 1,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+            "uploadWorkerStarted": false,
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          },
+          "uploadRescan": {
+            "accepted": true,
+            "running": true,
+            "candidates": 0,
+            "missing": 0,
+            "verificationState": "requested",
+            "verificationEligible": 1,
+            "message": "对账完成：发现 0 条可补传，0 条成片不存在；上传服务正在运行。上传服务会自动去重，并继续核验尚未完成的安全清理。",
+            "state": "completed",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video"
+          ]
+        },
+        "workbench/handoff/upload/upload_service.pid": 7001,
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [],
+      "clock": 1000.1
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "rescan-no-eligible": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "293",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "running": true,
+        "candidates": 0,
+        "missing": 0,
+        "verificationState": "completed",
+        "verificationEligible": 0,
+        "message": "对账完成：发现 0 条可补传，0 条成片不存在；上传服务正在运行。上传服务会自动去重，并继续核验尚未完成的安全清理。"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 2,
+              "cleanup": {
+                "cloudVerifiedAt": "2026-10-19T12:00:00+08:00"
+              }
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "completed",
+            "eligible": 0,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "没有需要补做云端核验的历史上传记录",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          },
+          "uploadRescan": {
+            "accepted": true,
+            "running": true,
+            "candidates": 0,
+            "missing": 0,
+            "verificationState": "completed",
+            "verificationEligible": 0,
+            "message": "对账完成：发现 0 条可补传，0 条成片不存在；上传服务正在运行。上传服务会自动去重，并继续核验尚未完成的安全清理。",
+            "state": "completed",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_service.pid": 7001,
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 2,
+              "cleanup": {
+                "cloudVerifiedAt": "2026-10-19T12:00:00+08:00"
+              }
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [],
+      "clock": 1000.1
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "rescan-already-verifying": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "291",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "running": true,
+        "candidates": 0,
+        "missing": 0,
+        "verificationState": "running",
+        "verificationEligible": 1,
+        "message": "对账完成：发现 0 条可补传，0 条成片不存在；上传服务正在运行。上传服务会自动去重，并继续核验尚未完成的安全清理。"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_status.json": {
+          "state": "running",
+          "commandId": "existing-verification",
+          "total": 1
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "uploadRescan": {
+            "accepted": true,
+            "running": true,
+            "candidates": 0,
+            "missing": 0,
+            "verificationState": "running",
+            "verificationEligible": 1,
+            "message": "对账完成：发现 0 条可补传，0 条成片不存在；上传服务正在运行。上传服务会自动去重，并继续核验尚未完成的安全清理。",
+            "state": "completed",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_status.json": {
+          "state": "running",
+          "commandId": "existing-verification",
+          "total": 1
+        },
+        "workbench/handoff/upload/upload_service.pid": 7001,
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [],
+      "clock": 1000.1
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "rescan-worker-missing": {
+    "mode": "isolated",
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-length": "58",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "百度网盘上传服务运行文件不完整"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "uploadRescan": {
+            "state": "failed",
+            "accepted": false,
+            "message": "百度网盘上传服务运行文件不完整",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "rescan-startup-failed": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "296",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "running": true,
+        "candidates": 0,
+        "missing": 0,
+        "verificationState": "requested",
+        "verificationEligible": 1,
+        "message": "对账完成：发现 0 条可补传，0 条成片不存在；已重新启动上传服务。上传服务会自动去重，并继续核验尚未完成的安全清理。"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "requested",
+            "commandId": "verify-history-000000000000",
+            "requestedAt": "2026-10-20T12:00:00+08:00",
+            "eligible": 1,
+            "total": 1,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+            "uploadWorkerStarted": false,
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          },
+          "uploadRescan": {
+            "accepted": true,
+            "running": true,
+            "candidates": 0,
+            "missing": 0,
+            "verificationState": "requested",
+            "verificationEligible": 1,
+            "message": "对账完成：发现 0 条可补传，0 条成片不存在；已重新启动上传服务。上传服务会自动去重，并继续核验尚未完成的安全清理。",
+            "state": "completed",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video"
+          ]
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        },
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [],
+      "clock": 1000.2
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "rescan-startup-timeout": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "296",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "running": true,
+        "candidates": 0,
+        "missing": 0,
+        "verificationState": "requested",
+        "verificationEligible": 1,
+        "message": "对账完成：发现 0 条可补传，0 条成片不存在；已重新启动上传服务。上传服务会自动去重，并继续核验尚未完成的安全清理。"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "requested",
+            "commandId": "verify-history-000000000000",
+            "requestedAt": "2026-10-20T12:00:00+08:00",
+            "eligible": 1,
+            "total": 1,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+            "uploadWorkerStarted": false,
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          },
+          "uploadRescan": {
+            "accepted": true,
+            "running": true,
+            "candidates": 0,
+            "missing": 0,
+            "verificationState": "requested",
+            "verificationEligible": 1,
+            "message": "对账完成：发现 0 条可补传，0 条成片不存在；已重新启动上传服务。上传服务会自动去重，并继续核验尚未完成的安全清理。",
+            "state": "completed",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video"
+          ]
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        },
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [],
+      "clock": 1010.0000000000023
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "rescan-worker-running": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "293",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "running": true,
+        "candidates": 0,
+        "missing": 0,
+        "verificationState": "requested",
+        "verificationEligible": 1,
+        "message": "对账完成：发现 0 条可补传，0 条成片不存在；上传服务正在运行。上传服务会自动去重，并继续核验尚未完成的安全清理。"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_service.pid": 7001,
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "requested",
+            "commandId": "verify-history-000000000000",
+            "requestedAt": "2026-10-20T12:00:00+08:00",
+            "eligible": 1,
+            "total": 1,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+            "uploadWorkerStarted": false,
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          },
+          "uploadRescan": {
+            "accepted": true,
+            "running": true,
+            "candidates": 0,
+            "missing": 0,
+            "verificationState": "requested",
+            "verificationEligible": 1,
+            "message": "对账完成：发现 0 条可补传，0 条成片不存在；上传服务正在运行。上传服务会自动去重，并继续核验尚未完成的安全清理。",
+            "state": "completed",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video"
+          ]
+        },
+        "workbench/handoff/upload/upload_service.pid": 7001,
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "rescan-untrusted": {
+    "mode": "isolated",
+    "response": {
+      "status": 403,
+      "headers": {
+        "content-length": "78",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "控制操作仅允许通过 Tailscale 或家里电脑本机执行"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "rescan-unexpected": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "45",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "Dashboard暂时无法读取数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [
+        [
+          "ApiError",
+          "ERROR",
+          "Dashboard接口异常",
+          {
+            "error": "fixture-unexpected-launch-failure"
+          }
+        ]
+      ],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "rescan-backlog": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "293",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "running": true,
+        "candidates": 1,
+        "missing": 1,
+        "verificationState": "requested",
+        "verificationEligible": 2,
+        "message": "对账完成：发现 1 条可补传，1 条成片不存在；上传服务正在运行。上传服务会自动去重，并继续核验尚未完成的安全清理。"
+      }
+    },
+    "before": {
+      "files": {
+        "final.mp4": {
+          "sha256": "8a2c095134df2038f94931feae12270bba35f7609f0faabe920c83bfea0cb7b7",
+          "bytes": 22
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            },
+            "uploaded": {
+              "status": "uploaded"
+            },
+            "uploading": {
+              "status": "uploading"
+            }
+          }
+        },
+        "workbench/records/fixture/第四步到第五步.json": {
+          "tasks": [
+            {
+              "taskId": "ready",
+              "status": "completed",
+              "finalOutputPath": "$SNAPSHOT\\final.mp4"
+            },
+            {
+              "taskId": "gone",
+              "status": "completed",
+              "finalOutputPath": "$SNAPSHOT\\missing.mp4"
+            },
+            {
+              "taskId": "uploaded",
+              "status": "completed",
+              "finalOutputPath": "$SNAPSHOT\\final.mp4"
+            },
+            {
+              "taskId": "uploading",
+              "status": "completed",
+              "finalOutputPath": "$SNAPSHOT\\final.mp4"
+            },
+            {
+              "taskId": "unfinished",
+              "status": "waiting",
+              "finalOutputPath": "$SNAPSHOT\\final.mp4"
+            }
+          ]
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "requested",
+            "commandId": "verify-history-000000000000",
+            "requestedAt": "2026-10-20T12:00:00+08:00",
+            "eligible": 2,
+            "total": 2,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "已提交 2 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+            "uploadWorkerStarted": false,
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          },
+          "uploadRescan": {
+            "accepted": true,
+            "running": true,
+            "candidates": 1,
+            "missing": 1,
+            "verificationState": "requested",
+            "verificationEligible": 2,
+            "message": "对账完成：发现 1 条可补传，1 条成片不存在；上传服务正在运行。上传服务会自动去重，并继续核验尚未完成的安全清理。",
+            "state": "completed",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "final.mp4": {
+          "sha256": "8a2c095134df2038f94931feae12270bba35f7609f0faabe920c83bfea0cb7b7",
+          "bytes": 22
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video",
+            "uploaded"
+          ]
+        },
+        "workbench/handoff/upload/upload_service.pid": 7001,
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            },
+            "uploaded": {
+              "status": "uploaded"
+            },
+            "uploading": {
+              "status": "uploading"
+            }
+          }
+        },
+        "workbench/records/fixture/第四步到第五步.json": {
+          "tasks": [
+            {
+              "taskId": "ready",
+              "status": "completed",
+              "finalOutputPath": "$SNAPSHOT\\final.mp4"
+            },
+            {
+              "taskId": "gone",
+              "status": "completed",
+              "finalOutputPath": "$SNAPSHOT\\missing.mp4"
+            },
+            {
+              "taskId": "uploaded",
+              "status": "completed",
+              "finalOutputPath": "$SNAPSHOT\\final.mp4"
+            },
+            {
+              "taskId": "uploading",
+              "status": "completed",
+              "finalOutputPath": "$SNAPSHOT\\final.mp4"
+            },
+            {
+              "taskId": "unfinished",
+              "status": "waiting",
+              "finalOutputPath": "$SNAPSHOT\\final.mp4"
+            }
+          ]
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [],
+      "clock": 1000.1
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "verify-ok": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "339",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "state": "requested",
+        "commandId": "verify-history-000000000000",
+        "requestedAt": "2026-10-20T12:00:00+08:00",
+        "eligible": 1,
+        "total": 1,
+        "processed": 0,
+        "verified": 0,
+        "failed": 0,
+        "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+        "uploadWorkerStarted": true
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "requested",
+            "commandId": "verify-history-000000000000",
+            "requestedAt": "2026-10-20T12:00:00+08:00",
+            "eligible": 1,
+            "total": 1,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+            "uploadWorkerStarted": true,
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video"
+          ]
+        },
+        "workbench/handoff/upload/upload_service.pid": 7001,
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [],
+      "clock": 1000.1
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "verify-no-eligible": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "152",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "state": "completed",
+        "eligible": 0,
+        "processed": 0,
+        "verified": 0,
+        "failed": 0,
+        "message": "没有需要补做云端核验的历史上传记录"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 2,
+              "cleanup": {
+                "cloudVerifiedAt": "2026-10-19T12:00:00+08:00"
+              }
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "completed",
+            "eligible": 0,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "没有需要补做云端核验的历史上传记录",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 2,
+              "cleanup": {
+                "cloudVerifiedAt": "2026-10-19T12:00:00+08:00"
+              }
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "verify-already-verifying": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "148",
+        "content-type": "application/json"
+      },
+      "body": {
+        "commandId": "existing-verification",
+        "state": "running",
+        "total": 1,
+        "accepted": true,
+        "message": "历史百度云核验正在进行，请勿重复点击"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_status.json": {
+          "state": "running",
+          "commandId": "existing-verification",
+          "total": 1
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_status.json": {
+          "state": "running",
+          "commandId": "existing-verification",
+          "total": 1
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "verify-worker-missing": {
+    "mode": "isolated",
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-length": "58",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "百度网盘上传服务运行文件不完整"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "state": "failed",
+            "accepted": false,
+            "message": "百度网盘上传服务运行文件不完整",
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video"
+          ]
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "verify-startup-failed": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "340",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "state": "requested",
+        "commandId": "verify-history-000000000000",
+        "requestedAt": "2026-10-20T12:00:00+08:00",
+        "eligible": 1,
+        "total": 1,
+        "processed": 0,
+        "verified": 0,
+        "failed": 0,
+        "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+        "uploadWorkerStarted": false
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "requested",
+            "commandId": "verify-history-000000000000",
+            "requestedAt": "2026-10-20T12:00:00+08:00",
+            "eligible": 1,
+            "total": 1,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+            "uploadWorkerStarted": false,
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video"
+          ]
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [],
+      "clock": 1000.1
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "verify-startup-timeout": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "340",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "state": "requested",
+        "commandId": "verify-history-000000000000",
+        "requestedAt": "2026-10-20T12:00:00+08:00",
+        "eligible": 1,
+        "total": 1,
+        "processed": 0,
+        "verified": 0,
+        "failed": 0,
+        "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+        "uploadWorkerStarted": false
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "requested",
+            "commandId": "verify-history-000000000000",
+            "requestedAt": "2026-10-20T12:00:00+08:00",
+            "eligible": 1,
+            "total": 1,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+            "uploadWorkerStarted": false,
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video"
+          ]
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [],
+      "clock": 1005.0000000000011
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "verify-worker-running": {
+    "mode": "isolated",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "340",
+        "content-type": "application/json"
+      },
+      "body": {
+        "accepted": true,
+        "state": "requested",
+        "commandId": "verify-history-000000000000",
+        "requestedAt": "2026-10-20T12:00:00+08:00",
+        "eligible": 1,
+        "total": 1,
+        "processed": 0,
+        "verified": 0,
+        "failed": 0,
+        "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+        "uploadWorkerStarted": false
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_service.pid": 7001,
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "data/control_actions.json": {
+          "historicalCloudVerification": {
+            "accepted": true,
+            "state": "requested",
+            "commandId": "verify-history-000000000000",
+            "requestedAt": "2026-10-20T12:00:00+08:00",
+            "eligible": 1,
+            "total": 1,
+            "processed": 0,
+            "verified": 0,
+            "failed": 0,
+            "message": "已提交 1 条历史百度云核验；只查询云端文件和大小，不补传、不删除、不改变任务状态",
+            "uploadWorkerStarted": false,
+            "updatedAt": "2026-10-20T12:00:00+08:00"
+          }
+        },
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video"
+          ]
+        },
+        "workbench/handoff/upload/upload_service.pid": 7001,
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "verify-untrusted": {
+    "mode": "isolated",
+    "response": {
+      "status": 403,
+      "headers": {
+        "content-length": "78",
+        "content-type": "application/json"
+      },
+      "body": {
+        "detail": "控制操作仅允许通过 Tailscale 或家里电脑本机执行"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  },
+  "verify-unexpected": {
+    "mode": "isolated",
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-length": "45",
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "Dashboard暂时无法读取数据"
+      }
+    },
+    "before": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [],
+      "events": [],
+      "clock": 1000.0
+    },
+    "after": {
+      "files": {
+        "workbench/.venv/Scripts/pythonw.exe": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        },
+        "workbench/handoff/upload/historical_cloud_verify_request.json": {
+          "schemaVersion": 1,
+          "commandId": "verify-history-000000000000",
+          "requestedAt": "2026-10-20T12:00:00+08:00",
+          "taskIds": [
+            "old-video"
+          ]
+        },
+        "workbench/handoff/upload/upload_status.json": {
+          "tasks": {
+            "old-video": {
+              "status": "uploaded",
+              "cleanupPolicyVersion": 1
+            }
+          }
+        },
+        "workbench/upload_service.py": {
+          "sha256": "98a7b8b35cb2813242dd075188065ec77bd357eaa432135315896b0756ca1c69",
+          "bytes": 13
+        }
+      },
+      "requests": [],
+      "launches": [
+        {
+          "args": [
+            "$SNAPSHOT\\workbench\\.venv\\Scripts\\pythonw.exe",
+            "$SNAPSHOT\\workbench\\upload_service.py"
+          ],
+          "cwd": "$SNAPSHOT\\workbench",
+          "creationflags": 134217728,
+          "close_fds": true
+        }
+      ],
+      "events": [
+        [
+          "ApiError",
+          "ERROR",
+          "Dashboard接口异常",
+          {
+            "error": "fixture-unexpected-launch-failure"
+          }
+        ]
+      ],
+      "clock": 1000.0
+    },
+    "realShadowPassed": false,
+    "switchAccepted": false
+  }
+}
