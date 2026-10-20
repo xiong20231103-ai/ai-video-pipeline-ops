@@ -91,7 +91,7 @@ def ops_projection(path,output):
         for child in scratch.iterdir():child.unlink()
         scratch.rmdir()
 
-def record(output,roots,*,quota=MAX_TOTAL):
+def record(output,roots,*,quota=MAX_TOTAL,budget_seconds=20):
     output=disjoint(output,roots)
     output.mkdir(parents=True,exist_ok=True)
     for name in ('objects','samples','scratch'):(output/name).mkdir(exist_ok=True)
@@ -99,6 +99,10 @@ def record(output,roots,*,quota=MAX_TOTAL):
         raise ValueError('output_invalid')
     used=sum(p.stat().st_size for folder in ('objects','samples') for p in (output/folder).iterdir())
     rows=[];errors={};exhausted=False;started=time.monotonic()
+    cache_path=output/'metadata-index.json'
+    try:cache=json.loads(cache_path.read_text(encoding='utf-8'))
+    except (OSError,ValueError):cache={}
+    next_cache={};budget_hit=False
     def store(root,relative,body):
         nonlocal used,exhausted
         digest=hashlib.sha256(body).hexdigest();target=output/'objects'/digest
@@ -108,15 +112,25 @@ def record(output,roots,*,quota=MAX_TOTAL):
         rows.append(dict(root=root,relative=relative,sha256=digest,bytes=len(body)))
     def problem(kind):errors[kind]=errors.get(kind,0)+1
     for rule in approved_rules():
+        if time.monotonic()-started>=budget_seconds:budget_hit=True;break
         root=Path(roots[rule.root])
         try:paths=match_paths(root,rule.pattern)
         except (OSError,PolicyError):problem('inventory_unavailable');continue
         for source in paths:
+            if (output/'STOP').exists() or time.monotonic()-started>=budget_seconds:
+                budget_hit=True;break
             if len(rows)>=10000:problem('file_limit');break
             try:
+                relative=source.relative_to(root).as_posix();key=rule.root+'/'+relative
+                info=checked_stat(source);identity=[info.st_size,info.st_mtime_ns]
+                old=cache.get(key)
+                if old and old.get('identity')==identity and len(old.get('sha256',''))==64 and (output/'objects'/old['sha256']).is_file():
+                    rows.append(dict(root=rule.root,relative=relative,sha256=old['sha256'],bytes=info.st_size))
+                    next_cache[key]=old;continue
                 body=stable_bytes(source)
                 if body is not None:
-                    safe_json(body);store(rule.root,source.relative_to(root).as_posix(),body)
+                    safe_json(body);store(rule.root,relative,body)
+                    next_cache[key]=dict(identity=identity,sha256=hashlib.sha256(body).hexdigest())
             except SnapshotError:problem('private_content_rejected')
             except (OSError,ValueError,UnicodeError):problem('unreadable_or_unaligned')
     try:
@@ -124,9 +138,14 @@ def record(output,roots,*,quota=MAX_TOTAL):
         if body is not None:store('OPS','data/ops.logical.json',body)
     except SnapshotError:problem('private_database_content_rejected')
     except (OSError,ValueError,sqlite3.Error):problem('database_unaligned_or_unavailable')
+    if budget_hit:
+        # Keep prior metadata for future incremental rounds, never pretend that
+        # unvisited sources were observed in this sample.
+        for key,value in cache.items():next_cache.setdefault(key,value)
+    atomic(cache_path,encoded(next_cache))
     result=dict(schema=1,mode='passive-evidence',observedAt=datetime.datetime.now(datetime.timezone.utc).isoformat(),
         files=rows,errorCounts=errors,quotaExhausted=exhausted,bytesStored=used,
-        elapsedSeconds=round(time.monotonic()-started,3),productionWrites=False,businessRequests=0,
+        elapsedSeconds=round(time.monotonic()-started,3),budgetHit=budget_hit,productionWrites=False,businessRequests=0,
         comparable=False,realShadowPassed=False,switchAccepted=False,
         missingForComparison=['aligned filesystem/process/external-source facts','offline candidate replay','complete triggered batch coverage'])
     body=encoded(result)
@@ -152,7 +171,7 @@ def main():
                 if a.once:print(json.dumps(status));return 0
             except (OSError,ValueError,sqlite3.Error):
                 atomic(output/'status.json',encoded(dict(mode='passive-evidence',error='capture_failed',productionWrites=False,realShadowPassed=False)))
-            for _ in range(120):
+            for _ in range(600):
                 if (output/'STOP').exists():break
                 time.sleep(1)
     return 0

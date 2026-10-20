@@ -34,4 +34,14 @@ class PassiveTests(unittest.TestCase):
    (roots['WB']/'ops_pipeline_status.json').write_text('{"state":"paused"}')
    result=m.record(base/'out',roots,quota=1)
    self.assertTrue(result['quotaExhausted']);self.assertFalse(list((base/'out'/'objects').iterdir()))
+ def test_unchanged_json_is_not_reopened_and_budget_is_explicit(self):
+  from unittest.mock import patch
+  with tempfile.TemporaryDirectory() as td:
+   base=Path(td);roots=self.roots(base);state=roots['WB']/'ops_pipeline_status.json';state.write_text('{"state":"paused"}')
+   m.record(base/'out',roots)
+   with patch.object(m,'stable_bytes',side_effect=AssertionError('unchanged source reopened')):
+    result=m.record(base/'out',roots)
+   self.assertGreater(result['fileCount'],0)
+   result=m.record(base/'out',roots,budget_seconds=0)
+   self.assertTrue(result['budgetHit']);self.assertFalse(result['comparable'])
 if __name__=='__main__':unittest.main()
