@@ -1,0 +1,591 @@
+{
+  "schema": 1,
+  "legacyCommit": "f78db5a4bfd32eb5ebeab2c63f6dea48cc26f061",
+  "legacySha256": "f4d754cd86c524933d3f87da1006167c2fd698e288fcda09992115dc0e1c044e",
+  "functions": [
+    {
+      "name": "cleanup_source_guard",
+      "legacyStart": 32,
+      "legacyEnd": 40,
+      "candidateStart": 8,
+      "candidateEnd": 16
+    },
+    {
+      "name": "now_iso",
+      "legacyStart": 183,
+      "legacyEnd": 184,
+      "candidateStart": 19,
+      "candidateEnd": 20
+    },
+    {
+      "name": "parse_time",
+      "legacyStart": 187,
+      "legacyEnd": 193,
+      "candidateStart": 23,
+      "candidateEnd": 29
+    },
+    {
+      "name": "safe_int",
+      "legacyStart": 196,
+      "legacyEnd": 200,
+      "candidateStart": 32,
+      "candidateEnd": 36
+    },
+    {
+      "name": "sanitize_public_value",
+      "legacyStart": 203,
+      "legacyEnd": 214,
+      "candidateStart": 39,
+      "candidateEnd": 50
+    },
+    {
+      "name": "resolve_path",
+      "legacyStart": 217,
+      "legacyEnd": 219,
+      "candidateStart": 53,
+      "candidateEnd": 55
+    },
+    {
+      "name": "read_json_object",
+      "legacyStart": 593,
+      "legacyEnd": 602,
+      "candidateStart": 58,
+      "candidateEnd": 67
+    },
+    {
+      "name": "capcut_draft_root",
+      "legacyStart": 605,
+      "legacyEnd": 610,
+      "candidateStart": 70,
+      "candidateEnd": 75
+    },
+    {
+      "name": "_write_json_atomic",
+      "legacyStart": 613,
+      "legacyEnd": 617,
+      "candidateStart": 78,
+      "candidateEnd": 82
+    },
+    {
+      "name": "_capcut_draft_processes",
+      "legacyStart": 756,
+      "legacyEnd": 770,
+      "candidateStart": 85,
+      "candidateEnd": 99
+    },
+    {
+      "name": "_draft_timestamp",
+      "legacyStart": 773,
+      "legacyEnd": 780,
+      "candidateStart": 102,
+      "candidateEnd": 109
+    },
+    {
+      "name": "_draft_directory_size",
+      "legacyStart": 783,
+      "legacyEnd": 794,
+      "candidateStart": 112,
+      "candidateEnd": 123
+    },
+    {
+      "name": "_draft_content_summary",
+      "legacyStart": 797,
+      "legacyEnd": 816,
+      "candidateStart": 126,
+      "candidateEnd": 145
+    },
+    {
+      "name": "_capcut_draft_snapshot",
+      "legacyStart": 819,
+      "legacyEnd": 848,
+      "candidateStart": 148,
+      "candidateEnd": 177
+    },
+    {
+      "name": "_capcut_draft_inventory",
+      "legacyStart": 851,
+      "legacyEnd": 957,
+      "candidateStart": 180,
+      "candidateEnd": 286
+    },
+    {
+      "name": "capcut_draft_inventory_public",
+      "legacyStart": 960,
+      "legacyEnd": 971,
+      "candidateStart": 289,
+      "candidateEnd": 300
+    },
+    {
+      "name": "_selected_capcut_drafts",
+      "legacyStart": 974,
+      "legacyEnd": 991,
+      "candidateStart": 303,
+      "candidateEnd": 320
+    },
+    {
+      "name": "preview_capcut_draft_cleanup",
+      "legacyStart": 994,
+      "legacyEnd": 1018,
+      "candidateStart": 323,
+      "candidateEnd": 347
+    },
+    {
+      "name": "pending_delete_retention_days",
+      "legacyStart": 1021,
+      "legacyEnd": 1026,
+      "candidateStart": 350,
+      "candidateEnd": 355
+    },
+    {
+      "name": "pending_delete_note",
+      "legacyStart": 1029,
+      "legacyEnd": 1032,
+      "candidateStart": 358,
+      "candidateEnd": 361
+    },
+    {
+      "name": "pending_delete_roots",
+      "legacyStart": 1035,
+      "legacyEnd": 1045,
+      "candidateStart": 364,
+      "candidateEnd": 374
+    },
+    {
+      "name": "execute_capcut_draft_cleanup",
+      "legacyStart": 1061,
+      "legacyEnd": 1157,
+      "candidateStart": 377,
+      "candidateEnd": 473
+    },
+    {
+      "name": "_path_key",
+      "legacyStart": 1160,
+      "legacyEnd": 1164,
+      "candidateStart": 476,
+      "candidateEnd": 480
+    },
+    {
+      "name": "_audio_producer_processes",
+      "legacyStart": 1167,
+      "legacyEnd": 1178,
+      "candidateStart": 483,
+      "candidateEnd": 494
+    },
+    {
+      "name": "_audio_reference_inventory",
+      "legacyStart": 1182,
+      "legacyEnd": 1258,
+      "candidateStart": 498,
+      "candidateEnd": 574
+    },
+    {
+      "name": "_registered_audio_roots",
+      "legacyStart": 1261,
+      "legacyEnd": 1292,
+      "candidateStart": 577,
+      "candidateEnd": 608
+    },
+    {
+      "name": "_audio_snapshot",
+      "legacyStart": 1295,
+      "legacyEnd": 1306,
+      "candidateStart": 611,
+      "candidateEnd": 622
+    },
+    {
+      "name": "_audio_inventory",
+      "legacyStart": 1309,
+      "legacyEnd": 1413,
+      "candidateStart": 625,
+      "candidateEnd": 729
+    },
+    {
+      "name": "audio_inventory_public",
+      "legacyStart": 1416,
+      "legacyEnd": 1427,
+      "candidateStart": 732,
+      "candidateEnd": 743
+    },
+    {
+      "name": "_selected_audio_files",
+      "legacyStart": 1430,
+      "legacyEnd": 1443,
+      "candidateStart": 746,
+      "candidateEnd": 759
+    },
+    {
+      "name": "preview_audio_cleanup",
+      "legacyStart": 1446,
+      "legacyEnd": 1470,
+      "candidateStart": 762,
+      "candidateEnd": 786
+    },
+    {
+      "name": "execute_audio_cleanup",
+      "legacyStart": 1473,
+      "legacyEnd": 1569,
+      "candidateStart": 789,
+      "candidateEnd": 885
+    },
+    {
+      "name": "_configured_directory_list",
+      "legacyStart": 1582,
+      "legacyEnd": 1600,
+      "candidateStart": 888,
+      "candidateEnd": 906
+    },
+    {
+      "name": "_workbench_root",
+      "legacyStart": 1603,
+      "legacyEnd": 1616,
+      "candidateStart": 909,
+      "candidateEnd": 922
+    },
+    {
+      "name": "_canonical_task_aliases",
+      "legacyStart": 1619,
+      "legacyEnd": 1635,
+      "candidateStart": 925,
+      "candidateEnd": 941
+    },
+    {
+      "name": "_canonical_task_id",
+      "legacyStart": 1638,
+      "legacyEnd": 1656,
+      "candidateStart": 944,
+      "candidateEnd": 962
+    },
+    {
+      "name": "_project_status_records",
+      "legacyStart": 1659,
+      "legacyEnd": 1668,
+      "candidateStart": 965,
+      "candidateEnd": 974
+    },
+    {
+      "name": "_upload_task_records",
+      "legacyStart": 1671,
+      "legacyEnd": 1680,
+      "candidateStart": 977,
+      "candidateEnd": 986
+    },
+    {
+      "name": "_cloud_verification",
+      "legacyStart": 1683,
+      "legacyEnd": 1696,
+      "candidateStart": 989,
+      "candidateEnd": 1002
+    },
+    {
+      "name": "_production_active_projects",
+      "legacyStart": 1700,
+      "legacyEnd": 1720,
+      "candidateStart": 1006,
+      "candidateEnd": 1026
+    },
+    {
+      "name": "_isolated_runtime_processes",
+      "legacyStart": 1723,
+      "legacyEnd": 1743,
+      "candidateStart": 1029,
+      "candidateEnd": 1049
+    },
+    {
+      "name": "_is_baidu_sync_path",
+      "legacyStart": 1746,
+      "legacyEnd": 1754,
+      "candidateStart": 1052,
+      "candidateEnd": 1060
+    },
+    {
+      "name": "_production_file_identity",
+      "legacyStart": 1757,
+      "legacyEnd": 1815,
+      "candidateStart": 1063,
+      "candidateEnd": 1121
+    },
+    {
+      "name": "_production_snapshot",
+      "legacyStart": 1818,
+      "legacyEnd": 1828,
+      "candidateStart": 1124,
+      "candidateEnd": 1134
+    },
+    {
+      "name": "_production_file_inventory",
+      "legacyStart": 1832,
+      "legacyEnd": 2025,
+      "candidateStart": 1138,
+      "candidateEnd": 1331
+    },
+    {
+      "name": "production_file_inventory_public",
+      "legacyStart": 2028,
+      "legacyEnd": 2039,
+      "candidateStart": 1334,
+      "candidateEnd": 1345
+    },
+    {
+      "name": "_selected_production_files",
+      "legacyStart": 2042,
+      "legacyEnd": 2055,
+      "candidateStart": 1348,
+      "candidateEnd": 1361
+    },
+    {
+      "name": "preview_production_file_cleanup",
+      "legacyStart": 2058,
+      "legacyEnd": 2099,
+      "candidateStart": 1364,
+      "candidateEnd": 1405
+    },
+    {
+      "name": "execute_production_file_cleanup",
+      "legacyStart": 2102,
+      "legacyEnd": 2216,
+      "candidateStart": 1408,
+      "candidateEnd": 1522
+    },
+    {
+      "name": "load_control_actions",
+      "legacyStart": 2503,
+      "legacyEnd": 2504,
+      "candidateStart": 1525,
+      "candidateEnd": 1526
+    },
+    {
+      "name": "save_control_action",
+      "legacyStart": 2507,
+      "legacyEnd": 2513,
+      "candidateStart": 1529,
+      "candidateEnd": 1535
+    },
+    {
+      "name": "_is_tailnet_or_local",
+      "legacyStart": 2883,
+      "legacyEnd": 2894,
+      "candidateStart": 1538,
+      "candidateEnd": 1549
+    },
+    {
+      "name": "require_control_permission",
+      "legacyStart": 2897,
+      "legacyEnd": 2899,
+      "candidateStart": 1552,
+      "candidateEnd": 1554
+    },
+    {
+      "name": "control_capcut_drafts",
+      "legacyStart": 6732,
+      "legacyEnd": 6734,
+      "candidateStart": 1557,
+      "candidateEnd": 1559
+    },
+    {
+      "name": "control_capcut_drafts_preview",
+      "legacyStart": 6738,
+      "legacyEnd": 6746,
+      "candidateStart": 1562,
+      "candidateEnd": 1570
+    },
+    {
+      "name": "control_capcut_drafts_cleanup",
+      "legacyStart": 6750,
+      "legacyEnd": 6767,
+      "candidateStart": 1573,
+      "candidateEnd": 1590
+    },
+    {
+      "name": "control_capcut_drafts_cleanup_status",
+      "legacyStart": 6771,
+      "legacyEnd": 6774,
+      "candidateStart": 1593,
+      "candidateEnd": 1596
+    },
+    {
+      "name": "control_audio_files",
+      "legacyStart": 6778,
+      "legacyEnd": 6780,
+      "candidateStart": 1599,
+      "candidateEnd": 1601
+    },
+    {
+      "name": "control_audio_files_preview",
+      "legacyStart": 6784,
+      "legacyEnd": 6792,
+      "candidateStart": 1604,
+      "candidateEnd": 1612
+    },
+    {
+      "name": "control_audio_files_recycle",
+      "legacyStart": 6796,
+      "legacyEnd": 6809,
+      "candidateStart": 1615,
+      "candidateEnd": 1628
+    },
+    {
+      "name": "control_audio_files_recycle_status",
+      "legacyStart": 6813,
+      "legacyEnd": 6816,
+      "candidateStart": 1631,
+      "candidateEnd": 1634
+    },
+    {
+      "name": "control_production_files",
+      "legacyStart": 6820,
+      "legacyEnd": 6822,
+      "candidateStart": 1637,
+      "candidateEnd": 1639
+    },
+    {
+      "name": "control_production_files_preview",
+      "legacyStart": 6826,
+      "legacyEnd": 6834,
+      "candidateStart": 1642,
+      "candidateEnd": 1650
+    },
+    {
+      "name": "control_production_files_recycle",
+      "legacyStart": 6838,
+      "legacyEnd": 6854,
+      "candidateStart": 1653,
+      "candidateEnd": 1669
+    },
+    {
+      "name": "control_pending_delete_status",
+      "legacyStart": 6858,
+      "legacyEnd": 6861,
+      "candidateStart": 1672,
+      "candidateEnd": 1675
+    },
+    {
+      "name": "control_pending_delete_empty",
+      "legacyStart": 6865,
+      "legacyEnd": 6878,
+      "candidateStart": 1678,
+      "candidateEnd": 1691
+    },
+    {
+      "name": "control_production_files_recycle_status",
+      "legacyStart": 6882,
+      "legacyEnd": 6885,
+      "candidateStart": 1694,
+      "candidateEnd": 1697
+    },
+    {
+      "name": "unhandled_error",
+      "legacyStart": 6982,
+      "legacyEnd": 6984,
+      "candidateStart": 1700,
+      "candidateEnd": 1702
+    },
+    {
+      "name": "cloud_cleanup_capabilities",
+      "legacyStart": 7002,
+      "legacyEnd": 7005,
+      "candidateStart": 1705,
+      "candidateEnd": 1708
+    },
+    {
+      "name": "_cloud_cleanup_payload",
+      "legacyStart": 7008,
+      "legacyEnd": 7024,
+      "candidateStart": 1711,
+      "candidateEnd": 1727
+    },
+    {
+      "name": "cloud_cleanup_preview",
+      "legacyStart": 7027,
+      "legacyEnd": 7049,
+      "candidateStart": 1730,
+      "candidateEnd": 1752
+    },
+    {
+      "name": "cloud_cleanup_execute",
+      "legacyStart": 7052,
+      "legacyEnd": 7071,
+      "candidateStart": 1755,
+      "candidateEnd": 1774
+    },
+    {
+      "name": "control_cloud_cleanup_capabilities",
+      "legacyStart": 7075,
+      "legacyEnd": 7077,
+      "candidateStart": 1777,
+      "candidateEnd": 1779
+    },
+    {
+      "name": "control_cloud_cleanup_preview",
+      "legacyStart": 7081,
+      "legacyEnd": 7087,
+      "candidateStart": 1782,
+      "candidateEnd": 1788
+    },
+    {
+      "name": "control_cloud_cleanup_execute",
+      "legacyStart": 7091,
+      "legacyEnd": 7097,
+      "candidateStart": 1791,
+      "candidateEnd": 1797
+    }
+  ],
+  "requiredPorts": [
+    "AUDIO_CLEANUP_BACKUP_DIR",
+    "AUDIO_CLEANUP_CONFIRM",
+    "AUDIO_CLEANUP_LOCK",
+    "AUDIO_CLEANUP_STATUS_PATH",
+    "AUDIO_EXTENSIONS",
+    "BASE_DIR",
+    "CAPCUT_DRAFT_CLEANUP_BACKUP_DIR",
+    "CAPCUT_DRAFT_CLEANUP_CONFIRM",
+    "CAPCUT_DRAFT_CLEANUP_STATUS_PATH",
+    "CAPCUT_DRAFT_LOCK",
+    "CLOUD_CLEANUP_TICKETS",
+    "COLLECTOR",
+    "COMPLETED_STATES",
+    "CONFIG",
+    "CONTROL_ACTIONS_PATH",
+    "DATA_DIR",
+    "HTTPException",
+    "JSONResponse",
+    "LOCAL_PATH_PATTERN",
+    "PENDING_DELETE_EMPTY_CONFIRM",
+    "PRODUCTION_FILE_CATEGORY_LABELS",
+    "PRODUCTION_FILE_CLEANUP_BACKUP_DIR",
+    "PRODUCTION_FILE_CLEANUP_CONFIRM",
+    "PRODUCTION_FILE_CLEANUP_INDEX_PATH",
+    "PRODUCTION_FILE_CLEANUP_LOCK",
+    "PRODUCTION_FILE_CLEANUP_STATUS_PATH",
+    "PRODUCTION_VIDEO_EXTENSIONS",
+    "Path",
+    "SENSITIVE_KEY_PARTS",
+    "STORE",
+    "_CLEANUP_SOURCE_STRICT",
+    "datetime",
+    "hashlib",
+    "ipaddress",
+    "json",
+    "os",
+    "pending_delete",
+    "psutil",
+    "re",
+    "sqlite3",
+    "time",
+    "uuid"
+  ],
+  "deferredBoundaries": [
+    "authoritative_active_task_box",
+    "process_status",
+    "production_capcut_tasks",
+    "task_box_payloads",
+    "upload_task_index"
+  ],
+  "preservedDecorators": [
+    "cleanup_source_guard"
+  ],
+  "excluded": [
+    "testing/reset",
+    "five-directory-extension",
+    "pending_delete_purge_loop"
+  ]
+}
