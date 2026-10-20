@@ -105,6 +105,13 @@ def make_app(plan):
     root=require_plain_path(plan['legacyRoot']);fence=OrdinaryFence(require_plain_path(plan['fenceRoot']))
     state=fence.status()
     if state['owner']!='legacy' or state['fenceId']!=plan['fenceId']:raise ValueError('legacy_owner_not_selected')
+    lease=AuthorityLease(fence,lambda:{**state,'protocol':1,'candidateWritesBlocked':True},owner='legacy')
+    # Importing app.py initializes its Store before lifespan starts. Ownership
+    # must therefore span import AND wrapper installation, not only HTTP/scan.
+    with lease.guard():return _load_legacy_app(plan,root,lease)
+
+
+def _load_legacy_app(plan,root,lease):
     module=load_verified(root/'app.py',plan['legacyAppSha256'],'retained_legacy_dashboard')
     workbench=module.resolve_path(str(module.CONFIG['workbench_dir']))
     if (workbench/'workbench').is_dir():workbench=workbench/'workbench'
@@ -113,7 +120,6 @@ def make_app(plan):
     recovery=load_verified(plan['recoveryModule'],plan['recoveryModuleSha256'],'retained_legacy_recovery')
     control=require_plain_path(plan['recoveryControlDir'])
     controller=recovery.RecoveryControl(control/'automatic_recovery.json',control/'automatic_recovery.lock',control/'continue_current_project.json')
-    lease=AuthorityLease(fence,lambda:{**state,'protocol':1,'candidateWritesBlocked':True},owner='legacy')
     LegacyBackgroundGuard(vars(module),lease).install()
     return LegacyRecoveryApp(module.app,vars(module),controller,lease),module.CONFIG
 

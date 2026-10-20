@@ -3,10 +3,12 @@ from contextlib import contextmanager
 from unittest.mock import Mock,patch
 import types
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from fastapi import FastAPI,HTTPException
 from fastapi.testclient import TestClient
-from agent.legacy_host import LegacyRecoveryApp,LegacyBackgroundGuard
+from agent.legacy_host import LegacyRecoveryApp,LegacyBackgroundGuard,make_app
 from agent.core.ordinary_fence import FenceRejected
 
 
@@ -110,3 +112,38 @@ class BackgroundGuardTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'already_installed'):guard.install()
         collector.thread=Mock();collector.thread.is_alive.return_value=True
         with self.assertRaisesRegex(ValueError,'already_started'):LegacyBackgroundGuard(n,guard.lease).install()
+
+
+class ImportOwnershipTests(unittest.TestCase):
+    def test_owner_loss_after_snapshot_prevents_any_app_import(self):
+        with TemporaryDirectory(prefix='r6-import-') as temp:
+            plan=dict(schema=1,action='R6_LEGACY_START',agentState=temp,legacyRoot=temp,
+                fenceRoot=temp,fenceId='inert-fence')
+            @contextmanager
+            def denied():
+                raise FenceRejected('owner changed before import')
+                yield
+            with patch('agent.legacy_host.OrdinaryFence') as fence,patch('agent.legacy_host.AuthorityLease') as lease,patch('agent.legacy_host.load_verified') as load:
+                fence.return_value.status.return_value={'owner':'legacy','fenceId':'inert-fence'}
+                lease.return_value.guard=denied
+                with self.assertRaises(FenceRejected):make_app(plan)
+                load.assert_not_called()
+    def test_app_import_is_inside_owner_lease_even_before_lifespan(self):
+        with TemporaryDirectory(prefix='r6-import-') as temp:
+            plan=dict(schema=1,action='R6_LEGACY_START',agentState=temp,legacyRoot=temp,
+                fenceRoot=temp,fenceId='inert-fence',legacyAppSha256='inert-digest')
+            inside=[]
+            @contextmanager
+            def held():
+                inside.append(True)
+                try:yield
+                finally:inside.pop()
+            def import_probe(*args):
+                self.assertTrue(inside)
+                self.assertEqual(Path(temp)/'app.py',args[0])
+                raise ValueError('isolated import probe')
+            with patch('agent.legacy_host.OrdinaryFence') as fence,patch('agent.legacy_host.AuthorityLease') as lease,patch('agent.legacy_host.load_verified',side_effect=import_probe):
+                fence.return_value.status.return_value={'owner':'legacy','fenceId':'inert-fence'}
+                lease.return_value.guard=held
+                with self.assertRaisesRegex(ValueError,'isolated import probe'):make_app(plan)
+            self.assertEqual([],inside)
