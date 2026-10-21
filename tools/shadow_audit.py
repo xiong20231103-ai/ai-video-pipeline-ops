@@ -2,7 +2,7 @@
 import argparse,json,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from agent.core.shadow_audit import audit_passive
+from tools.shadow_evidence_audit import audit_passive
 from agent.core.oracle import LEGACY_SOURCE_SHA256
 from agent.core.snapshot import no_links
 

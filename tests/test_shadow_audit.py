@@ -1,6 +1,6 @@
 import hashlib,json,tempfile,unittest
 from pathlib import Path
-from agent.core.shadow_audit import audit_passive,source_identity
+from tools.shadow_evidence_audit import audit_passive,source_identity
 from agent.core.snapshot import canonical
 
 class ShadowAuditTests(unittest.TestCase):
@@ -56,7 +56,7 @@ class ShadowAuditTests(unittest.TestCase):
     def test_audit_budget_is_explicit_and_never_a_pass(self):
         from unittest.mock import patch
         self.add()
-        with patch('agent.core.shadow_audit.time.monotonic',side_effect=[0,31,32]):
+        with patch('tools.shadow_evidence_audit.time.monotonic',side_effect=[0,31,32]):
             r=audit_passive(self.root,self.batch)
         self.assertTrue(r['auditBudgetHit']);self.assertIn('audit_time_budget_reached',r['blockers'])
         self.assertFalse(r['realShadowPassed'])
