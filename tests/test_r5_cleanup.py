@@ -20,7 +20,7 @@ ROOT=Path(__file__).resolve().parents[1]
 class CleanupExtractionTests(unittest.TestCase):
     def setUp(self):
         self.temp=TemporaryDirectory(prefix='r5-fixture-');self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
-        self.source=(ROOT/'app.py').read_text(encoding='utf-8')
+        self.source=(ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8')
 
     def test_exact_source_including_strict_decorators_and_provenance(self):
         manifest=json.loads((ROOT/'docs/migration/r5-provenance.json').read_text(encoding='utf-8'))

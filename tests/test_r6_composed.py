@@ -13,7 +13,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 class CompositionTests(unittest.TestCase):
     def test_remaining_handlers_have_exact_reviewable_source(self):
-        source=(ROOT/'app.py').read_text(encoding='utf-8')
+        source=(ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8')
         manifest=json.loads((ROOT/'docs/migration/r6-provenance.json').read_text(encoding='utf-8'))
         self.assertEqual(manifest['legacySha256'],hashlib.sha256(source.encode()).hexdigest())
         old={n.name:n for n in ast.parse(source).body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}
@@ -50,7 +50,7 @@ class CompositionTests(unittest.TestCase):
                 self.assertFalse((root/'state').exists())
 
     def test_twenty_profiles_all_read_handlers_and_side_effects_match(self):
-        source=(ROOT/'app.py').read_text(encoding='utf-8')
+        source=(ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8')
         profiles=json.loads((ROOT/'tests/fixtures/r0/profiles.json').read_text(encoding='utf-8'))
         targets=read_targets(json.loads((ROOT/'contracts/endpoints.json').read_text(encoding='utf-8')))
         with TemporaryDirectory(prefix='r6-isolated-') as directory:

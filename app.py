@@ -3602,12 +3602,28 @@ class Collector:
                 "failed": "剪辑失败",
             }.get(state, state)
         )
+        # Reconcile only a terminal maintenance failure, never an active attempt.
+        # The live ledger's QC + exact final bytes outrank a stale failed status.
+        from verified_final import released_final_verified
+        verified_maintenance = (
+            state in FAILED_STATES
+            and str(meta.get("status") or "") in FAILED_STATES
+            and released_final_verified(meta)
+        )
+        historical_error = str(item.get("error") or meta.get("maintenanceError") or meta.get("error") or "")
+        if verified_maintenance:
+            state = "completed"
+            state_text = "成片已验证完成（保留历史维护异常）"
         normalized_error, cleanup_status, cleanup_warning = split_completed_cleanup_warning(
             state,
             str(item.get("error") or ""),
             str(item.get("draftCleanupStatus") or meta.get("draftCleanupStatus") or ""),
             str(item.get("draftCleanupWarning") or meta.get("draftCleanupWarning") or ""),
         )
+        if verified_maintenance:
+            normalized_error = ""
+            cleanup_status = "warning"
+            cleanup_warning = "历史维护异常：" + (historical_error or "旧尝试失败；成片已核验")
         return {
             "task_id": task_id,
             "batch_id": batch_id or str(meta.get("_batch_id") or ""),
@@ -3619,14 +3635,14 @@ class Collector:
             "sequence": int(item.get("sequence") or meta.get("sequence") or 0),
             "video_path": str(item.get("videoPath") or meta.get("videoPath") or ""),
             "audio_path": str(item.get("audioPath") or meta.get("audioPath") or ""),
-            "output_path": str(
+            "output_path": str(meta["finalOutputPath"]) if verified_maintenance else str(
                 item.get("outputPath") or item.get("finalOutputPath")
                 or meta.get("finalOutputPath") or ""
             ),
             "state": state,
             "state_text": state_text,
-            "phase": str(item.get("currentPhase") or item.get("phase") or item.get("state") or meta.get("currentPhase") or ""),
-            "phase_text": str(item.get("phaseText") or item.get("stateText") or meta.get("phaseText") or ""),
+            "phase": "completed" if verified_maintenance else str(item.get("currentPhase") or item.get("phase") or item.get("state") or meta.get("currentPhase") or ""),
+            "phase_text": state_text if verified_maintenance else str(item.get("phaseText") or item.get("stateText") or meta.get("phaseText") or ""),
             "manifest_id": str(item.get("manifestId") or meta.get("activeManifestId") or ""),
             "attempt_id": str(item.get("attemptId") or meta.get("activeAttemptId") or ""),
             "heartbeat_at": str(item.get("heartbeatAt") or ""),

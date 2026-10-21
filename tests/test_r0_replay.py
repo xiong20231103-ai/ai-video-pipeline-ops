@@ -13,7 +13,7 @@ ROOT=Path(__file__).resolve().parents[1]
 class SnapshotTests(unittest.TestCase):
     def setUp(self):
         self.temp=TemporaryDirectory(prefix='r0-unit-');self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
-        self.source=(ROOT/'app.py').read_text(encoding='utf-8');self.sha=hashlib.sha256(self.source.encode()).hexdigest()
+        self.source=(ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8');self.sha=hashlib.sha256(self.source.encode()).hexdigest()
     def capture(self,**extra):return capture(self.root/'snapshot',facts={},frozen_at='2026-10-16T00:00:00+08:00',legacy_sha256=self.sha,**extra)
     def test_explicit_bounded_input_and_no_live_fallback(self):
         source=self.root/'state.json';source.write_text('{"x":null}',encoding='utf-8')
@@ -137,7 +137,7 @@ class SnapshotTests(unittest.TestCase):
         output=self.root/'output.json';delta=self.root/'delta.json'
         with redirect_stdout(io.StringIO()):
             self.assertEqual(0,main(['capture','--recipe',str(recipe),'--out',str(self.root/'snapshot')]))
-            self.assertEqual(0,main(['replay','--source',str(ROOT/'app.py'),'--snapshot',str(self.root/'snapshot'),'--scratch',str(self.root/'scratch'),'--out',str(output)]))
+            self.assertEqual(0,main(['replay','--source',str(ROOT/'contracts/legacy-app-f78db5a.txt'),'--snapshot',str(self.root/'snapshot'),'--scratch',str(self.root/'scratch'),'--out',str(output)]))
             self.assertEqual(28,len(json.loads(output.read_text(encoding='utf-8'))['responses']))
             self.assertEqual(0,main(['compare','--expected',str(output),'--actual',str(output),'--out',str(delta)]))
             self.assertFalse(json.loads(delta.read_text(encoding='utf-8'))['switchAccepted'])

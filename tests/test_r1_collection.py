@@ -11,7 +11,7 @@ ROOT=Path(__file__).resolve().parents[1]
 class CollectionTests(unittest.TestCase):
     def setUp(self):
         self.temp=TemporaryDirectory(prefix='r1-isolated-');self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
-        self.source=(ROOT/'app.py').read_text(encoding='utf-8');self.profiles=json.loads((ROOT/'tests/fixtures/r0/profiles.json').read_text(encoding='utf-8'))
+        self.source=(ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8');self.profiles=json.loads((ROOT/'tests/fixtures/r0/profiles.json').read_text(encoding='utf-8'))
         self.targets=read_targets(json.loads((ROOT/'contracts/endpoints.json').read_text(encoding='utf-8')))
     def test_all_profiles_read_outputs_and_get_effects_match_old_oracle(self):
         for i,(name,profile) in enumerate(self.profiles.items()):

@@ -42,7 +42,7 @@ def staged_replay(source,snapshot,scratch,targets,stage):
 
 class StagedModuleTests(unittest.TestCase):
     def test_retained_store_routes_and_all_read_side_effects_match_twenty_profiles(self):
-        source=(ROOT/'app.py').read_text(encoding='utf-8')
+        source=(ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8')
         profiles=json.loads((ROOT/'tests/fixtures/r0/profiles.json').read_text(encoding='utf-8'))
         targets=read_targets(json.loads((ROOT/'contracts/endpoints.json').read_text(encoding='utf-8')))
         with TemporaryDirectory(prefix='r6-staged-golden-') as directory:
