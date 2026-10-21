@@ -25,7 +25,7 @@ def _class(original,namespace):
     return type(original.__name__,(),attributes)
 
 class CollectionSession:
-    def __init__(self,ports,*,seed=None,max_bytes=50*1024*1024,max_rows=200000,store_factory=None):
+    def __init__(self,ports,*,source_sha=None,seed=None,max_bytes=50*1024*1024,max_rows=200000,store_factory=None):
         provenance=json.loads((Path(__file__).parents[2]/'docs/migration/r1-provenance.json').read_text(encoding='utf-8'))
         required=set(provenance['requiredPorts'])-{'STORE','COLLECTOR'}
         missing=required-set(ports)
@@ -37,6 +37,13 @@ class CollectionSession:
             if inspect.isfunction(value) and value.__module__==logic.__name__:namespace[name]=_function(value,namespace)
         namespace['Store']=_class(logic.Store,namespace)
         namespace['Collector']=_class(logic.Collector,namespace)
+        if source_sha is not None:
+            from .source_profiles import PROFILES,PR49
+            if source_sha not in PROFILES:raise CollectionError('unsupported_collection_source')
+            if source_sha==PR49:
+                from .collection_verified_final import normalize_task
+                namespace['Collector'].normalize_task=_function(normalize_task,namespace)
+
         self.valid=False
         class MemoryStore(namespace['Store']):
             def __init__(self):

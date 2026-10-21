@@ -28,6 +28,7 @@ R6_FILES=FILES+(
     'agent/core/ordinary.py','agent/core/ordinary_logic.py','agent/core/ordinary_fence.py',
     'agent/core/projection_store.py','agent/core/recovery.py','agent/core/recovery_logic.py',
     'agent/core/recovery_transport.py','agent/core/retirement_gate.py','agent/core/compatibility_logic.py',
+    'agent/core/source_profiles.py','agent/core/collection_verified_final.py','verified_final.py',
     'agent/core/snapshot.py','contracts/golden.py','docs/migration/r1-provenance.json',
     'docs/migration/r6-provenance.json',
     'agent/core/collection_replay.py','agent/core/comparison.py','agent/core/history_export.py',
