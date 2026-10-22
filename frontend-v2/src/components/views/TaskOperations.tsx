@@ -1,3 +1,4 @@
+import { replenishmentQueueStatus } from "@/data/replenishment-status";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,7 +133,11 @@ export default function TaskOperations({
         actions={{
           available,
           control,
-          replenish: onReplenishment,
+          replenish: (row) => {
+            const queued = replenishmentQueueStatus(row, data.receiverQueue && !(data.receiverQueue as Record<string, unknown>).error ? ((data.receiverQueue as Record<string, unknown>).items as Row[] || []) : []);
+            if (queued.queued) { setResult(queued.message); return; }
+            onReplenishment(row);
+          },
           create: () => setCreateOpen(true),
         }}
       />

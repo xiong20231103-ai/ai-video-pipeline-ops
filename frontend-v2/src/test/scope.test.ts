@@ -7,9 +7,9 @@ const root = resolve(process.cwd(), ".."),
     readFileSync(resolve(root, "docs/v2/inventory.json"), "utf8"),
   ),
   rows = Object.values(inventory.groups).flat() as Row[];
-it("all 900 legacy entries now have implementations and isolated evidence", () => {
-  expect(rows).toHaveLength(900);
-  expect(new Set(rows.map((r) => r.id)).size).toBe(900);
+it("all 904 inventoried entries now have implementations and isolated evidence", () => {
+  expect(rows).toHaveLength(904);
+  expect(new Set(rows.map((r) => r.id)).size).toBe(904);
   expect(rows.filter((r) => !r.implemented)).toHaveLength(0);
   const login = rows.filter(
     (r) => r.source === "cloud/login.js" || r.source === "cloud/login.html",
@@ -30,8 +30,8 @@ it("checked entries retain PR and corresponding worktree evidence paths", () => 
 });
 it("current scope explicitly excludes production shadow and default entry switch", () => {
   expect(inventory.scopeDecision).toMatchObject({
-    implemented: 900,
-    total: 900,
+    implemented: 904,
+    total: 904,
     deferred: 0,
     productionShadowPassed: false,
     defaultEntrySwitched: false,

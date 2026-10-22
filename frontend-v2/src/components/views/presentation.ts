@@ -1,3 +1,4 @@
+import { replenishmentQueueStatus } from "@/data/replenishment-status";
 import {
   object as o,
   list,
@@ -37,9 +38,10 @@ export function heroFor(data: Row) {
       subtitle: `${t(current.date_label, '未定日期')} · ${t(current.project, '未分类')} · ${t(current.material, '未指定材料')} · ${t(current.language, '未指定语言')}`,
     }
   const gaps = list(o(data.projectGaps).items).filter((row) => row.gapActive)
+  const queued = gaps.filter(row => replenishmentQueueStatus(row, o(data.receiverQueue).error ? [] : list(o(data.receiverQueue).items)).queued > 0).length
   return gaps.length
     ? {
-        title: `没有正在运行的项目 · ${gaps.length} 个项目等待补链（共缺 ${gaps.reduce((sum, row) => sum + n(row.missingCount), 0)} 条）`,
+        title: queued ? `没有正在运行的项目 · ${queued} 个项目补链已收到、排队中` : `没有正在运行的项目 · ${gaps.length} 个项目等待补链（共缺 ${gaps.reduce((sum, row) => sum + n(row.missingCount), 0)} 条）`,
         subtitle:
           gaps
             .slice(0, 4)
@@ -47,7 +49,7 @@ export function heroFor(data: Row) {
               (row) =>
                 `${t(row.date, '')} ${t(row.project, '未分类')}/${t(row.material)} 缺 ${n(row.missingCount)} 条`,
             )
-            .join('；') + '。点上方“补链”按钮提交链接。',
+            .join('；') + (queued ? '。已收到的补链等待执行，请勿重复补交。' : '。点上方“补链”按钮提交链接。'),
       }
     : {
         title: '暂时没有生产任务',

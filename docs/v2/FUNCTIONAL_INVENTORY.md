@@ -360,11 +360,11 @@
 - [x] **FN-160** `匿名回调@1009` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1009](../../static/app.js#L1009)。
   - 原实现：`(total, item) => total + missingFor(item)`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-161** `匿名回调@1012` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1012](../../static/app.js#L1012)。
-  - 原实现：`item => ˋ <button type="button" data-task-id="${escapeHtml(String(item.taskId ¦¦ ""))}" onclick="openReplenishment(this.dataset.taskId)"> ${escapeHtml(item.project ¦¦ "未分类")} / ${escapeHtml(item.material ¦¦ "--")} · 缺 ${missingFor(item)} 条 </button>ˋ`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+  - 原实现：`item => ˋ <button type="button" data-task-id="${escapeHtml(String(item.taskId ¦¦ ""))}" onclick="openReplenishment(this.dataset.taskId)"> ${escapeHtml(item.project ¦¦ "未分类")} / ${escapeHtml(item.material ¦¦ "--")} · ${escapeHtml(replenishmentQueueStatus(item, state.replenishmentQueue).message ¦¦ ˋ缺 ${missingFor(item)} 条ˋ)} </button>ˋ`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **FN-162** `renderProjectGaps` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1019](../../static/app.js#L1019)。
   - 原实现：`function renderProjectGaps(items) { const node = $("projectGapList"); if (!node) return; state.gaps = {}; if (!items.length) { renderGapQuickBar([]); node.innerHTML = ˋ<p class="empty">暂无项目级下载记录</p>ˋ; return; } node.innerHTML = items.map(item => { const expected = Number(item.expectedCount ¦¦ 0); const completed = Number(item.completed ¦¦ 0); const storedMissing = item.missingCount; const missing = Number(storedMissing !== und`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-163** `匿名回调@1028` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1028](../../static/app.js#L1028)。
-  - 原实现：`item => { const expected = Number(item.expectedCount ¦¦ 0); const completed = Number(item.completed ¦¦ 0); const storedMissing = item.missingCount; const missing = Number(storedMissing !== undefined && storedMissing !== null && storedMissing !== "" ? storedMissing : Math.max(0, expected - completed)); const notStarted = Boolean(item.notStarted); const blocked = Boolean(item.gapActive); const historicalFailed = Number(item.hist`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
+  - 原实现：`item => { const expected = Number(item.expectedCount ¦¦ 0); const completed = Number(item.completed ¦¦ 0); const storedMissing = item.missingCount; const missing = Number(storedMissing !== undefined && storedMissing !== null && storedMissing !== "" ? storedMissing : Math.max(0, expected - completed)); const notStarted = Boolean(item.notStarted); const queued = replenishmentQueueStatus(item, state.replenishmentQueue); const blo`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-164** `匿名回调@1043` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1043](../../static/app.js#L1043)。
   - 原实现：`video => ˋ<li><span>${escapeHtml(video.url ¦¦ "--")}</span><b>${escapeHtml(video.stage ¦¦ "waiting")}</b><em>${escapeHtml(video.error ¦¦ video.message ¦¦ video.status ¦¦ "等待")}</em></li>ˋ`；实现：V2 数据层/原显示规则/React 只读视图；证据：client.test、parity.test、readonly-browser-check；PR #30；仅隔离验收。
 - [x] **FN-165** `renderTemplates` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1058](../../static/app.js#L1058)。
@@ -384,7 +384,7 @@
 - [x] **FN-172** `匿名回调@1093` — 两者（写操作按模式分流）；计划 **V2-1**；来源 [static/app.js:1093](../../static/app.js#L1093)。
   - 原实现：`() => controller.abort()`；实现/测试证据：待补。 完整子功能复核：frontend-v2/src/data/home-cleanup.ts:105（原JSON正文、独立超时与错误提示；云端使用队列写入器）；PR #37、V2-2F_ADMIN_PARITY.md；仅隔离范围。
 - [x] **FN-173** `openReplenishment` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1117](../../static/app.js#L1117)。
-  - 原实现：`function openReplenishment(taskId) { const item = state.gaps[String(taskId)]; const panel = $("replenishPanel"); const dialog = $("replenishDialog"); if (!item ¦¦ !panel) return; const expected = Number(item.expectedCount ¦¦ 0); const completed = Number(item.completed ¦¦ 0); const missing = Number(item.missingCount ?? Math.max(0, expected - completed)); panel.innerHTML = ˋ<header><div><strong>补链：${escapeHtml(item.project)} / $`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
+  - 原实现：`function openReplenishment(taskId) { const item = state.gaps[String(taskId)]; const panel = $("replenishPanel"); const dialog = $("replenishDialog"); if (!item ¦¦ !panel) return; const queued = replenishmentQueueStatus(item, state.replenishmentQueue); if (queued.queued) { window.alert(queued.message); return; } const expected = Number(item.expectedCount ¦¦ 0); const completed = Number(item.completed ¦¦ 0); const missing = Numb`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **FN-174** `匿名回调@1131` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1131](../../static/app.js#L1131)。
   - 原实现：`() => dialog?.close()`；实现/测试证据：待补。 V2-2B_TASK_PARITY.md + tasks.test + task-browser-check，PR #32，仅隔离验收。
 - [x] **FN-175** `匿名回调@1132` — 两者（写操作按模式分流）；计划 **V2-2B**；来源 [static/app.js:1132](../../static/app.js#L1132)。
@@ -2293,3 +2293,12 @@
 ## V2-4 实现补齐（PR #39）
 
 原22条登录/注册延期项已补实现及隔离证据：900/900。默认入口仍未切换，真实生产试用、真实影子和切换验收未通过；此前延期记录是历史决策，不再代表当前实现缺失。
+
+- [x] **F-REPLENISH-1** replenishmentQueueStatus
+  原实现：`function replenishmentQueueStatus(gap, queue) { const missing = Math.max(0, Number(gap.missingCount ?? (Number(gap.expectedCount ¦¦ 0) - Number(gap.completed ¦¦ 0))) ¦¦ 0); const seen = new Set(); let count = 0; let manual = false; for (const child of Array.isArray(queue) ? queue : []) { const id = String(child.taskId ¦¦ ""); if (!id ¦¦ seen.has(id) ¦¦ !gap.taskId ¦¦ child.replenishForTaskId !== gap.taskId ¦¦ child.canonicalTa`；补链排队状态展示（本 PR）。
+- [x] **F-REPLENISH-2** 匿名回调@12
+  原实现：`url => typeof url === "string" && url.trim()`；补链排队状态展示（本 PR）。
+- [x] **F-REPLENISH-3** 匿名回调@913
+  原实现：`item => replenishmentQueueStatus(item, state.replenishmentQueue).queued > 0`；补链排队状态展示（本 PR）。
+- [x] **F-REPLENISH-4** 匿名回调@1033
+  原实现：`item => replenishmentQueueStatus(item, state.replenishmentQueue).queued > 0`；补链排队状态展示（本 PR）。
