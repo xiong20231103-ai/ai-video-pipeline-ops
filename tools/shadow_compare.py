@@ -80,14 +80,75 @@ def compare_history(snapshot,scratch,*,source_id,sequence,recipes=None):
 
 def batch_review(reports,*,batch_id,started_evidence,completed_evidence,required_modules=('R1','R2','R3','R5')):
  """Conservative review checklist. Never grants an automatic production switch."""
+ from datetime import datetime
+ if not isinstance(reports,list) or len(reports)>10000 or any(not isinstance(r,dict) for r in reports) or not isinstance(started_evidence,dict) or not isinstance(completed_evidence,dict):raise CaptureError('batch_review_input_schema')
+ def instant(value):
+  try:
+   value=datetime.fromisoformat(value.replace('Z','+00:00'))
+   return value if value.utcoffset() is not None else None
+  except (ValueError,TypeError,AttributeError):return None
+ def ids(value):
+  return isinstance(value,list) and bool(value) and all(isinstance(x,str) and x for x in value) and len(set(value))==len(value)
+ if not required_modules or len(set(required_modules))!=len(required_modules) or set(required_modules)-{'R1','R2','R3','R5'}:raise CaptureError('explicit_unique_review_modules_required')
  blockers=[];modules={};started=started_evidence or {};completed=completed_evidence or {}
  if not batch_id or started.get('batchId')!=batch_id or completed.get('batchId')!=batch_id:blockers.append('batch_boundary_identity_missing_or_mismatched')
  if not started.get('sourceIdentity') or not completed.get('sourceIdentity') or not started.get('observedAt') or not completed.get('observedAt'):blockers.append('batch_boundary_capture_missing')
- if not completed.get('completeTaskIds') or set(started.get('expectedTaskIds',[]))!=set(completed.get('completeTaskIds',[])):blockers.append('complete_batch_tasks_not_observed')
+ expected=started.get('expectedTaskIds',[]);done=completed.get('completeTaskIds',[])
+ if not ids(expected) or not ids(done) or set(expected)!=set(done):blockers.append('complete_batch_tasks_not_observed')
+ begin=instant(started.get('observedAt'));end=instant(completed.get('observedAt'))
+ if begin is None or end is None or begin>=end:blockers.append('batch_boundary_time_invalid')
+ if started.get('sourceIdentity')==completed.get('sourceIdentity'):blockers.append('batch_boundary_snapshot_reused')
+ # These are required producer claims, not authentication. An offline JSON file
+ # cannot establish live provenance; every result still requires human review.
+ if any(x.get('realBatchEvidence') is not True or x.get('dependencyClosureVerified') is not True for x in (started,completed)):blockers.append('batch_boundary_real_evidence_missing')
+ evidence_ids=[];trigger_owners={}
  for module in required_modules:
   rows=[r for r in reports if r.get('module')==module and r.get('batchId')==batch_id]
-  good=rows and all(r.get('comparable') is True and type(r.get('mismatchCount')) is int and r['mismatchCount']==0 and type(r.get('caseCount')) is int and r['caseCount']>0 and r.get('sourceIdentity')==r.get('candidateSourceIdentity') and r.get('sourceIdentity') and r.get('dependencyClosureVerified') is True and r.get('observedTriggerIds') and r.get('realBatchEvidence') is True for r in rows)
+  good=bool(rows) and all(r.get('comparable') is True and type(r.get('mismatchCount')) is int and r['mismatchCount']==0 and type(r.get('caseCount')) is int and r['caseCount']>0 and r.get('sourceIdentity')==r.get('candidateSourceIdentity') and r.get('sourceIdentity') and r.get('dependencyClosureVerified') is True and ids(r.get('observedTriggerIds')) and r.get('realBatchEvidence') is True for r in rows)
+  covered=set();seen_sources=set();module_blockers=[]
+  for row in rows:
+   when=instant(row.get('observedAt'));tasks=row.get('taskIds',[]);source=row.get('sourceIdentity')
+   if begin is None or end is None or when is None or not begin<=when<=end:module_blockers.append('comparison_outside_batch_window')
+   if not ids(tasks) or not ids(expected) or not set(tasks)<=set(expected):module_blockers.append('comparison_task_identity_unproven')
+   else:covered.update(tasks)
+   if not source or source in seen_sources:module_blockers.append('comparison_snapshot_reused')
+   seen_sources.add(source)
+   if source:evidence_ids.append(source)
+   for trigger in row.get('observedTriggerIds',[]) if ids(row.get('observedTriggerIds')) else []:
+    owner=trigger_owners.setdefault(trigger,(module,source))
+    if owner!=(module,source):module_blockers.append('trigger_reused_across_comparisons')
+  if module in {'R1','R2'} and (not ids(expected) or covered!=set(expected)):module_blockers.append('complete_task_coverage_missing')
+  if module_blockers:good=False
   if module=='R2' and rows:good=good and all(r.get('timelineAccuracyAccepted') is True for r in rows)
-  modules[module]={'status':'ready-for-human-review' if good else 'not-accepted','comparisonWindows':len(rows),'actualTriggers':sum(len(r.get('observedTriggerIds',[])) for r in rows)}
+  modules[module]={'status':'ready-for-human-review' if good else 'not-accepted','comparisonWindows':len(rows),'actualTriggers':len({x for r in rows if ids(r.get('observedTriggerIds')) for x in r['observedTriggerIds']}) ,'coveredTaskCount':len(covered),'blockers':sorted(set(module_blockers))}
   if not good:blockers.append('missing_actual_trigger_or_comparison:'+module)
- return {'schema':1,'batchId':batch_id,'modules':modules,'blockers':blockers,'readyForHumanReview':not blockers,'realShadowPassed':False,'switchAccepted':False,'requiredRealBatches':2}
+ result={'schema':1,'batchId':batch_id,'modules':modules,'blockers':blockers,'readyForHumanReview':not blockers,'realShadowPassed':False,'switchAccepted':False,'requiredRealBatches':2,'requiredModules':list(required_modules),'boundarySourceIdentities':[started.get('sourceIdentity'),completed.get('sourceIdentity')],'comparisonSourceIdentities':sorted(set(evidence_ids)),'startedAt':started.get('observedAt'),'completedAt':completed.get('observedAt'),'inputSha256':hashlib.sha256(canonical({'reports':reports,'started':started,'completed':completed})).hexdigest()}
+ result['reviewIdentity']=hashlib.sha256(canonical(result)).hexdigest()
+ return result
+
+
+def campaign_review(batches,*,required_modules=('R1','R2','R3','R5')):
+ """Two distinct complete batches, never two submissions of the same report.
+
+ This checks internal consistency only. It cannot authenticate JSON supplied by
+ an operator and does not replace Claude's examination of the source evidence.
+ """
+ if not isinstance(batches,list) or len(batches)>100 or any(not isinstance(r,dict) for r in batches):raise CaptureError('campaign_review_input_schema')
+ if not required_modules or len(set(required_modules))!=len(required_modules) or set(required_modules)-{'R1','R2','R3','R5'}:raise CaptureError('explicit_unique_review_modules_required')
+ blockers=[];seen_batches=set();seen_sources=set();ready=[]
+ for row in batches:
+  identity=row.get('batchId');boundary=row.get('boundarySourceIdentities');comparison=row.get('comparisonSourceIdentities')
+  if not isinstance(identity,str) or not isinstance(boundary,list) or len(boundary)!=2 or not isinstance(comparison,list):blockers.append('batch_review_input_schema');continue
+  sources=boundary+comparison
+  if not identity or identity in seen_batches:blockers.append('duplicate_or_missing_batch_identity');continue
+  seen_batches.add(identity)
+  if not sources or any(not isinstance(s,str) or not s for s in sources):blockers.append('batch_snapshot_identity_missing');continue
+  if seen_sources.intersection(sources):blockers.append('snapshot_reused_across_batches');continue
+  seen_sources.update(sources)
+  body=dict(row);identity_hash=body.pop('reviewIdentity',None)
+  if identity_hash!=hashlib.sha256(canonical(body)).hexdigest():blockers.append('batch_review_hash_mismatch');continue
+  good=row.get('schema')==1 and row.get('readyForHumanReview') is True and row.get('blockers')==[] and set(row.get('requiredModules',[]))==set(required_modules) and all(row.get('modules',{}).get(m,{}).get('status')=='ready-for-human-review' for m in required_modules)
+  if not good:blockers.append('batch_not_ready_for_review');continue
+  ready.append(identity)
+ if len(ready)<2:blockers.append('two_distinct_complete_batches_required')
+ return {'schema':1,'readyBatchCount':len(ready),'requiredRealBatches':2,'readyBatchIds':ready,'blockers':sorted(set(blockers)),'readyForHumanReview':not blockers,'acceptedRealBatchCount':0,'realShadowPassed':False,'switchAccepted':False}
