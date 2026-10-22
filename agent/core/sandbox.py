@@ -10,9 +10,14 @@ from urllib.parse import urlsplit,unquote
 from unittest.mock import patch
 
 class SandboxIO:
-    def __init__(self,root,stack,filesystem=None,content_files=(),aliases=None):
+    def __init__(self,root,stack,filesystem=None,content_files=(),aliases=None,*,strict_reads=False,absent_paths=(),closed_roots=()):
         self.root=Path(root).resolve();self.lexical_root=Path(os.path.abspath(root));self.stack=stack;self.denied=[]
         self.filesystem=filesystem or {};self.content_files=set(content_files)
+        self.closed_roots=tuple(closed_roots)
+        if any(self.filesystem.get(name,{}).get('kind')!='directory' for name in self.closed_roots):raise ValueError('closed_inventory_directory_required')
+        self.strict_reads=strict_reads;self.absent_paths=set(absent_paths);self.generated=set();self.accesses=set()
+        self.declared=set(self.filesystem)|self.content_files|self.absent_paths
+        self.parents={parent.as_posix() for name in self.declared for parent in Path(name).parents if str(parent)!='.'}
         self.aliases=sorted((aliases or {}).items(),key=lambda item:len(item[0]),reverse=True)
         self.read_roots=[self.root,Path(__file__).resolve().parents[2],Path(sys.base_prefix).resolve()]
         self.read_roots.extend(Path(p).resolve() for p in sys.path if p and ('site-packages' in p or '.test-deps' in p))
@@ -43,6 +48,13 @@ class SandboxIO:
         if not any(candidate==base or candidate.is_relative_to(base) for base in roots):self.deny('link-escape')
         if candidate.is_relative_to(self.root):
             name=candidate.relative_to(self.root).as_posix()
+            if write:
+                self.generated.add(name)
+            else:
+                self.accesses.add(name)
+                if self.strict_reads and name!='.' and name not in self.declared|self.parents|self.generated and not any(name.startswith(base+'/') for base in self.closed_roots):
+                    self.denied.append({'operation':'undeclared-frozen-fact','outsideScratch':False})
+                    raise PermissionError('undeclared_frozen_fact')
             if name in self.filesystem and name not in self.content_files and self.filesystem[name]['kind']=='file' and (content or write):
                 self.denied.append({'operation':'metadata-only-content','outsideScratch':False})
                 raise PermissionError('metadata_only_content_unavailable')

@@ -17,4 +17,8 @@ def verify_source(source, snapshot):
         helper=Path(__file__).resolve().parents[2]/'verified_final.py'
         if hashlib.sha256(helper.read_text(encoding="utf-8-sig").encode()).hexdigest()!=PR49_HELPER:
             raise SnapshotError('source_dependency_hash_mismatch')
+    for name,expected in snapshot.manifest.get('facts',{}).get('captureProof',{}).get('helperHashes',{}).items():
+        if name not in {'pending_delete.py','cleanup_tickets.py','verified_final.py'}:raise SnapshotError('undeclared_source_dependency')
+        helper=Path(__file__).resolve().parents[2]/name
+        if hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=expected:raise SnapshotError('source_dependency_hash_mismatch')
     return digest
