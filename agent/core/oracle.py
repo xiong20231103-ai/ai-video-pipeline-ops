@@ -5,7 +5,7 @@ Top-level engine construction, mounts and __main__ are excluded by AST, while
 the original function/class bodies and route decorators are retained.
 """
 from __future__ import annotations
-import ast,asyncio,copy,hashlib,inspect,json,re,sqlite3,types,urllib.error,urllib.parse
+import ast,asyncio,copy,hashlib,inspect,json,re,sqlite3,sys,types,urllib.error,urllib.parse
 from contextlib import ExitStack
 from functools import lru_cache
 from datetime import datetime,timezone,timedelta
@@ -59,6 +59,8 @@ class Oracle:
     def __init__(self,source,snapshot:Snapshot,scratch,*,collect=True):
         from .source_profiles import verify_source
         self.source_sha=verify_source(source,snapshot)
+        from .source_profiles import PR49,legacy_verified_final_source
+        self.frozen_verified_final_source=legacy_verified_final_source() if self.source_sha==PR49 else None
         self.missing_hash_facts=[];self.missing_http_facts=[]
         self.collect=collect;self.snapshot=snapshot;self.root=snapshot.materialize(scratch);self.registry=Registry();self.stack=ExitStack();self.requests=[]
         self.namespace={'__name__':'isolated_legacy_oracle','__file__':str(self.root/'repository/app.py'),'_frozen_config':{},'_frozen_app':self.registry}
@@ -127,7 +129,11 @@ class Oracle:
         self.io=SandboxIO(self.root,self.stack,facts.get('filesystem'),self.snapshot.manifest['files'],facts.get('pathAliases'),strict_reads=facts.get('dependencyClosure') is True,absent_paths=facts.get('absentPaths',()),closed_roots=facts.get('completeDirectoryRoots',())).install()
         from .source_profiles import PR49
         if self.source_sha==PR49:
-            import verified_final
+            # Replay the exact deployed helper, not today's mutable candidate.
+            # Keep this import binding local to the isolated replay context.
+            verified_final=types.ModuleType('verified_final')
+            exec(compile(self.frozen_verified_final_source,'<frozen-pr49-helper>','exec'),verified_final.__dict__)
+            self.stack.enter_context(patch.dict(sys.modules,{'verified_final':verified_final}))
             def frozen_digest(path,size,modified,changed):
                 try:
                     mapped=self.io.check(path)

@@ -73,11 +73,21 @@ class VerifiedFinalTests(unittest.TestCase):
         self.output.write_bytes(b"x" * self.qc["fileSize"])
         self.assertFalse(released_final_verified(self.meta))
 
-    def test_unchanged_file_reuses_bounded_digest_cache(self):
-        _digest.cache_clear()
-        self.assertTrue(released_final_verified(self.meta))
-        self.assertTrue(released_final_verified(self.meta))
-        self.assertEqual(1, _digest.cache_info().hits)
+    def test_unchanged_mutable_file_is_rehashed(self):
+        with patch('verified_final._digest', wraps=_digest) as digest:
+            self.assertTrue(released_final_verified(self.meta))
+            self.assertTrue(released_final_verified(self.meta))
+            self.assertEqual(2, digest.call_count)
+
+    def test_same_size_content_change_with_identical_stat_is_rejected(self):
+        original_stat = Path.stat
+        stable = self.output.stat()
+        def stat(path, *args, **kwargs):
+            return stable if path == self.output else original_stat(path, *args, **kwargs)
+        with patch.object(Path, 'stat', stat):
+            self.assertTrue(released_final_verified(self.meta))
+            self.output.write_bytes(b'x' * self.qc['fileSize'])
+            self.assertFalse(released_final_verified(self.meta))
 
     def test_four_finals_with_one_stale_failure_count_four_not_three(self):
         verified = self.normalize()

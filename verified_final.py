@@ -2,13 +2,13 @@
 import hashlib
 import json
 import re
-from functools import lru_cache
 from pathlib import Path
 
 
-@lru_cache(maxsize=128)
 def _digest(path, size, modified, changed):
-    # Stat identity is part of the key; never reuse a hash after a file changes.
+    # Files remain mutable. On Windows ctime can describe creation, and quick
+    # same-size writes can retain all cached stat fields. Always read current
+    # bytes; stat tuples alone cannot safely authorize a previously failed task.
     with Path(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
@@ -44,6 +44,7 @@ def released_final_verified(metadata):
         actual = _digest(str(output.resolve()), size, before.st_mtime_ns, before.st_ctime_ns)
         after = output.stat()
         return (actual == digest and before.st_size == after.st_size
+                and before.st_dev == after.st_dev and before.st_ino == after.st_ino
                 and before.st_mtime_ns == after.st_mtime_ns
                 and before.st_ctime_ns == after.st_ctime_ns)
     except (OSError, ValueError, TypeError):
