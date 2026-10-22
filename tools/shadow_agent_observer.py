@@ -1,14 +1,16 @@
 """Explicit in-memory observer for existing Agent.home reads; no I/O or credentials."""
-import copy,json,threading,re
+import copy,json,threading,re,time
 from tools.shadow_capture import CaptureError,_safe
 
 class AgentReadObserver:
-    def __init__(self, ports, *, max_body_bytes=3*1024*1024):
+    def __init__(self, ports, *, max_body_bytes=3*1024*1024, max_age_seconds=90, clock=time.monotonic):
         self.ports=dict(ports)
         if not self.ports or len(self.ports)>16 or max_body_bytes<1 or max_body_bytes>8*1024*1024:raise CaptureError('observer_ports_required')
         for (port,target),key in self.ports.items():
             if port not in {8765,8766} or not target.startswith('/api/') or '?' in target or not re.fullmatch(r'(receiver|control):/api/[A-Za-z0-9_/.:-]+',key):
                 raise CaptureError('observer_port_invalid')
+        if not 1<=max_age_seconds<=300:raise CaptureError('observer_age_limit')
+        self.max_age=max_age_seconds;self.clock=clock;self.completed_at={}
         self.limit=max_body_bytes;self.lock=threading.RLock();self.serial=0
         self.pending={};self.values={};self.generations={};self.failures={}
     def begin(self,port,target):
@@ -29,7 +31,7 @@ class AgentReadObserver:
                 value=json.loads(raw.decode('utf-8-sig'));_safe(value)
             except Exception:
                 self.failures[key]='observer_body_rejected';self.pending.pop(attempt,None);return
-            self.values[key]=value;self.failures.pop(key,None);self.pending.pop(attempt,None)
+            self.values[key]=value;self.completed_at[key]=self.clock();self.failures.pop(key,None);self.pending.pop(attempt,None)
     def end(self,attempt):
         with self.lock:
             key=self.pending.pop(attempt,None)
@@ -37,5 +39,5 @@ class AgentReadObserver:
                 self.values.pop(key,None);self.failures[key]='observer_read_incomplete'
     def observation(self):
         with self.lock:
-            if self.pending or self.failures or set(self.values)!=set(self.ports.values()):raise CaptureError('observed_external_ports_incomplete')
+            if self.pending or self.failures or set(self.values)!=set(self.ports.values()) or any(not 0<=self.clock()-stamp<=self.max_age for stamp in self.completed_at.values()):raise CaptureError('observed_external_ports_incomplete')
             return {'responses':copy.deepcopy(self.values),'observationGeneration':self.serial}
