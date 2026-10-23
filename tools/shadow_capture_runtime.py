@@ -58,7 +58,7 @@ class CapturePublisher:
                         'emitterPid':os.getpid(),'realShadowPassed':False,'switchAccepted':False}
                     raw=canonical(value);destination=self.root/'ready';destination.mkdir(exist_ok=True)
                     with (destination/(stored['sourceIdentity']+'.json')).open('xb') as out:out.write(raw)
-                self.state.update(state='captured',published=self.state['published']+1,lastSourceIdentity=stored['sourceIdentity'])
+                self.state.update(state='captured',published=self.state['published']+1,lastSourceIdentity=stored['sourceIdentity'],lastChanges=[])
             finally:lock.unlink(missing_ok=True)
         except Exception as error:
             # Exception values can contain live paths/credentials: return a fixed code only.
@@ -67,6 +67,8 @@ class CapturePublisher:
                 'state_changed_in_window','state_content_changed_in_window','external_or_process_changed',
                 'directory_changed_in_window','database_changed_in_window','capture_window_exceeded'} else 'capture_rejected'
             self.state.update(state='blocked',lastCode=code,rejected=self.state['rejected']+1)
+            # Logical plan names and change types only; status writers screen it again.
+            self.state['lastChanges']=list(getattr(error,'diagnostics',{}).get('changes',[]))[:20]
             if code=='directory_changed_in_window':self.state['directoryChangeRejected']+=1
         finally:self.lock.release()
         return self.status()

@@ -486,10 +486,20 @@ def _verified_media(plan,nodes,inventory,roots,budget,*,deadline,clock):
     return proofs,used
 
 
-def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024,max_entries=10000,max_hash_bytes=64*1024*1024,max_window_seconds=20,digest_cache=None,volatile_http=(),clock=time.monotonic,now=lambda:datetime.now(timezone.utc).isoformat()):
+def aligned_capture(plan,destination,**options):
+    """Refusals carry the bounded change report (logical plan names and change
+    types only, never paths or contents) so a host can say what moved."""
+    changes=ChangeReport()
+    try:return _aligned_capture(plan,destination,changes=changes,**options)
+    except CaptureError as error:
+        error.diagnostics={'changes':changes.report()['changes'][:20]}
+        raise
+
+
+def _aligned_capture(plan,destination,*,changes,source_path,process_probe,http_probe,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024,max_entries=10000,max_hash_bytes=64*1024*1024,max_window_seconds=20,digest_cache=None,volatile_http=(),clock=time.monotonic,now=lambda:datetime.now(timezone.utc).isoformat()):
     roots,bindings=validate_plan(plan,destination)
     if type(max_window_seconds) not in (int,float) or not math.isfinite(max_window_seconds) or not 0<max_window_seconds<=20:raise CaptureError('capture_window_limit')
-    started=clock();deadline=started+max_window_seconds;changes=ChangeReport();small_budget=SmallReadBudget();opened_at=now();source_path=no_links(source_path)
+    started=clock();deadline=started+max_window_seconds;small_budget=SmallReadBudget();opened_at=now();source_path=no_links(source_path)
     small_budget.hash_until=started+WINDOW_HASH_SECONDS
     if source_path.stat().st_size>2*1024*1024:raise CaptureError('capture_source_byte_limit')
     source=read_source(source_path);source_sha=hashlib.sha256(source.encode()).hexdigest()
