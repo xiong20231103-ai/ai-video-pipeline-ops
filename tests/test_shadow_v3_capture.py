@@ -130,15 +130,15 @@ class CaptureV3Tests(unittest.TestCase):
 
     def test_single_backup_step_has_no_restart_while_wal_writer_commits(self):
         source=self.root/'single.db';out=self.root/'single-backup.db';original=sqlite3.connect
-        completed=threading.Event();allow_writer=threading.Event();writer_done=threading.Event();errors=[]
+        allow_writer=threading.Event();writer_done=threading.Event();errors=[]
         with closing(original(source)) as writer:
             writer.execute('PRAGMA journal_mode=WAL');writer.execute('CREATE TABLE items(id,payload)')
             writer.executemany('INSERT INTO items VALUES(?,?)',((i,'x'*8000) for i in range(1024)));writer.commit()
             def update():
                 try:
-                    allow_writer.wait(3)
-                    with closing(original(source,timeout=1)) as conn:
-                        conn.execute('UPDATE items SET id=id+1');conn.commit()
+                    if not allow_writer.wait(10):raise AssertionError('writer was not released')
+                    with closing(original(source,timeout=10)) as conn:
+                        conn.execute('UPDATE items SET payload=? WHERE id=0',('committed',));conn.commit()
                     writer_done.set()
                 except Exception as error:errors.append(type(error).__name__)
             thread=threading.Thread(target=update);thread.start();steps=[];callbacks=[]
@@ -150,7 +150,7 @@ class CaptureV3Tests(unittest.TestCase):
                     steps.append(options['pages']);progress=options['progress']
                     def on_progress(status,remaining,total):
                         callbacks.append((status,remaining));allow_writer.set()
-                        if not writer_done.wait(2):raise AssertionError('WAL writer blocked during backup callback')
+                        if not writer_done.wait(10):raise AssertionError('WAL writer did not commit within fixture deadline')
                         progress(status,remaining,total)
                     return self.conn.backup(target,**{**options,'progress':on_progress})
             def connect(path,*args,**kw):
@@ -159,9 +159,16 @@ class CaptureV3Tests(unittest.TestCase):
             try:
                 with patch('tools.shadow_sqlite_snapshot.sqlite3.connect',side_effect=connect):
                     online_backup(source,out,max_bytes=16*1024*1024)
-            finally:allow_writer.set();thread.join(3)
+            finally:allow_writer.set();thread.join(10)
             self.assertFalse(errors);self.assertFalse(thread.is_alive());self.assertTrue(writer_done.is_set())
             self.assertEqual([-1],steps);self.assertEqual([(sqlite3.SQLITE_DONE,0)],callbacks)
+            with closing(original(source)) as reader:
+                self.assertEqual('committed',reader.execute('SELECT payload FROM items WHERE id=0').fetchone()[0])
+                self.assertEqual(1023,reader.execute('SELECT count(*) FROM items WHERE payload=?',('x'*8000,)).fetchone()[0])
+            with closing(original(out)) as snapshot:
+                self.assertEqual('ok',snapshot.execute('PRAGMA quick_check').fetchone()[0])
+                self.assertEqual((1024,1024,0,1023),snapshot.execute('SELECT count(*),count(DISTINCT id),min(id),max(id) FROM items').fetchone())
+                self.assertEqual(1024,snapshot.execute('SELECT count(*) FROM items WHERE payload=?',('x'*8000,)).fetchone()[0])
 
     def test_readonly_online_backup_includes_wal_and_does_not_lock_out_writer(self):
         source=self.root/'source.db';out=self.root/'snapshot.db'
