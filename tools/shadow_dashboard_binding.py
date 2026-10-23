@@ -17,7 +17,8 @@ class DashboardReadBinding:
         self.original=namespace['urllib'];original_open=self.original.request.urlopen
         for url,(port,path) in self.routes.items():
             parsed=urlsplit(url)
-            if parsed.scheme not in {'http','https'} or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path!=path or (port,path) not in observer.ports:raise CaptureError('dashboard_observer_route_invalid')
+            if parsed.scheme not in {'http','https'} or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path!=path or parsed.port!=port or (port,path) not in observer.ports:raise CaptureError('dashboard_observer_route_invalid')
+            if port == 18790 and parsed.hostname not in {'127.0.0.1','localhost','::1'}:raise CaptureError('dashboard_control_loopback_required')
         def open_existing(request,*args,**kwargs):
             url=request.full_url if hasattr(request,'full_url') else str(request)
             method=request.get_method() if hasattr(request,'get_method') else ('POST' if args and args[0] is not None or kwargs.get('data') is not None else 'GET')
