@@ -332,6 +332,8 @@ class ObserveTests(unittest.TestCase):
             while self.dashboard.urllib is not self.urllib and time.monotonic()<deadline:time.sleep(.02)
             self.assertIs(self.urllib,self.dashboard.urllib)
             self.assertEqual('stopped',host.status()['state'])
+            stopped=json.loads(status_path.read_text())
+            self.assertEqual('stopped',stopped['state']);self.assertEqual(os.getpid(),stopped['hostPid'])
             self.assertEqual(200,client.get('/api/health').status_code)
         self.assertEqual(['start','stop'],events);self.assertEqual([],self.opened)
         self.assertFalse((self.root/'new'/'store').exists())
