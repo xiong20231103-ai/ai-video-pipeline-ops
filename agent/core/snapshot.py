@@ -60,6 +60,42 @@ def sqlite_rows(path):
             result[name]=sorted(rows,key=lambda row:canonical(row))
         return result
 
+_ROWS_HASHES={}
+
+
+def _closed_database(path):
+    # Read-only opens of a WAL-mode copy leave an empty -wal behind; an empty
+    # WAL/journal means every row is in the main file the key is derived from.
+    for suffix in ('-wal','-journal'):
+        sibling=path.with_name(path.name+suffix)
+        if sibling.exists() and sibling.stat().st_size>0:return False
+    return True
+
+
+def rows_sha256(path,rows=None):
+    """sha256 of canonical rows; also enforces the sqlite_rows privacy check.
+
+    One capture hashes the same closed copy several times (alignment checks,
+    manifest validation, store publication); ~800k rows took 8 s per pass.
+    Only a closed file is cached, keyed by its bytes: a WAL/journal sibling
+    means a live database, which is always re-read. Callers that already read
+    the rows of a closed file may pass them to seed the cache.
+    """
+    path=Path(path)
+    if rows is not None:
+        if not _closed_database(path):raise SnapshotError('rows_seed_requires_closed_database')
+        value=hashlib.sha256(canonical(rows)).hexdigest()
+        _ROWS_HASHES.clear();_ROWS_HASHES[(digest_file(path),path.stat().st_size)]=value
+        return value
+    if not _closed_database(path):
+        return hashlib.sha256(canonical(sqlite_rows(path))).hexdigest()
+    key=(digest_file(path),path.stat().st_size)
+    if key not in _ROWS_HASHES:
+        value=hashlib.sha256(canonical(sqlite_rows(path))).hexdigest()
+        _ROWS_HASHES.clear();_ROWS_HASHES[key]=value
+    return _ROWS_HASHES[key]
+
+
 def capture(destination,*,files=None,databases=None,facts,frozen_at,legacy_sha256,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024):
     files=files or {};databases=databases or {};destination=no_links(destination)
     if destination.exists():raise SnapshotError('snapshot_destination_exists')
@@ -69,7 +105,11 @@ def capture(destination,*,files=None,databases=None,facts,frozen_at,legacy_sha25
     safe_facts(facts);canonical(facts)
     for old,new in facts.get('pathAliases',{}).items():
         relative(new)
-        if not isinstance(old,str) or not (PureWindowsPath(old).is_absolute() or Path(old).is_absolute()) or not PureWindowsPath(old).name:raise SnapshotError('invalid_path_alias')
+        if not isinstance(old,str) or not (PureWindowsPath(old).is_absolute() or Path(old).is_absolute()):raise SnapshotError('invalid_path_alias')
+        # A drive root has no name but is a valid explicit capture root; replay
+        # translates the longest alias first, so deeper roots still win.
+        windows=PureWindowsPath(old)
+        if not windows.name and not (windows.drive and str(windows)==windows.anchor):raise SnapshotError('invalid_path_alias')
     for name,node in facts.get('filesystem',{}).items():
         relative(name)
         if node.get('kind') not in {'file','directory'} or type(node.get('size',0)) is not int or node.get('size',0)<0 or type(node.get('mtimeNs',0)) is not int:raise SnapshotError('invalid_filesystem_fact')
@@ -82,7 +122,7 @@ def capture(destination,*,files=None,databases=None,facts,frozen_at,legacy_sha25
         if source.name.lower() in PRIVATE_FILES or source.suffix.lower() in {'.env','.exe','.dll','.mp4','.wav','.mp3','.zip','.rar'}:raise SnapshotError('non_state_source_forbidden')
         if name not in databases and source.suffix.lower() not in {'.json','.csv','.log','.txt'}:raise SnapshotError('explicit_state_type_required')
     before={name:(p.stat().st_size,p.stat().st_mtime_ns) for name,p in inputs.items()}
-    database_before={name:hashlib.sha256(canonical(sqlite_rows(path))).hexdigest() for name,path in inputs.items() if name in databases}
+    database_before={name:rows_sha256(path) for name,path in inputs.items() if name in databases}
     destination.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.r0-snapshot-',dir=destination.parent) as folder:
         stage=Path(folder);records={};total=0
@@ -92,7 +132,7 @@ def capture(destination,*,files=None,databases=None,facts,frozen_at,legacy_sha25
             if kind=='sqlite':
                 with closing(sqlite3.connect(source.resolve().as_uri()+'?mode=ro',uri=True)) as db,closing(sqlite3.connect(target)) as output:
                     db.backup(output)
-                table_hash=hashlib.sha256(canonical(sqlite_rows(target))).hexdigest()
+                table_hash=rows_sha256(target)
             else:
                 if before[name][0]>max_file_bytes:raise SnapshotError('snapshot_file_too_large')
                 with source.open('rb') as stream:body=stream.read(max_file_bytes+1)
@@ -115,7 +155,7 @@ def capture(destination,*,files=None,databases=None,facts,frozen_at,legacy_sha25
         if before!=after:raise SnapshotError('unaligned_capture_window')
         for name,path in inputs.items():
             if name in databases:
-                current=hashlib.sha256(canonical(sqlite_rows(path))).hexdigest()
+                current=rows_sha256(path)
                 if current!=database_before[name] or current!=records[name]['rowsSha256']:raise SnapshotError('unaligned_database_window')
             elif digest_file(path)!=records[name]['sha256']:raise SnapshotError('unaligned_file_content')
         manifest={'schema':SCHEMA,'frozenAt':frozen_at,'legacySha256':legacy_sha256,'facts':facts,'files':records,'origin':'explicit-inputs','realBatchEvidence':False}
@@ -143,7 +183,7 @@ class Snapshot:
             if not isinstance(record,dict) or record.get('kind') not in {'file','sqlite'}:raise SnapshotError('snapshot_file_kind_invalid')
             path=no_links(self.root/relative(name))
             if path.stat().st_size!=record['size'] or digest_file(path)!=record['sha256']:raise SnapshotError('snapshot_file_hash_mismatch')
-            if record['kind']=='sqlite' and hashlib.sha256(canonical(sqlite_rows(path))).hexdigest()!=record['rowsSha256']:raise SnapshotError('snapshot_rows_hash_mismatch')
+            if record['kind']=='sqlite' and rows_sha256(path)!=record['rowsSha256']:raise SnapshotError('snapshot_rows_hash_mismatch')
     def read(self,name):
         if name not in self.manifest['files']:raise SnapshotError('undeclared_snapshot_file')
         return (self.root/relative(name)).read_bytes()
