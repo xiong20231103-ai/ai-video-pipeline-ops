@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse,json,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from agent.core.source_profiles import read_source
 from tools.shadow_archive import archive_passive,verify_archive,capacity
 from tools.shadow_capture import aligned_capture,CaptureError,_safe
 
@@ -46,7 +47,7 @@ def main(argv=None):
   forbidden=[snapshot.root,no_links(args.source).parent,*[no_links(x) for x in snapshot.manifest['facts'].get('pathAliases',{})]]
   for output in [no_links(args.scratch),no_links(args.out)]:
    if any(output==base or output.is_relative_to(base) or base.is_relative_to(output) for base in forbidden):raise CaptureError('comparison_output_source_overlap')
-  source=args.source.read_text(encoding='utf-8-sig')
+  source=read_source(args.source)
   if args.module in {'R1','R5'}:
    if not args.targets:raise CaptureError('explicit_targets_file_required')
    targets=json.loads(args.targets.read_text(encoding='utf-8-sig'));summary=compare_reads(source,snapshot,args.scratch,targets,module=args.module)

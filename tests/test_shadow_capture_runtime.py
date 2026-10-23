@@ -11,7 +11,7 @@ class CaptureRuntimeTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.root=Path(self.tmp.name)
         self.live=self.root/'live';self.live.mkdir();(self.live/'state.json').write_text('{"items":[]}',encoding='utf-8')
-        src=self.root/'source-app';src.mkdir();self.source=src/'app.py';self.source.write_text((ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8'),encoding='utf-8')
+        src=self.root/'source-app';src.mkdir();self.source=src/'app.py';self.source.write_text((ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
         self.plan={'schema':1,'roots':{'workbench':str(self.live)},'files':{'workbench/state.json':{'root':'workbench','path':'state.json'}},'facts':{'scan':False}}
         self.observer=AgentReadObserver({(8766,'/api/health'):'receiver:/api/health'})
         self.complete();self.tick=100

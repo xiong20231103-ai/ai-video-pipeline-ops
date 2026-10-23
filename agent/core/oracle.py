@@ -59,8 +59,8 @@ class Oracle:
     def __init__(self,source,snapshot:Snapshot,scratch,*,collect=True):
         from .source_profiles import verify_source
         self.source_sha=verify_source(source,snapshot)
-        from .source_profiles import PR49,legacy_verified_final_source
-        self.frozen_verified_final_source=legacy_verified_final_source() if self.source_sha==PR49 else None
+        from .source_profiles import PR49_BEHAVIOR,legacy_verified_final_source
+        self.frozen_verified_final_source=legacy_verified_final_source() if self.source_sha in PR49_BEHAVIOR else None
         self.missing_hash_facts=[];self.missing_http_facts=[]
         self.collect=collect;self.snapshot=snapshot;self.root=snapshot.materialize(scratch);self.registry=Registry();self.stack=ExitStack();self.requests=[]
         self.effect_names={p.relative_to(self.root).as_posix() for p in self.root.rglob('*') if p.is_file()}
@@ -128,8 +128,8 @@ class Oracle:
             if key not in {'offline_after_seconds','pipeline_live_after_seconds','test_history_batch_ids','test_history_remote_task_ids','scan_interval_seconds','heartbeat_interval_seconds'}:raise SnapshotError('undeclared_oracle_setting')
             cfg[key]=value
         self.io=SandboxIO(self.root,self.stack,facts.get('filesystem'),self.snapshot.manifest['files'],facts.get('pathAliases'),strict_reads=facts.get('dependencyClosure') is True,absent_paths=facts.get('absentPaths',()),closed_roots=facts.get('completeDirectoryRoots',()),excluded_paths=facts.get('excludedPaths',())).install()
-        from .source_profiles import PR49
-        if self.source_sha==PR49:
+        from .source_profiles import PR49_BEHAVIOR
+        if self.source_sha in PR49_BEHAVIOR:
             # Replay the exact deployed helper, not today's mutable candidate.
             # Keep this import binding local to the isolated replay context.
             verified_final=types.ModuleType('verified_final')

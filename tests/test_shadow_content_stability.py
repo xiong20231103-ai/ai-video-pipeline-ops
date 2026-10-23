@@ -43,7 +43,7 @@ class ContentStabilityTests(unittest.TestCase):
         self.root=Path(self.temp.name);self.live=self.root/'live';self.tree=self.live/'metadata';self.tree.mkdir(parents=True)
         self.state=self.live/'workbench.ready.json';self.state.write_bytes(b'{"ready":true}')
         self.small=self.tree/'handoff.json';self.small.write_bytes(b'{"ready":true}')
-        self.source=self.root/'app.py';self.source.write_bytes((ROOT/'contracts/legacy-app-f78db5a.txt').read_bytes())
+        self.source=self.root/'app.py';self.source.write_bytes((ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8').encode())
         self.plan=dict(schema=1,roots={'workbench':str(self.live)},
             files={'workbench/workbench.ready.json':dict(root='workbench',path='workbench.ready.json')},
             trees={'workbench/metadata':dict(root='workbench',path='metadata')})

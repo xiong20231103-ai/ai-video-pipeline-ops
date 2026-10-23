@@ -9,7 +9,7 @@ import hashlib
 import json
 
 from agent.core.snapshot import canonical, no_links
-from agent.core.source_profiles import PROFILES
+from agent.core.source_profiles import PROFILES, read_source
 from tools.shadow_agent_observer import AgentReadObserver
 from tools.shadow_capture import CaptureError, validate_plan, _source, measure_directory_stability
 
@@ -38,7 +38,7 @@ def preflight(plan, source, evidence_root, archived_root, *, approved_bytes,
             if not any(archive==p or archive.is_relative_to(p) for p in exclusions):raise CaptureError('archive_not_capture_input')
     if source.stat().st_size > 2 * 1024 * 1024:
         raise CaptureError('preflight_source_limit')
-    source_hash = hashlib.sha256(source.read_text(encoding='utf-8-sig').encode()).hexdigest()
+    source_hash = hashlib.sha256(read_source(source).encode()).hexdigest()
     if source_hash not in PROFILES:
         raise CaptureError('unreviewed_capture_source')
     if not isinstance(routes, list) or not routes or len(routes) > 16:
