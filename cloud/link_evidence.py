@@ -25,7 +25,7 @@ class Evidence:
             CREATE TABLE IF NOT EXISTS records (
               id TEXT PRIMARY KEY, source TEXT NOT NULL, platform TEXT NOT NULL,
               video_id TEXT NOT NULL, judge_round TEXT NOT NULL, seq INTEGER NOT NULL,
-              payload TEXT NOT NULL, uploaded REAL NOT NULL, review TEXT NOT NULL,
+              payload TEXT NOT NULL, uploaded REAL NOT NULL, review TEXT,
               delivery TEXT NOT NULL, decided REAL, revision INTEGER NOT NULL DEFAULT 0,
               cloud_decision INTEGER NOT NULL DEFAULT 0, sha TEXT,
               UNIQUE(source,platform,video_id,judge_round));
@@ -33,6 +33,7 @@ class Evidence:
             CREATE TABLE IF NOT EXISTS actions(
               id TEXT PRIMARY KEY,record_id TEXT NOT NULL,kind TEXT NOT NULL,
               actor TEXT NOT NULL,created REAL NOT NULL,payload TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS evidence_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
             ''')
 
     @contextmanager
@@ -73,7 +74,10 @@ class Evidence:
 
     def cleanup(self):
         with self.db() as db:
-            return self._cleanup(db)
+            total=self._cleanup(db)
+            if total+600*1024<=self.cap:
+                db.execute("INSERT OR REPLACE INTO evidence_settings VALUES('capacity_blocked','0')")
+            return total
 
     def ingest(self, event):
         required = ('source', 'platform', 'video_id', 'judge_round', 'url')
@@ -81,9 +85,9 @@ class Evidence:
             raise ValueError('invalid_identity')
         if type(event.get('seq')) is not int or event['seq'] < 1:
             raise ValueError('invalid_sequence')
-        review = event.get('review', 'pending')
+        review = event.get('review')
         delivery = event.get('delivery', 'not_applicable')
-        if review not in {'pending','confirmed','rejected','expired'} or delivery not in {'not_applicable','waiting','sent','failed'}:
+        if review not in {None,'pending','confirmed','rejected','expired'} or delivery not in {'not_applicable','waiting','sent','failed'}:
             raise ValueError('invalid_state')
         decided = event.get('decidedAt')
         if decided is not None and (type(decided) not in (int,float) or decided <= 0 or decided > self.clock()+300):
@@ -129,6 +133,7 @@ class Evidence:
                     sha, image_status = digest, 'stored'
                 else:
                     image_status = 'capacity_rejected'
+                    db.execute("INSERT OR REPLACE INTO evidence_settings VALUES('capacity_blocked','1')")
             cloud = old and old['cloud_decision']
             if old and decided is None and old['review']==review:
                 decided=old['decided']
@@ -139,15 +144,19 @@ class Evidence:
                old['review'] if cloud else review, old['delivery'] if cloud else delivery, old['decided'] if cloud else decided,sha))
             return {'id':identifier,'stale':False,'image':image_status}
 
-    def listing(self):
+    def listing(self,limit=1000,offset=0):
+        if type(limit) is not int or not 1<=limit<=1000 or type(offset) is not int or offset<0:
+            raise ValueError('invalid_link_page')
         with self.db() as db:
-            rows = [dict(r) for r in db.execute('SELECT * FROM records ORDER BY uploaded DESC LIMIT 1000')]
+            rows = [dict(r) for r in db.execute('SELECT * FROM records ORDER BY uploaded DESC,id LIMIT ? OFFSET ?',(limit,offset))]
+            record_count=db.execute('SELECT COUNT(*) FROM records').fetchone()[0]
             total = db.execute("SELECT COUNT(*) FROM records WHERE review='pending'").fetchone()[0]
             size = db.execute('SELECT COALESCE(SUM(size),0) FROM shots').fetchone()[0]
+            capacity_blocked=db.execute("SELECT value FROM evidence_settings WHERE key='capacity_blocked'").fetchone()
             displayable = db.execute("SELECT COUNT(*) FROM records WHERE review='pending' AND sha IS NOT NULL AND json_extract(payload,'$.displayable')=1").fetchone()[0]
         for r in rows:
             r['payload'] = json.loads(r['payload'])
-        return {'items':rows,'pending':total,'displayable':displayable,'imageBytes':size,'imageCapacity':self.cap,'capacityReached':size>=self.cap}
+        return {'items':rows,'total':record_count,'nextOffset':offset+len(rows) if offset+len(rows)<record_count else None,'pending':total,'displayable':displayable,'imageBytes':size,'imageCapacity':self.cap,'capacityReached':size>=self.cap or bool(capacity_blocked and capacity_blocked['value']=='1')}
 
     def decide(self, identifier, revision, decision, request_id, actor):
         if decision not in {'confirmed','rejected'} or not isinstance(request_id,str) or not 1<=len(request_id)<=128:

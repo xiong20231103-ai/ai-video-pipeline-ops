@@ -48,9 +48,10 @@ def mount_links(app, config, session, csrf, rate):
             raise HTTPException(400,'invalid_link_event') from None
 
     @app.get('/api/links')
-    def listing(request:Request):
+    def listing(request:Request,limit:int=1000,offset:int=0):
         session(request)
-        return evidence.listing()
+        try:return evidence.listing(limit,offset)
+        except ValueError:raise HTTPException(400,'invalid_link_page') from None
 
     @app.get('/api/links/changes')
     def changes(request:Request,source:str,after:int=0):

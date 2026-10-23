@@ -49,6 +49,7 @@ def test_historical_and_capacity(tmp_path):
     clock=[100*DAY];store=Evidence(tmp_path,clock=lambda:clock[0],cap=1)
     result=store.ingest(event(image=image()))
     assert result['image']=='capacity_rejected'
+    assert store.listing()['capacityReached'] is True
     assert len(store.listing()['items'])==1
     store.cap=100000
     assert store.ingest(event(image=image()))['image']=='stored'
