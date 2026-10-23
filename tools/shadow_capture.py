@@ -111,29 +111,51 @@ def _same_version(a,b):
     return a is not None and b is not None and all(a[k]==b[k] for k in keys)
 
 
-def _read(path,limit,*,changes=None,logical_path=None,deadline=None,clock=time.monotonic):
+MAX_VOLATILE_FILES=8
+
+
+def volatile_files(plan):
+    """State files whose content legitimately changes every few seconds (heartbeats).
+
+    They are captured as first read; a later change inside the window is reported,
+    not treated as a failed window. Removal or a type change still fails it.
+    """
+    names=plan.get('volatileFiles',[])
+    if (not isinstance(names,list) or len(names)>MAX_VOLATILE_FILES or len(set(names))!=len(names)
+            or any(not isinstance(n,str) or n not in plan.get('files',{}) for n in names)):
+        raise CaptureError('volatile_files_invalid')
+    return frozenset(names)
+
+
+def _read(path,limit,*,changes=None,logical_path=None,deadline=None,clock=time.monotonic,volatile=False):
     raw,opened,closed=_read_version(path,limit,deadline=deadline,clock=clock)
     latest=_stat(path)
     if _same_version(opened,closed) and _same_version(closed,latest):return raw,latest
     second,second_open,second_close=_read_version(path,limit,deadline=deadline,clock=clock)
     second_latest=_stat(path)
-    if (not _same_version(second_open,second_close) or not _same_version(second_latest,second_close)
-            or hashlib.sha256(raw).digest()!=hashlib.sha256(second).digest()):
-        if changes is not None:changes.add(logical_path,'content-change')
-        raise CaptureError('state_changed_in_window')
-    if changes is not None:changes.add(logical_path,'stat-only',rewritten=True)
-    return second,second_latest
+    settled=_same_version(second_open,second_close) and _same_version(second_latest,second_close)
+    if settled and hashlib.sha256(raw).digest()==hashlib.sha256(second).digest():
+        if changes is not None:changes.add(logical_path,'stat-only',rewritten=True)
+        return second,second_latest
+    if volatile and settled:
+        # A complete, settled heartbeat version is the fact as of this read.
+        if changes is not None:changes.add(logical_path,'volatile-update')
+        return second,second_latest
+    if changes is not None:changes.add(logical_path,'content-change')
+    raise CaptureError('state_changed_in_window')
 
 
-def recheck_state(path,raw,before,*,limit,changes,logical_path,deadline=None,clock=time.monotonic):
+def recheck_state(path,raw,before,*,limit,changes,logical_path,deadline=None,clock=time.monotonic,volatile=False):
     latest=_stat(path)
     if latest==before:return latest
     if latest is None:
         changes.add(logical_path,'removed');raise CaptureError('state_changed_in_window')
     if latest['kind']!='file':
         changes.add(logical_path,'type-change');raise CaptureError('state_changed_in_window')
-    body,latest=_read(path,limit,deadline=deadline,clock=clock)
+    body,latest=_read(path,limit,deadline=deadline,clock=clock,volatile=volatile)
     if hashlib.sha256(body).digest()!=hashlib.sha256(raw).digest():
+        if volatile:
+            changes.add(logical_path,'volatile-update');return latest
         changes.add(logical_path,'content-change');raise CaptureError('state_changed_in_window')
     changes.add(logical_path,'stat-only',rewritten=True)
     return latest
@@ -209,6 +231,7 @@ def validate_plan(plan,destination):
         if any(path==p or path.is_relative_to(p) for p in exclusions.values()):raise CaptureError('excluded_capture_input')
         if name in files and (path.name.lower() in PRIVATE_FILES or path.suffix.lower() not in {'.json','.csv','.txt','.log'}):raise CaptureError('state_content_not_allowed')
         if name in databases and (name!='repository/data/ops.db' or spec!={'root':'repository','path':'data/ops.db'}):raise CaptureError('database_not_allowlisted')
+    volatile_files(plan)
     return roots,bindings
 
 class DigestCache:
@@ -434,8 +457,9 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
     destination=Path(destination);destination.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.aligned-capture-',dir=destination.parent) as folder:
         scratch=Path(folder)
+        volatile=volatile_files(plan)
         for name in plan.get('files',{}):
-            body,info=_read(bindings[name],max_file_bytes,changes=changes,logical_path=name,deadline=deadline,clock=clock);total+=len(body)
+            body,info=_read(bindings[name],max_file_bytes,changes=changes,logical_path=name,deadline=deadline,clock=clock,volatile=name in volatile);total+=len(body)
             if total>max_total_bytes:raise CaptureError('capture_total_limit')
             try:
                 text=body.decode('utf-8-sig');_safe(text)
@@ -461,7 +485,7 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
         if _observations(process_probe,http_probe)!=(processes,http,http_generation):raise CaptureError('external_or_process_changed')
         for name,path in copied.items():
             recheck_state(bindings[name],path.read_bytes(),before[name],limit=max_file_bytes,
-                          changes=changes,logical_path=name,deadline=deadline,clock=clock)
+                          changes=changes,logical_path=name,deadline=deadline,clock=clock,volatile=name in volatile)
         if any(_stat(bindings[name]) is not None for name in missing):raise CaptureError('absence_changed_in_window')
         latest=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0,small_budget=small_budget,baseline=inventory,deadline=deadline,clock=clock)[1]
         reconcile_inventory(nodes,inventory,latest,roots,digest_cache,changes=changes)

@@ -74,6 +74,39 @@ class ContentStabilityTests(unittest.TestCase):
         with self.assertRaisesRegex(CaptureError,'state_changed_in_window'):self.capture(between=changed)
         self.assertFalse((self.root/'snapshot').exists())
 
+    def test_declared_volatile_heartbeat_keeps_first_read_and_reports_update(self):
+        self.plan['volatileFiles']=['workbench/workbench.ready.json']
+        def changed():self.state.write_bytes(b'{"ready":true,"at":2}')
+        snapshot=self.capture(between=changed)
+        self.assertEqual(b'{"ready":true}',snapshot.read('workbench/workbench.ready.json'))
+        changes=snapshot.manifest['facts']['captureProof']['stabilityChanges']
+        self.assertEqual(1,changes['changeCounts'].get('volatile-update'))
+        self.assertIn({'path':'workbench/workbench.ready.json','type':'volatile-update'},changes['changes'])
+
+    def test_volatile_heartbeat_removal_still_rejects_window(self):
+        self.plan['volatileFiles']=['workbench/workbench.ready.json']
+        with self.assertRaisesRegex(CaptureError,'state_changed_in_window'):self.capture(between=self.state.unlink)
+
+    def test_volatile_list_must_name_whitelisted_state_files_only(self):
+        for bad in ['workbench/workbench.ready.json',['workbench/metadata'],['other.json'],
+                    ['workbench/workbench.ready.json']*2,[f'f{i}' for i in range(9)]]:
+            with self.subTest(bad=bad),self.assertRaisesRegex(CaptureError,'volatile_files_invalid'):
+                validate_plan({**self.plan,'volatileFiles':bad},self.root/'check')
+
+    def test_volatile_read_accepts_a_settled_new_version(self):
+        changes=ChangeReport();original=_stat(self.state);calls=[]
+        real=_stat
+        def stat(path):
+            # The first post-read stat reports a newer heartbeat than was opened.
+            calls.append(path)
+            if len(calls)==1:self.state.write_bytes(b'{"ready":true,"at":3}')
+            return real(path)
+        with patch('tools.shadow_capture._stat',side_effect=stat):
+            body,info=_read(self.state,1024,changes=changes,logical_path='hb',volatile=True)
+        self.assertEqual(b'{"ready":true,"at":3}',body)
+        self.assertEqual({'volatile-update':1},changes.report()['changeCounts'])
+        self.assertNotEqual(original,info)
+
     def test_changed_tree_small_file_is_pending_without_rejecting_window(self):
         snapshot=self.capture(between=lambda:self.small.write_bytes(b'{"ready":null}'))
         node=snapshot.manifest['facts']['filesystem']['workbench/metadata/handoff.json']

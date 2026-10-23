@@ -14,7 +14,7 @@ import threading
 import time
 
 from agent.core.snapshot import canonical,no_links
-from tools.shadow_capture import CaptureError, _safe, _stat, _read, _source, validate_plan, measure_directory_stability, ChangeReport, recheck_state, _check_deadline
+from tools.shadow_capture import CaptureError, _safe, _stat, _read, _source, validate_plan, measure_directory_stability, ChangeReport, recheck_state, _check_deadline, volatile_files
 from tools.shadow_process_preflight import probe_processes
 from tools.shadow_sqlite_snapshot import online_backup, sqlite_page_size, page_listing_segment, SEGMENT_KEYS
 
@@ -89,14 +89,14 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
         agent_pid=json.loads(state.read_text(encoding='utf-8-sig')).get('pid')
     phase=time.monotonic();process=probe_processes(dashboard.psutil,agent_pid=agent_pid)
     timings['processProbeSeconds']=time.monotonic()-phase
-    missing=[];file_bytes=0;state_versions={};phase=time.monotonic()
+    missing=[];file_bytes=0;state_versions={};phase=time.monotonic();volatile=volatile_files(plan)
     for name in plan.get('files',{}):
         path=bindings[name];info=_stat(path)
         if not info or info['kind']!='file':missing.append({'path':name,'code':'required_file_missing'});continue
         if info['size']>spec['maxCaptureBytes']-file_bytes:raise CaptureError('preflight_state_byte_limit')
         # Read only explicit state, privacy-screen in memory, never copy its body
         # into the diagnostic report. Native config/profile paths are forbidden.
-        raw,info=_read(path,spec['maxCaptureBytes']-file_bytes,changes=changes,logical_path=name,deadline=deadline);_safe(raw.decode('utf-8-sig'))
+        raw,info=_read(path,spec['maxCaptureBytes']-file_bytes,changes=changes,logical_path=name,deadline=deadline,volatile=name in volatile);_safe(raw.decode('utf-8-sig'))
         state_versions[name]=(raw,info)
         if path.suffix.lower()=='.json':
             try:_safe(json.loads(raw))
@@ -136,7 +136,7 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
     phase=time.monotonic()
     for name,(body,info) in state_versions.items():
         recheck_state(bindings[name],body,info,limit=spec['maxCaptureBytes'],changes=changes,
-                      logical_path=name,deadline=deadline)
+                      logical_path=name,deadline=deadline,volatile=name in volatile)
     timings['stateRecheckSeconds']=time.monotonic()-phase
     _check_deadline(deadline);timings['inputWindowSeconds']=time.monotonic()-started
     phase=time.monotonic()
