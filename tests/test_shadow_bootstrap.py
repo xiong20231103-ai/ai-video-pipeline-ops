@@ -139,6 +139,56 @@ class HostPreflightTests(unittest.TestCase):
         self.assertFalse(list(self.control.glob('.disabled-preflight-*')))
         self.assertEqual(1,len(list(self.control.glob('preflight-*.json'))))
 
+    def test_host_measures_directory_failures_and_blocks_report(self):
+        proof=dict(rounds=3,directoryChangeFailedRounds=1,unmeasurableRounds=0,
+                   directoryChangeFailureRatio=1/3,activeBatchRateVerified=False)
+        with patch.object(live,'measure_directory_stability',return_value=proof) as probe:
+            report=live.run_preflight(self.dashboard,self.spec,self.control)
+        probe.assert_called_once_with(self.spec['capturePlan'],self.root/'new/_preflight_check',rounds=3)
+        self.assertEqual(proof,report['directoryStability'])
+        self.assertEqual('blocked',report['technicalPreflight'])
+
+    def test_three_rounds_wait_and_measure_changes_without_evidence_store(self):
+        ticks=[0];waits=[]
+        class Stop:
+            def wait(inner,delay):
+                waits.append(delay);ticks[0]+=delay
+                if len(waits)==3:dump(self.state,{'state':'changed'})
+                return False
+        before=self.db.read_bytes()
+        result=live.run_preflight_series(self.dashboard,self.spec,self.control,Stop(),clock=lambda:ticks[0])
+        self.assertEqual('completed',result['status'])
+        self.assertEqual([0,300,300],waits)
+        rows=result['rounds']
+        self.assertEqual([0,300,600],[r['elapsedSeconds'] for r in rows])
+        self.assertGreater(rows[0]['deduplicatedIncrementBytes'],rows[1]['deduplicatedIncrementBytes'])
+        self.assertGreater(rows[2]['deduplicatedIncrementBytes'],rows[1]['deduplicatedIncrementBytes'])
+        self.assertEqual([0,0,0],[r['directoryChangeFailedRounds'] for r in rows])
+        self.assertFalse(result['productionBudgetVerified']);self.assertFalse(result['installationPermitted'])
+        self.assertEqual(before,self.db.read_bytes());self.assertFalse((self.root/'new').exists())
+        self.assertEqual(4,len(list(self.control.glob('preflight-*.json'))))
+        for path in self.control.iterdir():self.assertNotIn('changed',path.read_text())
+
+    def test_cancellation_stops_future_rounds_without_sleeping(self):
+        class Stop:
+            def wait(inner,delay):return delay>0
+        with patch.object(live,'run_preflight',wraps=live.run_preflight) as run:
+            result=live.run_preflight_series(self.dashboard,self.spec,self.control,Stop(),clock=lambda:0)
+        self.assertEqual('cancelled',result['status']);self.assertEqual(1,run.call_count)
+        self.assertEqual(1,len(result['rounds']))
+
+    def test_failed_round_is_unmeasurable_not_zero_and_not_retried(self):
+        stop=SimpleNamespace(wait=lambda delay:False)
+        with patch.object(live,'run_preflight',side_effect=OSError('PRIVATE-CANARY')) as run:
+            with self.assertRaisesRegex(live.CaptureError,'host_preflight_round_failed'):
+                live.run_preflight_series(self.dashboard,self.spec,self.control,stop)
+        self.assertEqual(1,run.call_count)
+        result=json.loads(next(self.control.glob('preflight-series-*.json')).read_text())
+        self.assertEqual('failed',result['status'])
+        self.assertIsNone(result['rounds'][0]['deduplicatedIncrementBytes'])
+        self.assertIsNone(result['rounds'][0]['directoryChangeFailedRounds'])
+        self.assertNotIn('PRIVATE-CANARY',json.dumps(result))
+
     def test_false_absence_and_missing_required_state_reported(self):
         self.state.unlink();(self.db.parent/'absent.json').write_text('{}')
         report=live.run_preflight(self.dashboard,self.spec,self.control)
@@ -167,9 +217,9 @@ class HostPreflightTests(unittest.TestCase):
         dashboard=SimpleNamespace(app=app)
         self.control.mkdir()
         # Force preflight failure inside the optional worker, never the real app.
-        def bad(*args):raise RuntimeError('PRIVATE-CANARY')
+        def bad(*args,**kwargs):raise RuntimeError('PRIVATE-CANARY')
         with patch.object(live,'run_preflight',bad):
-            live.configure(dashboard,{},'preflight',self.control)
+            live.configure(dashboard,self.spec,'preflight',self.control)
             with TestClient(app) as client:
                 self.assertEqual({'ok':True},client.get('/api/health').json())
                 import time

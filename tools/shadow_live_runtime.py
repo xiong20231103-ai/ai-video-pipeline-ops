@@ -4,6 +4,7 @@ This module is invoked only by the explicit bootstrap, never by app.py import.
 It makes no HTTP requests, does not start another app and does not replay here.
 """
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -13,18 +14,40 @@ import threading
 import time
 
 from agent.core.snapshot import canonical,no_links
-from tools.shadow_capture import CaptureError, _safe, _stat, _read, _source, validate_plan
+from tools.shadow_capture import CaptureError, _safe, _stat, _read, _source, validate_plan, measure_directory_stability
 from tools.shadow_process_preflight import probe_processes
 from tools.shadow_sqlite_snapshot import online_backup
 
 
-def run_preflight(dashboard,spec,control_root):
+CHUNK_BYTES=64*1024
+MAX_DIGESTS=32768
+
+
+class IncrementMeasurement:
+    """In-memory estimate only: never creates evidence blobs or an index file."""
+    def __init__(self):self.seen=set();self.new_bytes=0
+    def observe(self,raw):
+        digest=hashlib.sha256(raw).hexdigest()
+        if digest not in self.seen:
+            if len(self.seen)>=MAX_DIGESTS:raise CaptureError('preflight_digest_limit')
+            self.seen.add(digest);self.new_bytes+=len(raw)
+        return digest
+    def chunks(self,raw):
+        return [self.observe(raw[i:i+CHUNK_BYTES]) for i in range(0,len(raw),CHUNK_BYTES)]
+
+
+def run_preflight(dashboard,spec,control_root,*,measurement=None):
     """Must run with the original host identity, after its normal startup.
 
     Only a new private scratch and an immutable result are written. This is not
     a comparable capture and does not attach a GET binding or activate engines.
     """
     started=time.monotonic();control=no_links(control_root)
+    measurement=measurement if measurement is not None else IncrementMeasurement()
+    # Commit digest history only when this entire round succeeds.
+    staged=IncrementMeasurement();staged.seen=measurement.seen.copy()
+    index={}
+    sampled_at=datetime.now(timezone.utc).isoformat()
     evidence=no_links(spec['evidenceRoot']);archive=no_links(spec['archivedRoot'])
     if evidence==archive or evidence.is_relative_to(archive) or archive.is_relative_to(evidence):raise CaptureError('preflight_archive_overlap')
     for other in (archive,evidence):
@@ -57,6 +80,7 @@ def run_preflight(dashboard,spec,control_root):
             try:_safe(json.loads(raw))
             except json.JSONDecodeError:missing.append({'path':name,'code':'state_json_invalid'})
         file_bytes+=len(raw)
+        index[name]=staged.chunks(raw)
     for name in plan.get('absent',{}):
         if bindings[name].exists():missing.append({'path':name,'code':'declared_absence_exists'})
     # Read-only preflight still reserves the same 0.5GiB transient budget.
@@ -67,16 +91,28 @@ def run_preflight(dashboard,spec,control_root):
         for name in plan.get('databases',{}):
             result=online_backup(bindings[name],Path(folder)/'backup.db',max_bytes=spec['maxCaptureBytes']-file_bytes)
             results.append({'path':name,**result})
+            with (Path(folder)/'backup.db').open('rb') as stream:
+                chunks=[]
+                while raw:=stream.read(CHUNK_BYTES):chunks.append(staged.observe(raw))
+                index[name]=chunks
+            (Path(folder)/'backup.db').unlink()
+    directory=measure_directory_stability(plan,evidence/'_preflight_check',rounds=3)
+    index_bytes=len(canonical(index))
     # No credentials, task content or original exception body in diagnostics.
-    report={'schema':1,'mode':'preflight','enabled':False,'hostPid':os.getpid(),
+    report={'schema':1,'mode':'preflight','enabled':False,'sampledAtUtc':sampled_at,'hostPid':os.getpid(),
             'hostCreateTime':dashboard.psutil.Process(os.getpid()).create_time(),
             'seconds':time.monotonic()-started,'stateFileBytes':file_bytes,'databases':results,
             'measuredSingleRoundReadBytes':file_bytes+sum(row['bytes'] for row in results),
-            'measurementScope':'single-disabled-round-no-production-change-rate',
-            'deduplicatedIncrementBytes':None,'forecast12hBytes':None,
+            'measurementScope':'disabled-state-and-database-chunks-only',
+            'deduplicatedIncrementBytes':staged.new_bytes+index_bytes,
+            'newChunkBytes':staged.new_bytes,'estimatedIndexBytes':index_bytes,
+            'incrementEstimateComplete':not missing,
+            'incrementEstimateExcludes':['media-content','directory-evidence','change-journal','replay','logs'],
+            'directoryStability':directory,'forecast12hBytes':None,
             'processProbe':process,'missingPaths':missing,
             'planSha256':hashlib.sha256(canonical(plan)).hexdigest(),
-            'technicalPreflight':'blocked' if missing or process['preflight']['missing'] else 'measured',
+            'technicalPreflight':'blocked' if missing or process['preflight']['missing'] or
+                directory['directoryChangeFailedRounds'] or directory['unmeasurableRounds'] else 'measured',
             'productionBudgetVerified':False,'installationPermitted':False,
             'startupShapeEquivalent':False,
             'startupShapeDifferences':['configuration-read-count','store-initialization-count','inactive-module-objects'],
@@ -84,7 +120,47 @@ def run_preflight(dashboard,spec,control_root):
     _safe(report)
     target=control/('preflight-'+str(time.time_ns())+'.json')
     with target.open('xb') as stream:stream.write(canonical(report))
+    measurement.seen=staged.seen
     return report
+
+
+def run_preflight_series(dashboard,spec,control_root,stop,*,clock=time.monotonic):
+    """Three rounds at least five minutes apart; shutdown cancels further reads.
+
+    A missing/failed round remains unmeasurable. No retries, GET interception,
+    evidence-store writes, active-rate extrapolation or automatic activation.
+    """
+    measurement=IncrementMeasurement();rows=[];started=clock();last_start=None
+    outcome='completed'
+    for number in range(1,4):
+        delay=0 if last_start is None else max(0,300-(clock()-last_start))
+        if stop.wait(delay):outcome='cancelled';break
+        last_start=clock()
+        try:report=run_preflight(dashboard,spec,control_root,measurement=measurement)
+        except Exception:
+            rows.append({'round':number,'status':'unmeasurable','deduplicatedIncrementBytes':None,
+                         'directoryChangeFailedRounds':None,'directoryUnmeasurableRounds':None})
+            outcome='failed';break
+        rows.append({'round':number,'status':report['technicalPreflight'],
+                     'elapsedSeconds':last_start-started,'seconds':report['seconds'],'sampledAtUtc':report['sampledAtUtc'],
+                     'newChunkBytes':report['newChunkBytes'],'estimatedIndexBytes':report['estimatedIndexBytes'],
+                     'databaseBackupSeconds':sum(row['seconds'] for row in report['databases']),
+                     'deduplicatedIncrementBytes':report['deduplicatedIncrementBytes'],
+                     'incrementEstimateComplete':report['incrementEstimateComplete'],
+                     'directoryChangeFailedRounds':report['directoryStability']['directoryChangeFailedRounds'],
+                     'directoryUnmeasurableRounds':report['directoryStability']['unmeasurableRounds']})
+    summary={'schema':1,'mode':'preflight','enabled':False,'status':outcome,
+             'hostPid':os.getpid(),'planSha256':hashlib.sha256(canonical(spec['capturePlan'])).hexdigest(),
+             'requestedRounds':3,'minimumStartIntervalSeconds':300,'rounds':rows,
+             'measurementScope':'disabled-partial-state-database-estimate-not-retained-evidence',
+             'productionBudgetVerified':False,'activeBatchRateVerified':False,
+             'installationPermitted':False,'businessRequests':0,'productionWrites':False}
+    _safe(summary)
+    control=no_links(control_root);control.mkdir(parents=True,exist_ok=True)
+    with (control/('preflight-series-'+str(time.time_ns())+'.json')).open('xb') as stream:
+        stream.write(canonical(summary))
+    if outcome=='failed':raise CaptureError('host_preflight_round_failed')
+    return summary
 
 
 def configure(dashboard,spec,mode,control_root):
@@ -96,7 +172,7 @@ def configure(dashboard,spec,mode,control_root):
     def worker():
         # Let the original server/collector start under its normal lifecycle.
         if stop.wait(1):return
-        try:run_preflight(dashboard,spec,control_root)
+        try:run_preflight_series(dashboard,spec,control_root,stop)
         except Exception:
             # Failure reports contain a fixed code, no path/exception values.
             try:
