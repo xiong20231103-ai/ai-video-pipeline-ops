@@ -57,7 +57,9 @@ def normalize_root(value,root):
 
 class Oracle:
     def __init__(self,source,snapshot:Snapshot,scratch,*,collect=True):
-        if hashlib.sha256(source.encode('utf-8')).hexdigest()!=snapshot.manifest['legacySha256'] or snapshot.manifest['legacySha256']!=LEGACY_SOURCE_SHA256:raise SnapshotError('legacy_source_hash_mismatch')
+        from .source_profiles import verify_source
+        self.source_sha=verify_source(source,snapshot)
+        self.missing_hash_facts=[]
         self.collect=collect;self.snapshot=snapshot;self.root=snapshot.materialize(scratch);self.registry=Registry();self.stack=ExitStack();self.requests=[]
         self.namespace={'__name__':'isolated_legacy_oracle','__file__':str(self.root/'repository/app.py'),'_frozen_config':{},'_frozen_app':self.registry}
         tree=ast.parse(source)
@@ -123,6 +125,25 @@ class Oracle:
             if key not in {'offline_after_seconds','pipeline_live_after_seconds','test_history_batch_ids','test_history_remote_task_ids','scan_interval_seconds','heartbeat_interval_seconds'}:raise SnapshotError('undeclared_oracle_setting')
             cfg[key]=value
         self.io=SandboxIO(self.root,self.stack,facts.get('filesystem'),self.snapshot.manifest['files'],facts.get('pathAliases')).install()
+        from .source_profiles import PR49
+        if self.source_sha==PR49:
+            import verified_final
+            def frozen_digest(path,size,modified,changed):
+                try:
+                    mapped=self.io.check(path)
+                    logical=Path(n['os'].path.realpath(n['os'].path.abspath(mapped))).relative_to(self.io.root).as_posix()
+                except ValueError:logical=None
+                record=self.snapshot.manifest['files'].get(logical,{})
+                metadata=facts.get('filesystem',{}).get(logical,{})
+                digest=record.get('sha256') if record.get('kind')=='file' else metadata.get('contentSha256')
+                expected_size=record.get('size') if record else metadata.get('size')
+                expected_mtime=record.get('mtimeNs') if record else metadata.get('mtimeNs')
+                if (not isinstance(digest,str) or not re.fullmatch('[0-9a-f]{64}',digest)
+                        or size!=expected_size or modified!=expected_mtime):
+                    self.missing_hash_facts.append('metadata_hash_fact_missing_or_mismatched')
+                    raise SnapshotError('metadata_hash_fact_missing_or_mismatched')
+                return digest
+            self.stack.enter_context(patch.object(verified_final,'_digest',side_effect=frozen_digest))
         n['CONFIG']=cfg;n['DATA_DIR'].mkdir(parents=True,exist_ok=True)
         n['STORE']=n['Store'](n['DB_PATH']);n['COLLECTOR']=n['Collector'](cfg,n['STORE'])
         old_process_status=n['process_status']
@@ -143,6 +164,7 @@ class Oracle:
     def __exit__(self,*args):
         self.stack.close()
         if self.io.denied and args[0] is None:raise SnapshotError('replay_attempted_live_io')
+        if self.missing_hash_facts and args[0] is None:raise SnapshotError('missing_frozen_content_hash')
     def _http(self,request,*args,**kwargs):
         method=request.get_method() if hasattr(request,'get_method') else 'GET'
         if method!='GET':raise RuntimeError('oracle_non_get_forbidden')

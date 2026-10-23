@@ -10,7 +10,7 @@ def replay_collection(source,snapshot,scratch,targets,*,mutate=None):
         # Original Store schema/fixture seeding is isolated; transfer its consistent
         # view into RAM. The new Collector/projections are separately checked-in code.
         with closing(sqlite3.connect(environment.namespace['DB_PATH'])) as seed:
-            session=CollectionSession(environment.namespace,seed=seed)
+            session=CollectionSession(environment.namespace,source_sha=environment.source_sha,seed=seed)
         with session:
             environment.namespace.update(session.namespace)
             # Deferred R2/R4 adapters use this session's frozen globals. No POST.
