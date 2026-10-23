@@ -240,7 +240,7 @@ class HostPreflightTests(unittest.TestCase):
         self.control.mkdir()
         # Force preflight failure inside the optional worker, never the real app.
         def bad(*args,**kwargs):raise RuntimeError('PRIVATE-CANARY')
-        with patch.object(live,'run_preflight',bad):
+        with patch.object(live,'run_preflight',bad),patch.object(live,'PREFLIGHT_START_DELAY_SECONDS',0):
             live.configure(dashboard,self.spec,'preflight',self.control)
             with TestClient(app) as client:
                 self.assertEqual({'ok':True},client.get('/api/health').json())

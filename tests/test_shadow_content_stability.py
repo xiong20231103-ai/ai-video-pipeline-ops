@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from tools import shadow_capture
 from tools.shadow_capture import (aligned_capture,measure_directory_stability,validate_plan,
     _inventory,_stat,_read,recheck_state,ChangeReport,SmallReadBudget,CaptureError)
 
@@ -175,6 +176,29 @@ class ContentStabilityTests(unittest.TestCase):
         self.assertEqual(50,len(report['changes']));self.assertTrue(report['changesTruncated'])
         self.assertNotIn('PRIVATE-BODY-CANARY',json.dumps(report))
         self.assertTrue(all(set(row)=={'path','type'} for row in report['changes']))
+
+    def slow_small_reads(self,count,seconds_per_read=3):
+        for i in range(count):(self.tree/('state-%02d.json'%i)).write_bytes(b'{"ready":true}')
+        ticks=[0.0];real=shadow_capture._read_version
+        def slow(*args,**kwargs):
+            ticks[0]+=seconds_per_read;return real(*args,**kwargs)
+        return ticks,patch('tools.shadow_capture._read_version',side_effect=slow)
+
+    def test_slow_small_file_hashing_is_capped_and_defers_instead_of_expiring(self):
+        # Ten 3-second reads would take 30 s; the cap leaves the rest pending.
+        ticks,slow=self.slow_small_reads(10)
+        with slow:report=measure_directory_stability(self.plan,self.root/'probe',clock=lambda:ticks[0])
+        self.assertEqual(0,report['unmeasurableRounds']);self.assertEqual(0,report['directoryChangeFailedRounds'])
+        self.assertTrue(all(row['within20Seconds'] for row in report['windows']))
+        self.assertGreater(report['smallFileHashDeferredCount'],0)
+        self.assertTrue(all(row['hashSeconds']<=shadow_capture.WINDOW_HASH_SECONDS+3 for row in report['windows']))
+
+    def test_capped_hashing_still_fails_on_added_file(self):
+        ticks,slow=self.slow_small_reads(10)
+        with slow:
+            report=measure_directory_stability(self.plan,self.root/'probe',clock=lambda:ticks[0],
+                between=lambda:(self.tree/('added-%d.json'%ticks[0])).write_text('{}'))
+        self.assertEqual(3,report['directoryChangeFailedRounds']);self.assertEqual(0,report['unmeasurableRounds'])
 
     def test_expired_window_is_unmeasurable_and_limit_cannot_be_increased(self):
         ticks=[0]
