@@ -69,3 +69,17 @@ class ShadowSourceTests(unittest.TestCase):
   snap=self.snapshot()
   with Oracle(self.source,snap,self.root/'old',collect=False) as env:
    with self.assertRaisesRegex(CollectionError,'unsupported_collection_source'):CollectionSession(env.namespace,source_sha='0'*64)
+ def test_frozen_helper_binding_is_scoped_and_restored(self):
+  import sys,verified_final
+  from agent.core.source_profiles import legacy_verified_final_source,PR49_HELPER
+  self.assertEqual(PR49_HELPER,hashlib.sha256(legacy_verified_final_source().encode()).hexdigest())
+  original=verified_final
+  snap=self.snapshot()
+  with Oracle(self.source,snap,self.root/'old',collect=False):
+   self.assertIsNot(original,sys.modules['verified_final'])
+  self.assertIs(original,sys.modules['verified_final'])
+ def test_new_candidate_helper_cannot_be_relabeled_as_deployed_pr49(self):
+  profile=copy.deepcopy(self.profile)
+  profile['facts']['captureProof']={'helperHashes':{'verified_final.py':hashlib.sha256((ROOT/'verified_final.py').read_text(encoding='utf-8-sig').encode()).hexdigest()}}
+  snap=make_fixture(profile,self.source,self.root/'new-helper-snapshot')
+  with self.assertRaisesRegex(SnapshotError,'source_dependency_hash_mismatch'):Oracle(self.source,snap,self.root/'unknown-helper')

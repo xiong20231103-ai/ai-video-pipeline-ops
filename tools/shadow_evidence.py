@@ -11,10 +11,33 @@ def main(argv=None):
  archive=sub.add_parser('archive-passive');archive.add_argument('--source',required=True,type=Path);archive.add_argument('--out',required=True,type=Path);archive.add_argument('--approved-max-bytes',required=True,type=int)
  verify=sub.add_parser('verify-archive');verify.add_argument('--archive',required=True,type=Path)
  quota=sub.add_parser('capacity');quota.add_argument('--retained-root',required=True,action='append',type=Path);quota.add_argument('--approved-total-bytes',required=True,type=int)
+ review=sub.add_parser('review-batch');review.add_argument('--input',required=True,type=Path);review.add_argument('--out',required=True,type=Path)
+ campaign=sub.add_parser('review-campaign');campaign.add_argument('--batch-review',required=True,action='append',type=Path);campaign.add_argument('--out',required=True,type=Path)
  capture=sub.add_parser('capture-recorded');capture.add_argument('--plan',required=True,type=Path);capture.add_argument('--source',required=True,type=Path);capture.add_argument('--observations',required=True,type=Path);capture.add_argument('--out',required=True,type=Path)
  compare=sub.add_parser('compare');compare.add_argument('--module',required=True,choices=['R1','R2','R3','R5']);compare.add_argument('--snapshot',required=True,type=Path);compare.add_argument('--source',required=True,type=Path);compare.add_argument('--scratch',required=True,type=Path);compare.add_argument('--out',required=True,type=Path);compare.add_argument('--targets',type=Path);compare.add_argument('--operation-record');compare.add_argument('--recipes',type=Path);compare.add_argument('--history-source',default='home');compare.add_argument('--sequence',type=int,default=1)
  args=parser.parse_args(argv)
- if args.operation=='compare':
+ if args.operation in {'review-batch','review-campaign'}:
+  from agent.core.snapshot import canonical,no_links,SnapshotError
+  from tools.shadow_compare import batch_review,campaign_review
+  def read_review(path):
+   path=no_links(path)
+   if path.stat().st_size>8*1024*1024:raise CaptureError('review_input_size_limit')
+   try:
+    value=json.loads(path.read_text(encoding='utf-8-sig'));_safe(value)
+   except (SnapshotError,UnicodeError,json.JSONDecodeError) as error:raise CaptureError('review_input_rejected') from None
+   return value
+  if args.operation=='review-batch':
+   data=read_review(args.input)
+   if not isinstance(data,dict) or set(data)!={'reports','batchId','startedEvidence','completedEvidence'}:raise CaptureError('batch_review_input_schema')
+   summary=batch_review(data['reports'],batch_id=data['batchId'],started_evidence=data['startedEvidence'],completed_evidence=data['completedEvidence'])
+  else:
+   if len(args.batch_review)>100:raise CaptureError('campaign_review_input_limit')
+   summary=campaign_review([read_review(p) for p in args.batch_review])
+  output=no_links(args.out)
+  if output.exists():raise CaptureError('new_review_output_required')
+  output.parent.mkdir(parents=True,exist_ok=True)
+  with output.open('xb') as f:f.write(canonical(summary))
+ elif args.operation=='compare':
   from agent.core.snapshot import Snapshot,no_links,canonical
   from tools.shadow_compare import compare_reads,compare_history
   from tools.shadow_commands import compare_recorded_command
