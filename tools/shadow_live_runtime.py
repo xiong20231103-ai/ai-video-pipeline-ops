@@ -14,7 +14,7 @@ import threading
 import time
 
 from agent.core.snapshot import canonical,no_links
-from tools.shadow_capture import CaptureError, _safe, _stat, _read, _source, validate_plan, measure_directory_stability
+from tools.shadow_capture import CaptureError, _safe, _stat, _read, _source, validate_plan, measure_directory_stability, ChangeReport, recheck_state, _check_deadline
 from tools.shadow_process_preflight import probe_processes
 from tools.shadow_sqlite_snapshot import online_backup
 
@@ -37,12 +37,21 @@ class IncrementMeasurement:
 
 
 def run_preflight(dashboard,spec,control_root,*,measurement=None):
+    changes=ChangeReport();timings={};started=time.monotonic()
+    try:return _run_preflight(dashboard,spec,control_root,measurement=measurement,changes=changes,timings=timings)
+    except Exception as error:
+        error.diagnostics={**changes.report(),'phaseTimings':timings,'seconds':time.monotonic()-started,
+                           'code':str(error) if isinstance(error,CaptureError) else 'preflight_unmeasurable'}
+        raise
+
+
+def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
     """Must run with the original host identity, after its normal startup.
 
     Only a new private scratch and an immutable result are written. This is not
     a comparable capture and does not attach a GET binding or activate engines.
     """
-    started=time.monotonic();control=no_links(control_root)
+    started=time.monotonic();deadline=started+20;control=no_links(control_root)
     measurement=measurement if measurement is not None else IncrementMeasurement()
     # Commit digest history only when this entire round succeeds.
     staged=IncrementMeasurement();staged.seen=measurement.seen.copy()
@@ -67,36 +76,62 @@ def run_preflight(dashboard,spec,control_root,*,measurement=None):
     agent_pid=None
     if state.is_file() and state.stat().st_size<4096:
         agent_pid=json.loads(state.read_text(encoding='utf-8-sig')).get('pid')
-    process=probe_processes(dashboard.psutil,agent_pid=agent_pid)
-    missing=[];file_bytes=0
+    phase=time.monotonic();process=probe_processes(dashboard.psutil,agent_pid=agent_pid)
+    timings['processProbeSeconds']=time.monotonic()-phase
+    missing=[];file_bytes=0;state_versions={};phase=time.monotonic()
     for name in plan.get('files',{}):
         path=bindings[name];info=_stat(path)
         if not info or info['kind']!='file':missing.append({'path':name,'code':'required_file_missing'});continue
         if info['size']>spec['maxCaptureBytes']-file_bytes:raise CaptureError('preflight_state_byte_limit')
         # Read only explicit state, privacy-screen in memory, never copy its body
         # into the diagnostic report. Native config/profile paths are forbidden.
-        raw,_=_read(path,spec['maxCaptureBytes']-file_bytes);_safe(raw.decode('utf-8-sig'))
+        raw,info=_read(path,spec['maxCaptureBytes']-file_bytes,changes=changes,logical_path=name,deadline=deadline);_safe(raw.decode('utf-8-sig'))
+        state_versions[name]=(raw,info)
         if path.suffix.lower()=='.json':
             try:_safe(json.loads(raw))
             except json.JSONDecodeError:missing.append({'path':name,'code':'state_json_invalid'})
         file_bytes+=len(raw)
         index[name]=staged.chunks(raw)
+    timings['stateReadAndChunkHashSeconds']=time.monotonic()-phase
     for name in plan.get('absent',{}):
         if bindings[name].exists():missing.append({'path':name,'code':'declared_absence_exists'})
     # Read-only preflight still reserves the same 0.5GiB transient budget.
     if 3*spec['maxCaptureBytes']+16*1024*1024>512*1024*1024:raise CaptureError('preflight_scratch_reserve_limit')
     control.mkdir(parents=True,exist_ok=True)
-    results=[]
+    results=[];digest_seconds=0
     with tempfile.TemporaryDirectory(prefix='.disabled-preflight-',dir=control) as folder:
         for name in plan.get('databases',{}):
-            result=online_backup(bindings[name],Path(folder)/'backup.db',max_bytes=spec['maxCaptureBytes']-file_bytes)
+            _check_deadline(deadline)
+            result=online_backup(bindings[name],Path(folder)/'backup.db',max_bytes=spec['maxCaptureBytes']-file_bytes,timeout_seconds=max(.001,deadline-time.monotonic()))
             results.append({'path':name,**result})
+            phase=time.monotonic()
             with (Path(folder)/'backup.db').open('rb') as stream:
                 chunks=[]
-                while raw:=stream.read(CHUNK_BYTES):chunks.append(staged.observe(raw))
+                while raw:=stream.read(CHUNK_BYTES):
+                    _check_deadline(deadline);chunks.append(staged.observe(raw))
                 index[name]=chunks
+            digest_seconds+=time.monotonic()-phase
             (Path(folder)/'backup.db').unlink()
+    timings['databaseBackupSeconds']=sum(row['seconds'] for row in results)
+    timings['databaseChunkHashSeconds']=digest_seconds
+    phase=time.monotonic()
+    for name,(body,info) in state_versions.items():
+        recheck_state(bindings[name],body,info,limit=spec['maxCaptureBytes'],changes=changes,
+                      logical_path=name,deadline=deadline)
+    timings['stateRecheckSeconds']=time.monotonic()-phase
+    _check_deadline(deadline);timings['inputWindowSeconds']=time.monotonic()-started
+    phase=time.monotonic()
     directory=measure_directory_stability(plan,evidence/'_preflight_check',rounds=3)
+    timings['directoryWindowsSeconds']=time.monotonic()-phase
+    timings['smallFileHashSeconds']=directory.get('smallFileHashSeconds',0)
+    timings['directoryEnumerationAndComparisonSeconds']=sum(row['enumerationAndComparisonSeconds'] for row in directory.get('windows',[]))
+    combined=changes.report()
+    for key,value in directory.get('changeCounts',{}).items():combined['changeCounts'][key]=combined['changeCounts'].get(key,0)+value
+    unique={(row['path'],row['type']):row for row in combined['changes']+directory.get('changes',[])}
+    combined['changes']=list(unique.values())[:50]
+    combined['rewrittenSameContentCount']+=directory.get('rewrittenSameContentCount',0)
+    combined['statOnlyChangeCount']+=directory.get('statOnlyChangeCount',0)
+    combined['changesTruncated']=combined['changesTruncated'] or directory.get('changesTruncated',False) or len(unique)>50
     index_bytes=len(canonical(index))
     # No credentials, task content or original exception body in diagnostics.
     report={'schema':1,'mode':'preflight','enabled':False,'sampledAtUtc':sampled_at,'hostPid':os.getpid(),
@@ -108,7 +143,8 @@ def run_preflight(dashboard,spec,control_root,*,measurement=None):
             'newChunkBytes':staged.new_bytes,'estimatedIndexBytes':index_bytes,
             'incrementEstimateComplete':not missing,
             'incrementEstimateExcludes':['media-content','directory-evidence','change-journal','replay','logs'],
-            'directoryStability':directory,'forecast12hBytes':None,
+            'directoryStability':directory,'phaseTimings':timings,'stabilityChanges':combined,
+            'smallFileReadBytes':directory.get('smallFileReadBytes',0),'forecast12hBytes':None,
             'processProbe':process,'missingPaths':missing,
             'planSha256':hashlib.sha256(canonical(plan)).hexdigest(),
             'technicalPreflight':'blocked' if missing or process['preflight']['missing'] or
@@ -137,9 +173,10 @@ def run_preflight_series(dashboard,spec,control_root,stop,*,clock=time.monotonic
         if stop.wait(delay):outcome='cancelled';break
         last_start=clock()
         try:report=run_preflight(dashboard,spec,control_root,measurement=measurement)
-        except Exception:
+        except Exception as error:
             rows.append({'round':number,'status':'unmeasurable','deduplicatedIncrementBytes':None,
-                         'directoryChangeFailedRounds':None,'directoryUnmeasurableRounds':None})
+                         'directoryChangeFailedRounds':None,'directoryUnmeasurableRounds':None,
+                         'diagnostics':getattr(error,'diagnostics',{'code':'preflight_unmeasurable'})})
             outcome='failed';break
         rows.append({'round':number,'status':report['technicalPreflight'],
                      'elapsedSeconds':last_start-started,'seconds':report['seconds'],'sampledAtUtc':report['sampledAtUtc'],
@@ -148,7 +185,8 @@ def run_preflight_series(dashboard,spec,control_root,stop,*,clock=time.monotonic
                      'deduplicatedIncrementBytes':report['deduplicatedIncrementBytes'],
                      'incrementEstimateComplete':report['incrementEstimateComplete'],
                      'directoryChangeFailedRounds':report['directoryStability']['directoryChangeFailedRounds'],
-                     'directoryUnmeasurableRounds':report['directoryStability']['unmeasurableRounds']})
+                     'directoryUnmeasurableRounds':report['directoryStability']['unmeasurableRounds'],
+                     'stabilityChanges':report['stabilityChanges'],'phaseTimings':report['phaseTimings']})
     summary={'schema':1,'mode':'preflight','enabled':False,'status':outcome,
              'hostPid':os.getpid(),'planSha256':hashlib.sha256(canonical(spec['capturePlan'])).hexdigest(),
              'requestedRounds':3,'minimumStartIntervalSeconds':300,'rounds':rows,
