@@ -1,0 +1,208 @@
+"""Synthetic roots, media and WAL only; never imports the installed Dashboard."""
+from contextlib import ExitStack, closing
+import copy
+import hashlib
+import os
+from pathlib import Path
+import sqlite3
+import tempfile
+import threading
+import unittest
+from unittest.mock import patch
+
+from agent.core.sandbox import SandboxIO
+from tools.shadow_capture import validate_plan, _inventory, DigestCache, CaptureError, _stat, measure_directory_stability
+from tools.shadow_sqlite_snapshot import online_backup
+
+
+class CaptureV3Tests(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
+        self.root=Path(self.tmp.name);self.drive=self.root/'drive';self.drive.mkdir()
+        (self.drive/'10.22').mkdir();(self.drive/'10.22'/'video.mp4').write_bytes(b'abcdefghi')
+        (self.drive/'Backup').mkdir();(self.drive/'Backup'/'ops-shadow-v3').mkdir()
+        self.plan={'schema':1,'roots':{'final':str(self.drive)},
+                   'shallow':{'final':{'root':'final','path':'.'}},
+                   'trees':{'final/10.22':{'root':'final','path':'10.22'}},
+                   'exclude':{'final/Backup/ops-shadow-v3':{'root':'final','path':'Backup/ops-shadow-v3'}},
+                   'hashMetadataFiles':True}
+
+    def inventory(self,cache=None,budget=64*1024*1024):
+        _,bindings=validate_plan(self.plan,self.drive/'Backup/ops-shadow-v3/new-snapshot')
+        return _inventory(self.plan,bindings,100,budget,cache)
+
+    def test_shallow_root_excludes_outputs_without_rejecting_entire_drive(self):
+        nodes,_=self.inventory()
+        self.assertIn('final/10.22/video.mp4',nodes)
+        self.assertIn('final/Backup',nodes)
+        self.assertFalse(nodes['final/Backup']['contentsCaptured'])
+        self.assertNotIn('final/Backup/ops-shadow-v3',nodes)
+        bad=copy.deepcopy(self.plan);bad.pop('exclude')
+        with self.assertRaisesRegex(CaptureError,'overlap'):
+            validate_plan(bad,self.drive/'Backup/ops-shadow-v3/new-snapshot')
+
+    def test_new_date_is_discovered_but_never_treated_as_empty_directory(self):
+        (self.drive/'10.23').mkdir();(self.drive/'10.23'/'not-read.txt').write_text('outside approved subtree')
+        nodes,_=self.inventory()
+        self.assertFalse(nodes['final/10.23']['contentsCaptured'])
+        self.assertNotIn('final/10.23/not-read.txt',nodes)
+        scratch=self.root/'scratch';(scratch/'final/10.23').mkdir(parents=True)
+        with ExitStack() as stack:
+            guard=SandboxIO(scratch,stack,nodes,strict_reads=True,closed_roots=['final/10.22']).install()
+            self.assertTrue((scratch/'final/10.23').is_dir())
+            with self.assertRaisesRegex(PermissionError,'uncaptured_directory_contents'):
+                list((scratch/'final/10.23').iterdir())
+            self.assertTrue(guard.denied)
+
+    def test_excluded_tree_cannot_be_used_as_input_or_read_as_missing(self):
+        bad=copy.deepcopy(self.plan);bad['trees']['final/Backup/ops-shadow-v3']={'root':'final','path':'Backup/ops-shadow-v3'}
+        with self.assertRaisesRegex(CaptureError,'excluded_capture_input'):
+            validate_plan(bad,self.root/'elsewhere')
+        scratch=self.root/'scratch';scratch.mkdir()
+        with ExitStack() as stack:
+            SandboxIO(scratch,stack,strict_reads=True,excluded_paths=['final/Backup/ops-shadow-v3']).install()
+            with self.assertRaisesRegex(PermissionError,'excluded_frozen_fact'):
+                (scratch/'final/Backup/ops-shadow-v3').exists()
+
+    def test_incremental_digest_honours_round_budget_and_reuses_completed_hash(self):
+        cache=DigestCache()
+        first,_=self.inventory(cache,4)
+        self.assertTrue(first['final/10.22/video.mp4']['hashPending'])
+        self.assertEqual(4,cache.partial[str(self.drive/'10.22/video.mp4')]['offset'])
+        self.inventory(cache,4)
+        third,_=self.inventory(cache,4)
+        self.assertEqual(hashlib.sha256(b'abcdefghi').hexdigest(),third['final/10.22/video.mp4']['contentSha256'])
+        with patch.object(Path,'open',side_effect=AssertionError('unchanged media must not be read again')):
+            fourth,_=self.inventory(cache,0)
+        self.assertEqual(third,fourth)
+
+    def test_changed_media_invalidates_partial_and_complete_hash(self):
+        cache=DigestCache();self.inventory(cache,4)
+        media=self.drive/'10.22/video.mp4';media.write_bytes(b'changed')
+        result,_=self.inventory(cache,4)
+        self.assertTrue(result['final/10.22/video.mp4']['hashPending'])
+        self.assertEqual(4,cache.partial[str(media)]['offset'])
+        result,_=self.inventory(cache,4)
+        self.assertEqual(hashlib.sha256(b'changed').hexdigest(),result['final/10.22/video.mp4']['contentSha256'])
+
+    def test_drive_root_tree_rejected_even_with_shallow_and_output_exclusion(self):
+        anchor=Path(self.root.anchor)
+        plan={'schema':1,'roots':{'final':str(anchor)},'shallow':{'final':{'root':'final','path':'.'}},
+              'trees':{'final/recursive':{'root':'final','path':'.'}},
+              'exclude':{'final/'+self.root.relative_to(anchor).as_posix():{'root':'final','path':self.root.relative_to(anchor).as_posix()}}}
+        # Validation only. Never enumerate an actual drive root.
+        with self.assertRaisesRegex(CaptureError,'recursive_drive_inventory_forbidden'):
+            validate_plan(plan,self.root/'new-output')
+
+    def test_digest_reads_at_most_one_mib_and_growth_only_invalidates_this_file(self):
+        media=self.drive/'10.22/video.mp4';media.write_bytes(b'x'*(3*1024*1024))
+        info=_stat(media);cache=DigestCache();reads=[];original=Path.open
+        class GrowingReader:
+            def __enter__(self):self.inner=original(media,'rb');return self
+            def __exit__(self,*args):self.inner.close()
+            def seek(self,*args):return self.inner.seek(*args)
+            def read(self,amount):
+                reads.append(amount);raw=self.inner.read(amount)
+                if len(reads)==1:
+                    with original(media,'ab') as writer:writer.write(b'growing')
+                return raw
+        with patch.object(Path,'open',return_value=GrowingReader()):
+            digest,used=cache.observe(media,info,64*1024*1024)
+        self.assertIsNone(digest);self.assertEqual(3*1024*1024,used)
+        self.assertTrue(reads);self.assertLessEqual(max(reads),1024*1024)
+        self.assertNotIn(str(media),cache.partial);self.assertNotIn(str(media),cache.values)
+        nodes,_=self.inventory(cache)
+        self.assertIn('contentSha256',nodes['final/10.22/video.mp4'])
+
+    def test_directory_failure_ratio_distinguishes_file_growth_and_new_entry(self):
+        media=self.drive/'10.22/video.mp4'
+        _,bindings=validate_plan(self.plan,self.root/'output')
+        def grow():
+            with media.open('ab') as stream:stream.write(b'grow')
+        report=measure_directory_stability(self.plan,self.root/'output',between=grow)
+        self.assertEqual(0,report['directoryChangeFailureRatio'])
+        calls=[]
+        def new_entry():
+            calls.append(1);(media.parent/('new-'+str(len(calls)))).write_text('new')
+        report=measure_directory_stability(self.plan,self.root/'output',between=new_entry)
+        self.assertEqual(1,report['directoryChangeFailureRatio'])
+        self.assertFalse(report['activeBatchRateVerified'])
+
+    def test_single_backup_step_has_no_restart_while_wal_writer_commits(self):
+        source=self.root/'single.db';out=self.root/'single-backup.db';original=sqlite3.connect
+        allow_writer=threading.Event();writer_done=threading.Event();errors=[]
+        with closing(original(source)) as writer:
+            writer.execute('PRAGMA journal_mode=WAL');writer.execute('CREATE TABLE items(id,payload)')
+            writer.executemany('INSERT INTO items VALUES(?,?)',((i,'x'*8000) for i in range(1024)));writer.commit()
+            def update():
+                try:
+                    if not allow_writer.wait(10):raise AssertionError('writer was not released')
+                    with closing(original(source,timeout=10)) as conn:
+                        conn.execute('UPDATE items SET payload=? WHERE id=0',('committed',));conn.commit()
+                    writer_done.set()
+                except Exception as error:errors.append(type(error).__name__)
+            thread=threading.Thread(target=update);thread.start();steps=[];callbacks=[]
+            class Reader:
+                def __init__(self,conn):self.conn=conn
+                def execute(self,*args):return self.conn.execute(*args)
+                def close(self):self.conn.close()
+                def backup(self,target,**options):
+                    steps.append(options['pages']);progress=options['progress']
+                    def on_progress(status,remaining,total):
+                        callbacks.append((status,remaining));allow_writer.set()
+                        if not writer_done.wait(10):raise AssertionError('WAL writer did not commit within fixture deadline')
+                        progress(status,remaining,total)
+                    return self.conn.backup(target,**{**options,'progress':on_progress})
+            def connect(path,*args,**kw):
+                conn=original(path,*args,**kw)
+                return Reader(conn) if kw.get('uri') else conn
+            try:
+                with patch('tools.shadow_sqlite_snapshot.sqlite3.connect',side_effect=connect):
+                    online_backup(source,out,max_bytes=16*1024*1024)
+            finally:allow_writer.set();thread.join(10)
+            self.assertFalse(errors);self.assertFalse(thread.is_alive());self.assertTrue(writer_done.is_set())
+            self.assertEqual([-1],steps);self.assertEqual([(sqlite3.SQLITE_DONE,0)],callbacks)
+            with closing(original(source)) as reader:
+                self.assertEqual('committed',reader.execute('SELECT payload FROM items WHERE id=0').fetchone()[0])
+                self.assertEqual(1023,reader.execute('SELECT count(*) FROM items WHERE payload=?',('x'*8000,)).fetchone()[0])
+            with closing(original(out)) as snapshot:
+                self.assertEqual('ok',snapshot.execute('PRAGMA quick_check').fetchone()[0])
+                self.assertEqual((1024,1024,0,1023),snapshot.execute('SELECT count(*),count(DISTINCT id),min(id),max(id) FROM items').fetchone())
+                self.assertEqual(1024,snapshot.execute('SELECT count(*) FROM items WHERE payload=?',('x'*8000,)).fetchone()[0])
+
+    def test_readonly_online_backup_includes_wal_and_does_not_lock_out_writer(self):
+        source=self.root/'source.db';out=self.root/'snapshot.db'
+        with closing(sqlite3.connect(source)) as writer:
+            writer.execute('PRAGMA journal_mode=WAL');writer.execute('CREATE TABLE pairs(id PRIMARY KEY,a,b)')
+            writer.executemany('INSERT INTO pairs VALUES(?,?,?)',[(n,n,n) for n in range(600)])
+            writer.commit()
+            # Concurrent writer commits while the read-only online backup runs.
+            stop=threading.Event();progress=threading.Event();errors=[]
+            def update():
+                try:
+                    with closing(sqlite3.connect(source,timeout=1)) as conn:
+                        while not stop.is_set():
+                            conn.execute('UPDATE pairs SET a=a+1,b=b+1 WHERE id=1');conn.commit();progress.set()
+                except Exception as error:errors.append(type(error).__name__)
+            thread=threading.Thread(target=update);thread.start()
+            try:
+                self.assertTrue(progress.wait(2))
+                proof=online_backup(source,out,max_bytes=2*1024*1024)
+            finally:stop.set();thread.join(3)
+            self.assertFalse(thread.is_alive());self.assertFalse(errors)
+            self.assertEqual('sqlite-online-readonly',proof['method'])
+            with closing(sqlite3.connect(out)) as reader:
+                self.assertEqual(600,reader.execute('SELECT count(*) FROM pairs').fetchone()[0])
+                self.assertEqual(0,reader.execute('SELECT count(*) FROM pairs WHERE a<>b').fetchone()[0])
+            self.assertEqual('wal',writer.execute('PRAGMA journal_mode').fetchone()[0])
+
+    def test_backup_budget_rejection_removes_only_new_scratch(self):
+        source=self.root/'source.db'
+        with closing(sqlite3.connect(source)) as conn:conn.execute('CREATE TABLE keep(id)')
+        before=source.read_bytes()
+        with self.assertRaisesRegex(CaptureError,'byte_limit'):
+            online_backup(source,self.root/'too-big.db',max_bytes=1)
+        self.assertFalse((self.root/'too-big.db').exists());self.assertEqual(before,source.read_bytes())
+
+
+if __name__=='__main__':unittest.main()

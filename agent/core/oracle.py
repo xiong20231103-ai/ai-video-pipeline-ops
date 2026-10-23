@@ -63,6 +63,7 @@ class Oracle:
         self.frozen_verified_final_source=legacy_verified_final_source() if self.source_sha==PR49 else None
         self.missing_hash_facts=[];self.missing_http_facts=[]
         self.collect=collect;self.snapshot=snapshot;self.root=snapshot.materialize(scratch);self.registry=Registry();self.stack=ExitStack();self.requests=[]
+        self.effect_names={p.relative_to(self.root).as_posix() for p in self.root.rglob('*') if p.is_file()}
         self.namespace={'__name__':'isolated_legacy_oracle','__file__':str(self.root/'repository/app.py'),'_frozen_config':{},'_frozen_app':self.registry}
         tree=ast.parse(source)
         for index,node in enumerate(tree.body):
@@ -126,7 +127,7 @@ class Oracle:
         for key,value in facts.get('settings',{}).items():
             if key not in {'offline_after_seconds','pipeline_live_after_seconds','test_history_batch_ids','test_history_remote_task_ids','scan_interval_seconds','heartbeat_interval_seconds'}:raise SnapshotError('undeclared_oracle_setting')
             cfg[key]=value
-        self.io=SandboxIO(self.root,self.stack,facts.get('filesystem'),self.snapshot.manifest['files'],facts.get('pathAliases'),strict_reads=facts.get('dependencyClosure') is True,absent_paths=facts.get('absentPaths',()),closed_roots=facts.get('completeDirectoryRoots',())).install()
+        self.io=SandboxIO(self.root,self.stack,facts.get('filesystem'),self.snapshot.manifest['files'],facts.get('pathAliases'),strict_reads=facts.get('dependencyClosure') is True,absent_paths=facts.get('absentPaths',()),closed_roots=facts.get('completeDirectoryRoots',()),excluded_paths=facts.get('excludedPaths',())).install()
         from .source_profiles import PR49
         if self.source_sha==PR49:
             # Replay the exact deployed helper, not today's mutable candidate.
@@ -220,7 +221,10 @@ class Oracle:
     def effects(self):
         files={}
         metadata=self.snapshot.manifest['facts'].get('filesystem',{})
-        for path in self.root.rglob('*'):
+        # Enumerating unknown placeholder directories is itself a missing fact.
+        # Effect accounting visits only materialized inputs and traced writes.
+        for name in sorted(self.effect_names|self.io.generated):
+            path=self.root/name
             if not path.is_file() or path.suffix=='.db' or path.name.endswith(('-wal','-shm')):continue
             name=path.relative_to(self.root).as_posix()
             files[name]={'metadataOnly':metadata[name]} if name in metadata and name not in self.snapshot.manifest['files'] else digest_file(path)

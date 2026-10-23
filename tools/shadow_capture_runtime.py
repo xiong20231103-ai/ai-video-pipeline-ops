@@ -6,7 +6,7 @@ The published manifest is consumed later by the offline CLI in another process.
 from pathlib import Path
 import copy,os,tempfile,threading,time
 from agent.core.snapshot import canonical,no_links
-from tools.shadow_capture import aligned_capture,CaptureError,validate_plan
+from tools.shadow_capture import aligned_capture,CaptureError,validate_plan,DigestCache
 from tools.shadow_store import put_snapshot,usage
 
 MAX_APPROVED=2*1024*1024*1024
@@ -18,17 +18,22 @@ class CapturePublisher:
         self.root=no_links(evidence_root);self.source=no_links(source);self.retained=tuple(map(no_links,retained_roots))
         self.plan=copy.deepcopy(plan);self.observer=observer;self.process_probe=process_probe;self.cap=approved_total_bytes
         self.max_bytes=max_capture_bytes;self.interval=min_interval_seconds;self.clock=clock;self.last=None;self.lock=threading.Lock()
+        self.digest_cache=DigestCache()
         for other in [self.source.parent,*self.retained]:
             if self.root==other or self.root.is_relative_to(other) or other.is_relative_to(self.root):raise CaptureError('evidence_root_overlap')
         validate_plan(plan,self.root/'_validation_destination')
-        self.state={'schema':1,'state':'dormant','published':0,'rejected':0,'businessRequests':0,'realShadowPassed':False,'switchAccepted':False}
-    def status(self):return dict(self.state)
+        self.state={'schema':1,'state':'dormant','published':0,'rejected':0,'captureAttempts':0,
+                    'directoryChangeRejected':0,'businessRequests':0,'realShadowPassed':False,'switchAccepted':False}
+    def status(self):
+        attempts=self.state['captureAttempts']
+        return {**self.state,'directoryChangeFailureRatio':self.state['directoryChangeRejected']/attempts if attempts else None}
     def tick(self):
         if not self.lock.acquire(blocking=False):return {**self.status(),'state':'busy'}
         try:
             now=self.clock()
             if self.last is not None and now-self.last<self.interval:return self.status()
             self.last=now
+            self.state['captureAttempts']+=1
             # Check external completeness BEFORE creating a staging directory.
             self.observer.observation()
             self.root.mkdir(parents=True,exist_ok=True)
@@ -45,7 +50,7 @@ class CapturePublisher:
                 with tempfile.TemporaryDirectory(prefix='.capture-stage-',dir=self.root) as folder:
                     snapshot=aligned_capture(self.plan,Path(folder)/'snapshot',source_path=self.source,
                         process_probe=self.process_probe,http_probe=self.observer.observation,
-                        max_file_bytes=self.max_bytes,max_total_bytes=self.max_bytes,max_hash_bytes=self.max_bytes)
+                        max_file_bytes=self.max_bytes,max_total_bytes=self.max_bytes,max_hash_bytes=64*1024*1024,digest_cache=self.digest_cache)
                     stored=put_snapshot(snapshot,self.root/'store',approved_total_bytes=self.cap,
                         retained_roots=(*self.retained,Path(folder)))
                     # Atomic append-only handoff: no live paths or response values in report queue.
@@ -62,6 +67,7 @@ class CapturePublisher:
                 'state_changed_in_window','state_content_changed_in_window','external_or_process_changed',
                 'directory_changed_in_window','database_changed_in_window','capture_window_exceeded'} else 'capture_rejected'
             self.state.update(state='blocked',lastCode=code,rejected=self.state['rejected']+1)
+            if code=='directory_changed_in_window':self.state['directoryChangeRejected']+=1
         finally:self.lock.release()
         return self.status()
     def loop(self,stop):

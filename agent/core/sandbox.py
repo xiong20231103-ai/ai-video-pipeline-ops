@@ -10,12 +10,13 @@ from urllib.parse import urlsplit,unquote
 from unittest.mock import patch
 
 class SandboxIO:
-    def __init__(self,root,stack,filesystem=None,content_files=(),aliases=None,*,strict_reads=False,absent_paths=(),closed_roots=()):
+    def __init__(self,root,stack,filesystem=None,content_files=(),aliases=None,*,strict_reads=False,absent_paths=(),closed_roots=(),excluded_paths=()):
         self.root=Path(root).resolve();self.lexical_root=Path(os.path.abspath(root));self.stack=stack;self.denied=[]
         self.filesystem=filesystem or {};self.content_files=set(content_files)
         self.closed_roots=tuple(closed_roots)
         if any(self.filesystem.get(name,{}).get('kind')!='directory' for name in self.closed_roots):raise ValueError('closed_inventory_directory_required')
         self.strict_reads=strict_reads;self.absent_paths=set(absent_paths);self.generated=set();self.accesses=set()
+        self.excluded_paths=tuple(excluded_paths)
         self.declared=set(self.filesystem)|self.content_files|self.absent_paths
         self.parents={parent.as_posix() for name in self.declared for parent in Path(name).parents if str(parent)!='.'}
         self.aliases=sorted((aliases or {}).items(),key=lambda item:len(item[0]),reverse=True)
@@ -37,7 +38,7 @@ class SandboxIO:
     def deny(self,operation):
         self.denied.append({'operation':operation,'outsideScratch':True})
         raise PermissionError('replay_io_outside_snapshot')
-    def check(self,path,write=False,content=False):
+    def check(self,path,write=False,content=False,enumerate_directory=False):
         if isinstance(path,int):return path
         if os.fsdecode(path) in {':memory:',os.devnull}:return path
         translated=self.translate(path)
@@ -48,6 +49,10 @@ class SandboxIO:
         if not any(candidate==base or candidate.is_relative_to(base) for base in roots):self.deny('link-escape')
         if candidate.is_relative_to(self.root):
             name=candidate.relative_to(self.root).as_posix()
+            if any(name==p or name.startswith(p+'/') for p in self.excluded_paths):
+                self.denied.append({'operation':'explicitly-excluded-fact','outsideScratch':False});raise PermissionError('excluded_frozen_fact')
+            if not write and enumerate_directory and self.filesystem.get(name,{}).get('contentsCaptured') is False:
+                self.denied.append({'operation':'uncaptured-directory-contents','outsideScratch':False});raise PermissionError('uncaptured_directory_contents')
             if write:
                 self.generated.add(name)
             else:
@@ -77,7 +82,7 @@ class SandboxIO:
             original=getattr(os,name)
             def directory(path='.',*args,_original=original,**kwargs):
                 if isinstance(path,int):self.deny('directory-descriptor')
-                return _original(self.check(path),*args,**kwargs)
+                return _original(self.check(path,enumerate_directory=True),*args,**kwargs)
             self.stack.enter_context(patch.object(os,name,directory))
         for name in ('exists','isfile','isdir','lexists'):
             original=getattr(os.path,name)
@@ -88,7 +93,7 @@ class SandboxIO:
         for name in ('resolve','stat','iterdir','glob','rglob'):
             original=getattr(Path,name)
             def wrapped(path,*args,_original=original,_name=name,**kwargs):
-                mapped=self.check(path)
+                mapped=self.check(path,enumerate_directory=_name in {'iterdir','glob','rglob'})
                 if _name=='stat':
                     candidate=Path(os.path.realpath(os.path.abspath(mapped)))
                     if candidate.is_relative_to(self.root):
