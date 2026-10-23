@@ -59,7 +59,7 @@ class Oracle:
     def __init__(self,source,snapshot:Snapshot,scratch,*,collect=True):
         from .source_profiles import verify_source
         self.source_sha=verify_source(source,snapshot)
-        self.missing_hash_facts=[]
+        self.missing_hash_facts=[];self.missing_http_facts=[]
         self.collect=collect;self.snapshot=snapshot;self.root=snapshot.materialize(scratch);self.registry=Registry();self.stack=ExitStack();self.requests=[]
         self.namespace={'__name__':'isolated_legacy_oracle','__file__':str(self.root/'repository/app.py'),'_frozen_config':{},'_frozen_app':self.registry}
         tree=ast.parse(source)
@@ -124,7 +124,7 @@ class Oracle:
         for key,value in facts.get('settings',{}).items():
             if key not in {'offline_after_seconds','pipeline_live_after_seconds','test_history_batch_ids','test_history_remote_task_ids','scan_interval_seconds','heartbeat_interval_seconds'}:raise SnapshotError('undeclared_oracle_setting')
             cfg[key]=value
-        self.io=SandboxIO(self.root,self.stack,facts.get('filesystem'),self.snapshot.manifest['files'],facts.get('pathAliases')).install()
+        self.io=SandboxIO(self.root,self.stack,facts.get('filesystem'),self.snapshot.manifest['files'],facts.get('pathAliases'),strict_reads=facts.get('dependencyClosure') is True,absent_paths=facts.get('absentPaths',()),closed_roots=facts.get('completeDirectoryRoots',())).install()
         from .source_profiles import PR49
         if self.source_sha==PR49:
             import verified_final
@@ -165,6 +165,7 @@ class Oracle:
         self.stack.close()
         if self.io.denied and args[0] is None:raise SnapshotError('replay_attempted_live_io')
         if self.missing_hash_facts and args[0] is None:raise SnapshotError('missing_frozen_content_hash')
+        if self.missing_http_facts and self.snapshot.manifest['facts'].get('dependencyClosure') is True and args[0] is None:raise SnapshotError('missing_frozen_http_fact')
     def _http(self,request,*args,**kwargs):
         method=request.get_method() if hasattr(request,'get_method') else 'GET'
         if method!='GET':raise RuntimeError('oracle_non_get_forbidden')
@@ -172,7 +173,9 @@ class Oracle:
         key=('control' if url.port==18790 else 'receiver')+':'+url.path+('?' + url.query if url.query else '')
         self.requests.append(key)
         responses=self.snapshot.manifest['facts'].get('http',{})
-        if key not in responses:raise urllib.error.URLError('unavailable_frozen_source:'+key)
+        if key not in responses:
+            self.missing_http_facts.append(key)
+            raise urllib.error.URLError('unavailable_frozen_source:'+key)
         value=responses[key]
         if isinstance(value,dict) and '_httpStatus' in value:raise urllib.error.HTTPError(key,value['_httpStatus'],'frozen source unavailable',{},None)
         class FrozenResponse:
