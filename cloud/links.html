@@ -1,0 +1,12 @@
+<!doctype html><html lang="zh"><meta charset="utf-8"><title>素材云端记录</title>
+<style>body{font:16px system-ui;max-width:1100px;margin:30px auto;background:#15191f;color:#eee}article{padding:15px;border-bottom:1px solid #555}img{max-width:280px;max-height:180px}a{color:#86c9ff}input,select{margin:8px}</style>
+<h1>每日素材与补链</h1><p id="summary"></p><p id="warning"></p>
+<label>日期<input id="date" type="date"></label><label>平台<input id="platform"></label>
+<select id="review"><option value="">全部审核状态</option><option>pending</option><option>confirmed</option><option>rejected</option><option>expired</option></select>
+<select id="delivery"><option value="">全部投递状态</option><option>not_applicable</option><option>waiting</option><option>sent</option><option>failed</option></select>
+<p>本页只读。收录不会自动递交；递交需单独明确确认。最多显示最近 1000 条。</p><main></main>
+<script>
+let records=[];const $=s=>document.querySelector(s);function text(tag,value,parent){let e=document.createElement(tag);e.textContent=value??'';parent.append(e);return e}
+function render(){let main=$('main');main.replaceChildren();for(let r of records){let p=r.payload;if($('#review').value&&r.review!==$('#review').value||$('#delivery').value&&r.delivery!==$('#delivery').value||$('#platform').value&&r.platform!==$('#platform').value||$('#date').value&&p.date!==$('#date').value)continue;let a=document.createElement('article');main.append(a);text('h3',`${p.date||''} ${p.category||''} ${p.replace_id?'补链':'每日素材'}`,a);text('p',`${r.video_id} · ${r.review} · ${r.delivery} · ${r.decided?'决定时间已记录':'历史-时间未知'}`,a);try{let u=new URL(p.url);if(['http:','https:'].includes(u.protocol)){let link=text('a',p.url,a);link.href=u.href;link.target='_blank';link.rel='noopener noreferrer'}}catch{}if(r.sha){let link=document.createElement('a');link.href='/api/links/shots/'+r.sha;link.target='_blank';let img=document.createElement('img');img.src=link.href;img.alt='展示合成图';img.onerror=()=>{img.replaceWith(document.createTextNode('截图加载失败，请稍后重试'))};link.append(img);a.append(link)}else text('p','截图缺失或已过期',a);text('p',JSON.stringify(p.conditions||{}),a)}}
+fetch('/api/links').then(r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{records=d.items;$('#summary').textContent=`数据库待确认 ${d.pending} 条，当前可展示 ${d.displayable} 条`;$('#warning').textContent=d.capacityReached?'截图容量已达上限；链接和状态继续接收':'';render()}).catch(()=>$('#warning').textContent='读取失败，请确认登录后刷新');for(let e of document.querySelectorAll('input,select'))e.onchange=render;
+</script></html>
