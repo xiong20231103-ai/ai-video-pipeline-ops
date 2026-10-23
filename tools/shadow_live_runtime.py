@@ -16,22 +16,33 @@ import time
 from agent.core.snapshot import canonical,no_links
 from tools.shadow_capture import CaptureError, _safe, _stat, _read, _source, validate_plan, measure_directory_stability, ChangeReport, recheck_state, _check_deadline
 from tools.shadow_process_preflight import probe_processes
-from tools.shadow_sqlite_snapshot import online_backup
+from tools.shadow_sqlite_snapshot import online_backup, sqlite_page_size, page_listing_segment, SEGMENT_KEYS
 
 
 CHUNK_BYTES=64*1024
-MAX_DIGESTS=32768
+# A 126 MiB database alone is ~32k pages of 4 KiB; leave room for growth.
+MAX_DIGESTS=262144
+V3_APPROVED_BYTES=2*1024*1024*1024
 
 
 class IncrementMeasurement:
     """In-memory estimate only: never creates evidence blobs or an index file."""
-    def __init__(self):self.seen=set();self.new_bytes=0
+    def __init__(self,*,coarse=True):
+        self.seen=set();self.new_bytes=0
+        self.coarse=IncrementMeasurement(coarse=False) if coarse else None
+    def copy(self):
+        clone=IncrementMeasurement(coarse=self.coarse is not None);clone.seen=self.seen.copy()
+        if self.coarse is not None:clone.coarse.seen=self.coarse.seen.copy()
+        return clone
+    def commit(self,staged):
+        self.seen=staged.seen
+        if self.coarse is not None:self.coarse.seen=staged.coarse.seen
     def observe(self,raw):
-        digest=hashlib.sha256(raw).hexdigest()
+        digest=hashlib.sha256(raw).digest()
         if digest not in self.seen:
             if len(self.seen)>=MAX_DIGESTS:raise CaptureError('preflight_digest_limit')
             self.seen.add(digest);self.new_bytes+=len(raw)
-        return digest
+        return digest.hex()
     def chunks(self,raw):
         return [self.observe(raw[i:i+CHUNK_BYTES]) for i in range(0,len(raw),CHUNK_BYTES)]
 
@@ -54,7 +65,7 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
     started=time.monotonic();deadline=started+20;control=no_links(control_root)
     measurement=measurement if measurement is not None else IncrementMeasurement()
     # Commit digest history only when this entire round succeeds.
-    staged=IncrementMeasurement();staged.seen=measurement.seen.copy()
+    staged=measurement.copy()
     index={}
     sampled_at=datetime.now(timezone.utc).isoformat()
     evidence=no_links(spec['evidenceRoot']);archive=no_links(spec['archivedRoot'])
@@ -105,11 +116,19 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
             result=online_backup(bindings[name],Path(folder)/'backup.db',max_bytes=spec['maxCaptureBytes']-file_bytes,timeout_seconds=max(.001,deadline-time.monotonic()))
             results.append({'path':name,**result})
             phase=time.monotonic()
+            # Same layout the evidence store publishes: one object per SQLite
+            # page plus deduplicated page-listing segments. 64 KiB is kept only
+            # as a comparison figure for the review.
+            page=sqlite_page_size(Path(folder)/'backup.db') or CHUNK_BYTES
             with (Path(folder)/'backup.db').open('rb') as stream:
                 chunks=[]
-                while raw:=stream.read(CHUNK_BYTES):
+                while raw:=stream.read(page):
                     _check_deadline(deadline);chunks.append(staged.observe(raw))
-                index[name]=chunks
+            with (Path(folder)/'backup.db').open('rb') as stream:
+                while raw:=stream.read(CHUNK_BYTES):
+                    _check_deadline(deadline);staged.coarse.observe(raw)
+            segments=[staged.observe(page_listing_segment(chunks[i:i+SEGMENT_KEYS])) for i in range(0,len(chunks),SEGMENT_KEYS)]
+            index[name]={'pageSize':page,'segments':segments}
             digest_seconds+=time.monotonic()-phase
             (Path(folder)/'backup.db').unlink()
     timings['databaseBackupSeconds']=sum(row['seconds'] for row in results)
@@ -141,6 +160,7 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
             'measurementScope':'disabled-state-and-database-chunks-only',
             'deduplicatedIncrementBytes':staged.new_bytes+index_bytes,
             'newChunkBytes':staged.new_bytes,'estimatedIndexBytes':index_bytes,
+            'databaseNewBytesAt64KiB':staged.coarse.new_bytes,
             'incrementEstimateComplete':not missing,
             'incrementEstimateExcludes':['media-content','directory-evidence','change-journal','replay','logs'],
             'directoryStability':directory,'phaseTimings':timings,'stabilityChanges':combined,
@@ -156,7 +176,7 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
     _safe(report)
     target=control/('preflight-'+str(time.time_ns())+'.json')
     with target.open('xb') as stream:stream.write(canonical(report))
-    measurement.seen=staged.seen
+    measurement.commit(staged)
     return report
 
 
