@@ -252,7 +252,10 @@ def observe_routes(spec):
         parsed=urlsplit(url)
         if parsed.hostname not in {'127.0.0.1','localhost','::1'}:raise CaptureError('observe_route_loopback_required')
         bindings[url]=(parsed.port,parsed.path);ports[(parsed.port,parsed.path)]=key
-    return bindings,ports
+    volatile=(spec.get('observe') or {}).get('volatileRoutes',[])
+    if (not isinstance(volatile,list) or len(volatile)!=len(set(volatile))
+            or any(key not in set(routes.values()) for key in volatile)):raise CaptureError('observe_volatile_routes_invalid')
+    return bindings,ports,tuple(volatile)
 
 
 class _StatusPublisher:
@@ -288,7 +291,7 @@ def configure_observe(dashboard,spec,control_root,*,interval_seconds=None):
         if a==b or a.is_relative_to(b) or b.is_relative_to(a):raise CaptureError('observe_root_overlap')
     interval=interval_seconds if interval_seconds is not None else (spec.get('observe') or {}).get('intervalSeconds')
     if type(interval) is not int or not OBSERVE_MIN_INTERVAL_SECONDS<=interval<=3600:raise CaptureError('observe_interval_invalid')
-    bindings,ports=observe_routes(spec)
+    bindings,ports,volatile_http=observe_routes(spec)
     observer=AgentReadObserver(ports)
     def process_probe():
         state=Path(os.environ.get('LOCALAPPDATA',''))/'OpsAgent/agent-runtime.json';agent_pid=None
@@ -299,7 +302,7 @@ def configure_observe(dashboard,spec,control_root,*,interval_seconds=None):
         return {'processRecords':result['processRecords'],'processIds':result['processIds']}
     publisher=CapturePublisher(plan,spec['source'],evidence,observer,process_probe,
         approved_total_bytes=V3_APPROVED_BYTES,max_capture_bytes=spec['maxCaptureBytes'],
-        min_interval_seconds=interval)
+        min_interval_seconds=interval,volatile_http=volatile_http)
     stop_file=control/'STOP';status_path=control/'observe-status.json';stopped=[]
     def stop_requested():
         if not stop_file.exists():return False

@@ -298,7 +298,9 @@ class ObserveTests(unittest.TestCase):
         cases=[{'preflightOnly':True},{'observe':{'intervalSeconds':60,'routes':self.spec['observe']['routes']}},
                {'observe':{'intervalSeconds':300,'routes':{}}},
                {'observe':{'intervalSeconds':300,'routes':{'http://10.0.0.1:8766/api/pipeline/summary':'receiver:/api/pipeline/summary'}}},
-               {'evidenceRoot':str(self.control/'evidence')},{'approvedBytes':5*1024**3}]
+               {'evidenceRoot':str(self.control/'evidence')},{'approvedBytes':5*1024**3},
+               {'observe':{'intervalSeconds':300,'routes':self.spec['observe']['routes'],'volatileRoutes':['receiver:/api/other']}},
+               {'observe':{'intervalSeconds':300,'routes':self.spec['observe']['routes'],'volatileRoutes':'receiver:/api/pipeline/summary'}}]
         for change in cases:
             app=FastAPI();self.dashboard.app=app;before=app.router.lifespan_context
             with self.subTest(change=list(change)),self.assertRaises(live.CaptureError):
