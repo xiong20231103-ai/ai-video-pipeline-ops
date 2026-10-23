@@ -19,7 +19,7 @@ CURRENT_FILES=PREVIOUS_FILES+('contracts/state_files.py','deploy/agent-json.ps1'
 BACKUP_FILES=CURRENT_FILES+tuple('agent/'+name for name in ('backup_crypto.py','backup_policy.py','backup_setup.py','backup_snapshot.py','backup_runtime.py','backup_pack.py','backup_restore.py'))+('contracts/backup_crypto.py',)
 
 FILES=BACKUP_FILES+('agent/execution.py','contracts/commands.py')
-R6_FILES=FILES+(
+PREVIOUS_R6_FILES=FILES+(
     'agent/staged_runtime.py','agent/core/staged_modules.py','agent/core/transition.py','agent/core/dispatch_claim.py',
     'agent/engine_runtime.py','agent/legacy_host.py','agent/cutover.py','pending_delete.py','cleanup_tickets.py',
     'agent/core/__init__.py','agent/core/authority_lease.py','agent/core/cleanup.py',
@@ -37,6 +37,10 @@ R6_FILES=FILES+(
     'contracts/history.py','contracts/shadow.py','contracts/timeline.py','contracts/shadow_rules.json',
     'docs/migration/r3-provenance.json','docs/migration/r4-provenance.json','docs/migration/r5-provenance.json',
     'deploy/agent_source_update.py',
+)
+R6_FILES=PREVIOUS_R6_FILES+(
+    'agent/core/verified_final_replay.py',
+    'contracts/legacy-verified-final-pr49.txt','contracts/legacy-verified-final-fresh.txt',
 )
 
 class UpdateError(ValueError):
@@ -56,7 +60,7 @@ def validate(root,expected=None):
     if len(commit)!=40 or any(char not in '0123456789abcdef' for char in commit): raise UpdateError('invalid_commit')
     if expected and commit!=expected: raise UpdateError('unexpected_commit')
     names=set(manifest.get('sha256',{}))
-    if names not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(BACKUP_FILES),set(FILES),set(R6_FILES)): raise UpdateError('unexpected_source_whitelist')
+    if names not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(BACKUP_FILES),set(FILES),set(PREVIOUS_R6_FILES),set(R6_FILES)): raise UpdateError('unexpected_source_whitelist')
     for name in names:
         path=root/name;reject_link(path)
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=manifest['sha256'][name]:
@@ -102,7 +106,7 @@ def restore(backup,target):
     if str(target.absolute())!=metadata['target']: raise UpdateError('rollback_target_mismatch')
     validate(backup,metadata['before']);reject_link(target)
     current=read_json(target/'deployment-manifest.json')
-    if current.get('commit') not in {metadata['before'],metadata['after']} or set(current.get('sha256',{})) not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(BACKUP_FILES),set(FILES),set(R6_FILES)):
+    if current.get('commit') not in {metadata['before'],metadata['after']} or set(current.get('sha256',{})) not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(BACKUP_FILES),set(FILES),set(PREVIOUS_R6_FILES),set(R6_FILES)):
         raise UpdateError('rollback_source_identity_changed')
     copy_code(backup,target);validate(target,metadata['before'])
 

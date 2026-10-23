@@ -78,11 +78,11 @@ class ShadowSourceTests(unittest.TestCase):
   with Oracle(self.source,snap,self.root/'old',collect=False):
    self.assertIsNot(original,sys.modules['verified_final'])
   self.assertIs(original,sys.modules['verified_final'])
- def test_new_candidate_helper_cannot_be_relabeled_as_deployed_pr49(self):
+ def test_new_helper_requires_explicit_identity_facts(self):
   profile=copy.deepcopy(self.profile)
   profile['facts']['captureProof']={'helperHashes':{'verified_final.py':hashlib.sha256((ROOT/'verified_final.py').read_text(encoding='utf-8-sig').encode()).hexdigest()}}
   snap=make_fixture(profile,self.source,self.root/'new-helper-snapshot')
-  with self.assertRaisesRegex(SnapshotError,'source_dependency_hash_mismatch'):Oracle(self.source,snap,self.root/'unknown-helper')
+  with self.assertRaisesRegex(SnapshotError,'verified_final_identity_fact_required'):Oracle(self.source,snap,self.root/'unknown-helper')
 
  def test_exact_current_crlf_archive_uses_existing_pr49_oracle_and_candidate(self):
   raw=(ROOT/'contracts/legacy-app-d6a7211-crlf.txt').read_bytes()
@@ -105,6 +105,6 @@ class ShadowSourceTests(unittest.TestCase):
   self.source=modified.decode('utf-8');snap=self.snapshot()
   with self.assertRaisesRegex(SnapshotError,'legacy_source_hash_mismatch'):
    Oracle(self.source,snap,self.root/'modified')
- def test_current_archive_does_not_authorize_new_verified_final_helper(self):
+ def test_current_archive_requires_new_helper_identity_facts(self):
   self.source=read_source(ROOT/'contracts/legacy-app-d6a7211-crlf.txt')
-  self.test_new_candidate_helper_cannot_be_relabeled_as_deployed_pr49()
+  self.test_new_helper_requires_explicit_identity_facts()

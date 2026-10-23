@@ -9,7 +9,7 @@ from contextlib import closing
 from datetime import datetime,timezone
 from pathlib import Path
 from agent.core.snapshot import Snapshot,SnapshotError,canonical,capture,digest_file,no_links,relative,safe_facts,PRIVATE_FILES,sqlite_rows
-from agent.core.source_profiles import PROFILES,PR49_BEHAVIOR,PR49_HELPER,read_source
+from agent.core.source_profiles import PROFILES,PR49_BEHAVIOR,PR49_HELPER,FRESH_HELPER,SOURCE_HELPER_PROFILES,read_source,validate_fresh_helper_identity
 from tools.shadow_capture_errors import CaptureError
 from tools.shadow_sqlite_snapshot import online_backup
 
@@ -290,7 +290,7 @@ def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None,*,smal
         if path.suffix.lower()=='.lock' and info['kind']=='file':
             nodes[name]={'kind':'file','exists':True,'metadataPolicy':'existence-only'}
             identity[name]={'kind':'file','exists':True};return
-        node={k:info[k] for k in ('kind','size','mtimeNs','ctimeNs')}
+        node={k:info[k] for k in ('kind','size','mtimeNs','ctimeNs','device','inode')}
         if info['kind']=='file':
             eligible=(not shallow and path.suffix.lower() in {'.json','.txt','.log'} and path.name.lower() not in PRIVATE_FILES and info['size']<=SMALL_FILE_LIMIT)
             previous=(baseline or {}).get(name,{})
@@ -298,7 +298,7 @@ def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None,*,smal
             if small_budget is not None and eligible:
                 if same and previous.get('contentSha256'):digest=previous['contentSha256']
                 else:digest,info=_small_digest(path,info,small_budget,deadline=deadline,clock=clock)
-                node.update({k:info[k] for k in ('kind','size','mtimeNs','ctimeNs')})
+                node.update({k:info[k] for k in ('kind','size','mtimeNs','ctimeNs','device','inode')})
                 if digest is None:node.update(hashPending=True,hashState='content_comparison_pending')
                 else:node['contentSha256']=digest;info={**info,'contentSha256':digest}
             elif small_budget is not None and not shallow:
@@ -361,7 +361,7 @@ def reconcile_inventory(nodes,before,after,roots,digest_cache=None,*,changes=Non
     for name,old in before.items():
         latest=after[name]
         if old==latest:continue
-        nodes[name].update({k:latest[k] for k in ('kind','size','mtimeNs','ctimeNs') if k in latest})
+        nodes[name].update({k:latest[k] for k in ('kind','size','mtimeNs','ctimeNs','device','inode') if k in latest})
         if old['kind']=='directory':
             # Membership and type were checked above. Preserve final timestamps.
             changes.add(name,'stat-only');continue
@@ -435,6 +435,41 @@ def _observations(process_probe,http_probe):
     if any(not re.fullmatch(r'(receiver|control):/api/[A-Za-z0-9_/?=&%.:-]+',k) for k in http):raise CaptureError('unexpected_external_port')
     return processes,http,generation
 
+def _verified_media(plan,nodes,inventory,roots,budget,*,deadline,clock):
+    """Explicit media only, fresh single-open digest; no cached/partial reuse."""
+    from agent.core.verified_final_replay import ALIGNMENT
+    names=plan.get('verifiedFinalMedia',[])
+    if not isinstance(names,list) or len(names)>10000 or any(not isinstance(n,str) for n in names) or len(set(names))!=len(names):raise CaptureError('invalid_verified_final_media')
+    proofs={};used=0
+    for name in names:
+        relative(name)
+        info=inventory.get(name)
+        if not info or info.get('kind')!='file' or Path(name).suffix.lower() not in {'.mp4','.mov','.mkv'}:raise CaptureError('verified_final_media_not_in_inventory')
+        root,rel=name.split('/',1)
+        path=no_links(roots[root]/rel)
+        node=nodes[name]
+        if info['size']>budget-used:
+            node.update(hashPending=True,hashState='verified_final_digest_budget_pending');continue
+        before=_stat(path)
+        digest=hashlib.sha256();amount=0
+        with path.open('rb') as stream:
+            opened=_info(os.fstat(stream.fileno()))
+            while amount<info['size']:
+                _check_deadline(deadline,clock)
+                block=stream.read(min(1024*1024,info['size']-amount))
+                if not block:break
+                amount+=len(block);digest.update(block)
+            closed=_info(os.fstat(stream.fileno()))
+        used+=amount;after=_stat(path)
+        if not (before==opened==closed==after==info and amount==info['size']):
+            node.update(hashPending=True,hashState='verified_final_writing');continue
+        value=digest.hexdigest()
+        node.update(contentSha256=value,hashPending=False)
+        node.pop('hashState',None)
+        proofs[name]={'alignment':ALIGNMENT,'sha256':value,'readBytes':amount,'before':before,'after':after}
+    return proofs,used
+
+
 def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024,max_entries=10000,max_hash_bytes=64*1024*1024,max_window_seconds=20,digest_cache=None,clock=time.monotonic,now=lambda:datetime.now(timezone.utc).isoformat()):
     roots,bindings=validate_plan(plan,destination)
     if type(max_window_seconds) not in (int,float) or not math.isfinite(max_window_seconds) or not 0<max_window_seconds<=20:raise CaptureError('capture_window_limit')
@@ -444,19 +479,32 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
     if source_sha not in PROFILES:raise CaptureError('unreviewed_capture_source')
     helper=source_path.with_name('verified_final.py')
     dependency_names=['pending_delete.py','cleanup_tickets.py']+(['verified_final.py'] if source_sha in PR49_BEHAVIOR else [])
-    package_root=Path(__file__).resolve().parents[1];dependency_hashes={}
+    package_root=Path(__file__).resolve().parents[1];dependency_hashes={};dependency_identities={}
     for name in dependency_names:
         installed=source_path.with_name(name)
         if not installed.is_file():
             if source_path.parent==package_root:raise CaptureError('capture_dependency_missing')
             continue # Synthetic source-only capture is not live evidence.
-        actual=hashlib.sha256(installed.read_text(encoding='utf-8-sig').encode()).hexdigest()
-        expected=PR49_HELPER if name=='verified_final.py' and source_sha in PR49_BEHAVIOR else hashlib.sha256((package_root/name).read_text(encoding='utf-8-sig').encode()).hexdigest()
+        identity=_stat(installed)
+        if not identity or identity['size']>2*1024*1024:raise CaptureError('capture_dependency_byte_limit')
+        raw=installed.read_bytes()
+        actual=hashlib.sha256(raw.decode('utf-8-sig').replace('\r\n','\n').replace('\r','\n').encode()).hexdigest()
+        expected=actual if name=='verified_final.py' and (source_sha,actual) in SOURCE_HELPER_PROFILES else hashlib.sha256((package_root/name).read_text(encoding='utf-8-sig').encode()).hexdigest()
+        if name=='verified_final.py' and (source_sha,actual) not in SOURCE_HELPER_PROFILES:raise CaptureError('capture_dependency_not_reviewed')
         if actual!=expected:raise CaptureError('capture_dependency_not_reviewed')
+        if _stat(installed)!=identity:raise CaptureError('dependency_changed_in_window')
+        dependency_identities[name]={**identity,'sha256':hashlib.sha256(raw).hexdigest()}
+        if name=='verified_final.py' and actual==FRESH_HELPER:
+            validate_fresh_helper_identity(dependency_identities[name])
         dependency_hashes[name]=actual
-    if source_sha in PR49_BEHAVIOR and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('capture_source_dependency_mismatch')
+    if source_sha in PR49_BEHAVIOR and not helper.is_file():raise CaptureError('capture_source_dependency_mismatch')
     processes,http,http_generation=_observations(process_probe,http_probe)
     nodes,inventory=_inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache,small_budget=small_budget,deadline=deadline,clock=clock)
+    fresh=dependency_hashes.get('verified_final.py')==FRESH_HELPER
+    media_limit=min(max_hash_bytes,64*1024*1024)
+    # Reserve the other half for a fresh closing digest, including same-stat
+    # overwrites. A stat-only closing check cannot align this helper's behavior.
+    media_proofs,media_bytes=_verified_media(plan,nodes,inventory,roots,media_limit//2,deadline=deadline,clock=clock) if fresh else ({},0)
     missing={k:_stat(bindings[k]) for k in plan.get('absent',{})}
     if any(v is not None for v in missing.values()):raise CaptureError('declared_absence_exists')
     before={};copied={};database_proofs={};total=0
@@ -496,13 +544,27 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
         if any(_stat(bindings[name]) is not None for name in missing):raise CaptureError('absence_changed_in_window')
         latest=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0,small_budget=small_budget,baseline=inventory,deadline=deadline,clock=clock)[1]
         reconcile_inventory(nodes,inventory,latest,roots,digest_cache,changes=changes)
+        closing,closing_bytes=_verified_media({**plan,'verifiedFinalMedia':list(media_proofs)},nodes,latest,roots,media_limit-media_bytes,deadline=deadline,clock=clock) if fresh else ({},0)
+        media_bytes+=closing_bytes
+        for name in list(media_proofs):
+            if (latest.get(name)!=media_proofs[name]['after'] or name not in closing
+                    or closing[name]['sha256']!=media_proofs[name]['sha256']):
+                del media_proofs[name];nodes[name].pop('contentSha256',None)
+                nodes[name].update(hashPending=True,hashState='verified_final_changed_in_window')
+            else:
+                media_proofs[name]['windowClose']=closing[name]
         if any(hashlib.sha256(source_path.with_name(name).read_text(encoding='utf-8-sig').encode()).hexdigest()!=value for name,value in dependency_hashes.items()):raise CaptureError('dependency_changed_in_window')
-        if read_source(source_path)!=source or source_sha in PR49_BEHAVIOR and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('source_changed_in_window')
+        if any({**_stat(source_path.with_name(name)),'sha256':hashlib.sha256(source_path.with_name(name).read_bytes()).hexdigest()}!=identity for name,identity in dependency_identities.items()):raise CaptureError('dependency_changed_in_window')
+        if read_source(source_path)!=source:raise CaptureError('source_changed_in_window')
         if clock()-started>max_window_seconds:raise CaptureError('capture_window_exceeded')
         ended_at=now();settings=plan.get('facts',{});_safe(settings)
         if set(settings)-{'machineName','settings','metrics','collectorAlive','scan','historyResetGeneration','historyResetAt','historyAliases'}:raise CaptureError('unexpected_capture_fact')
         facts={**settings,**processes,'http':http,'filesystem':nodes,'pathAliases':{str(p):name for name,p in roots.items()},'dependencyClosure':True,'absentPaths':sorted(missing),'completeDirectoryRoots':sorted(plan.get('trees',{})),'excludedPaths':sorted(plan.get('exclude',{}))}
         facts['captureProof']={'schema':1,'openedAt':opened_at,'closedAt':ended_at,'processSha256':hashlib.sha256(canonical(processes)).hexdigest(),'httpSha256':hashlib.sha256(canonical(http)).hexdigest(),'inventorySha256':hashlib.sha256(canonical(inventory)).hexdigest(),'databaseSnapshotMethod':'sqlite-online-readonly','databaseSnapshots':database_proofs,'externalObservationGeneration':http_generation,'helperHashes':dependency_hashes}
+        facts['captureProof']['helperIdentities']=dependency_identities
+        if fresh:
+            facts['verifiedFinalMedia']=media_proofs
+            facts['captureProof']['verifiedFinalDigestReadBytes']=media_bytes
         facts['captureProof'].update(inventoryEndSha256=hashlib.sha256(canonical(latest)).hexdigest(),
             metadataComparisonPolicy='directory-membership-type-state-content',
             stabilityChanges=changes.report(),smallFileReadBytes=small_budget.used,smallFileHashSeconds=small_budget.seconds,
