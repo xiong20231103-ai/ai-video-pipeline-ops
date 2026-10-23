@@ -32,6 +32,7 @@ class FreshHelperTests(unittest.TestCase):
         self.node = {'kind':'file', 'size':100, 'mtimeNs':1700000000000000000,
                      'ctimeNs':1700000000000000001, 'device':2, 'inode':42}
         self.record = {'alignment':ALIGNMENT, 'before':dict(self.node), 'after':dict(self.node),
+                       'opened':dict(self.node),'closed':dict(self.node),
                        'sha256':'a'*64, 'readBytes':100}
         self.record['windowClose']=copy.deepcopy(self.record)
         self.profile['facts'].update(
@@ -187,6 +188,8 @@ class FreshHelperTests(unittest.TestCase):
         expected=hashlib.sha256(media.read_bytes()).hexdigest()
         for snap in (one,two):
             facts=snap.manifest['facts']
+            self.assertIn('workbench/final/video.mp4',facts['verifiedFinalMedia'],
+                          facts['filesystem']['workbench/final/video.mp4'])
             self.assertEqual(expected,facts['verifiedFinalMedia']['workbench/final/video.mp4']['sha256'])
             self.assertEqual(2*media.stat().st_size,facts['captureProof']['verifiedFinalDigestReadBytes'])
 
@@ -230,6 +233,25 @@ class FreshHelperTests(unittest.TestCase):
         with patch('tools.shadow_capture._verified_media',side_effect=changing):snap=capture()
         self.assertEqual({},snap.manifest['facts']['verifiedFinalMedia'])
         self.assertTrue(snap.manifest['facts']['filesystem']['workbench/final/video.mp4']['hashPending'])
+
+    def test_fd_ctime_is_preserved_separately_from_path_ctime(self):
+        import os,types
+        from tools.shadow_capture import _verified_media
+        source,media,plan,capture=self.capture_fixture()
+        original=os.fstat
+        def fstat(fd):
+            value=original(fd)
+            return types.SimpleNamespace(st_mode=value.st_mode,st_size=value.st_size,
+                st_mtime_ns=value.st_mtime_ns,st_ctime_ns=value.st_ctime_ns+100,
+                st_dev=value.st_dev,st_ino=value.st_ino)
+        def different_ctime(*args,**kwargs):
+            with patch('tools.shadow_capture.os.fstat',side_effect=fstat):
+                return _verified_media(*args,**kwargs)
+        with patch('tools.shadow_capture._verified_media',side_effect=different_ctime):snap=capture()
+        proof=snap.manifest['facts']['verifiedFinalMedia']['workbench/final/video.mp4']
+        self.assertNotEqual(proof['before']['ctimeNs'],proof['opened']['ctimeNs'])
+        self.assertEqual(proof['before'],proof['after'])
+        self.assertEqual(proof['opened'],proof['closed'])
 
     def test_old_combination_retains_original_frozen_helper(self):
         self.profile['facts'].pop('verifiedFinalMedia')

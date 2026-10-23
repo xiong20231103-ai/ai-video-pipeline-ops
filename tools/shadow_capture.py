@@ -207,6 +207,8 @@ def _source(roots,spec):
 
 def validate_plan(plan,destination):
     if not isinstance(plan,dict) or plan.get('schema')!=1:raise CaptureError('capture_plan_schema')
+    media=plan.get('verifiedFinalMedia',[])
+    if not isinstance(media,list) or len(media)>10000 or any(not isinstance(n,str) for n in media) or len(set(media))!=len(media):raise CaptureError('invalid_verified_final_media')
     roots=plan.get('roots',{})
     if not roots or set(roots)-ROOT_NAMES:raise CaptureError('capture_root_not_allowed')
     roots={k:no_links(v) for k,v in roots.items()}
@@ -284,6 +286,11 @@ def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None,*,smal
     def excluded_path(path):return any(path==base or path.is_relative_to(base) for base in excluded)
     def store(name,path,info,*,shallow=False):
         nonlocal hashed
+        if name in plan.get('verifiedFinalMedia',[]):
+            # Directory-entry stat caches need not expose full file IDs on all
+            # Windows versions. Obtain real path facts for explicit media only.
+            info=_stat(path)
+            if info is None:raise CaptureError('directory_changed_in_window')
         _check_deadline(deadline,clock)
         if name in nodes:raise CaptureError('overlapping_metadata_trees')
         if len(nodes)>=max_entries:raise CaptureError('metadata_entry_limit')
@@ -461,12 +468,17 @@ def _verified_media(plan,nodes,inventory,roots,budget,*,deadline,clock):
                 amount+=len(block);digest.update(block)
             closed=_info(os.fstat(stream.fileno()))
         used+=amount;after=_stat(path)
-        if not (before==opened==closed==after==info and amount==info['size']):
+        # Windows path stat and fd stat can expose different ctime semantics.
+        # Compare each API's ctime to itself, never manufacture a shared value.
+        common=('kind','size','mtimeNs','inode','device')
+        same_object=before is not None and all(before[k]==opened[k] for k in common)
+        if not (before==after==info and opened==closed and same_object and amount==info['size']):
             node.update(hashPending=True,hashState='verified_final_writing');continue
         value=digest.hexdigest()
         node.update(contentSha256=value,hashPending=False)
         node.pop('hashState',None)
-        proofs[name]={'alignment':ALIGNMENT,'sha256':value,'readBytes':amount,'before':before,'after':after}
+        proofs[name]={'alignment':ALIGNMENT,'sha256':value,'readBytes':amount,
+                      'before':before,'after':after,'opened':opened,'closed':closed}
     return proofs,used
 
 

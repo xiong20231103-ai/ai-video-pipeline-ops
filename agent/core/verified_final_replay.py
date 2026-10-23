@@ -25,6 +25,11 @@ def validate_read(value):
         raise SnapshotError('verified_final_aligned_digest_required')
     before = validate_identity(value.get('before'))
     validate_identity(value.get('after'))
+    opened = validate_identity(value.get('opened'))
+    closed = validate_identity(value.get('closed'))
+    if (any(before[k]!=opened[k] for k in IDENTITY if k!='ctimeNs')
+            or any(opened[k]!=closed[k] for k in IDENTITY)):
+        raise SnapshotError('verified_final_open_identity_mismatch')
     if (value.get('alignment') != ALIGNMENT
             or not isinstance(value.get('sha256'), str)
             or not re.fullmatch('[a-f0-9]{64}', value['sha256'])

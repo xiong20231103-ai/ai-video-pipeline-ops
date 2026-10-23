@@ -27,7 +27,7 @@
 
 - 文件/目录节点输出实际 device/inode；依赖读取前后与窗口结束再核对完整身份及原始字节 SHA256，内容相同但依赖被替换也拒绝本窗口。
 - 新组合的媒体必须在计划 `verifiedFinalMedia` 中逐条列逻辑路径，且已经出现在白名单树的文件清单中；只接受 mp4/mov/mkv。不扩大目录树，不自动发现或读取计划外媒体。
-- 对这些媒体，在窗口开始和结束各重新打开一次，以 1 MiB 块计算 SHA256，不使用 DigestCache，不跨窗口累积部分摘要，不存媒体正文。每次记录读取前的路径 stat、打开后的 fstat、读完的 fstat、关闭后的路径 stat；四者必须与本轮目录事实相等。记录 `alignment=single-open-fresh-sha256-v1`、readBytes、before/after 和摘要；第二次读取记录放在 `windowClose`。两个摘要必须相同，避免只靠 stat 放行同 stat 正文改写。回放也要求这些记录完整并相符。
+- 对这些媒体，在窗口开始和结束各重新打开一次，以 1 MiB 块计算 SHA256，不使用 DigestCache，不跨窗口累积部分摘要，不存媒体正文。显式媒体通过路径 lstat 刷新完整身份，避免依赖目录项缓存中的不完整文件编号。每次记录路径 before/after 和句柄 opened/closed：路径两次完整身份必须相同且与目录事实相符，句柄两次完整身份也必须相同；路径与句柄之间比较大小、mtime、dev/inode。Windows 两类 API 的 ctime 口径可能不同，必须分别如实保留并各自比较，不能互相覆盖或推断。记录 `alignment=single-open-fresh-sha256-v1`、readBytes 和摘要；第二次读取记录放在 `windowClose`。两个摘要必须相同，避免只靠 stat 放行同 stat 正文改写。回放也要求这些记录完整并相符。
 - 两次读取合计受现有 max_hash_bytes 和 64 MiB/轮中的较小值限制；首轮只使用一半额度，为结束复核预留另一半，因此默认单文件超过 32 MiB 将保持待补。仍遵守 20 秒总窗口，不增加额度。预算不够、写入中、结束时摘要或身份变化时，保留 hashPending 并不发布可比较摘要；helper 真正需要该文件时拒绝回放。小文件原有独立 32 MiB 预算保持不变。
 - 实际捕获器仅输出一个已对齐时点的 `verifiedFinalMedia`，不会伪造有序变化。`verifiedFinalReadSequences` 是显式多次读取事实端口，目前由隔离夹具验证语义；没有生产侧的实际序列证据时，不声称覆盖真实运行中的跨时点变化。
 
