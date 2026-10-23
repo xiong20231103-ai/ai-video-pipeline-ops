@@ -45,6 +45,10 @@ def _scan(value):
 
 SMALL_FILE_LIMIT=1024*1024
 SMALL_READ_LIMIT=32*1024*1024
+# Small-file hashing (and its privacy scan) may use at most this much of a
+# 20-second directory window; later files stay pending instead of the window
+# expiring. Measured in-host: 32 MiB took 16 s while the Dashboard was starting.
+WINDOW_HASH_SECONDS=6
 
 
 class ChangeReport:
@@ -67,7 +71,7 @@ class ChangeReport:
 class SmallReadBudget:
     def __init__(self,limit=SMALL_READ_LIMIT):
         if type(limit) is not int or not 0<=limit<=SMALL_READ_LIMIT:raise CaptureError('small_read_budget_limit')
-        self.limit=limit;self.used=0;self.seconds=0.0;self.pending=0
+        self.limit=limit;self.used=0;self.seconds=0.0;self.pending=0;self.deferred=0;self.hash_until=None
 
 
 def _check_deadline(deadline,clock=time.monotonic):
@@ -164,6 +168,8 @@ def recheck_state(path,raw,before,*,limit,changes,logical_path,deadline=None,clo
 def _small_digest(path,info,budget,*,deadline=None,clock=time.monotonic):
     if info['size']>budget.limit-budget.used:
         budget.pending+=1;return None,info
+    if budget.hash_until is not None and clock()>=budget.hash_until:
+        budget.pending+=1;budget.deferred+=1;return None,info
     started=clock()
     # Account actual reads, including one replacement retry, before each read.
     def version():
@@ -386,6 +392,7 @@ def measure_directory_stability(plan,destination,*,rounds=3,max_entries=10000,be
                 'smallFileHashSeconds':0,'windows':[]}
     for number in range(rounds):
         started=clock();deadline=started+20;hash_start=budget.seconds;gap=0;entry_count=None
+        budget.hash_until=started+WINDOW_HASH_SECONDS
         try:
             nodes,before=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0,
                                     small_budget=budget,deadline=deadline,clock=clock)
@@ -409,7 +416,7 @@ def measure_directory_stability(plan,destination,*,rounds=3,max_entries=10000,be
             'directoryChangeFailureRatio':changed/rounds if not missing else None,
             'measurementScope':'content-aware-directory-windows','activeBatchRateVerified':False,
             **changes.report(),'smallFileReadBytes':budget.used,'smallFileHashSeconds':budget.seconds,
-            'smallFileHashPendingCount':budget.pending,'windows':timings,
+            'smallFileHashPendingCount':budget.pending,'smallFileHashDeferredCount':budget.deferred,'windows':timings,
             'maxWindowSeconds':max(row['seconds'] for row in timings)}
 
 

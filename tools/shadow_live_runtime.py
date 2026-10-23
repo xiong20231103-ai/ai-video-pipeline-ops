@@ -23,6 +23,7 @@ CHUNK_BYTES=64*1024
 # A 126 MiB database alone is ~32k pages of 4 KiB; leave room for growth.
 MAX_DIGESTS=262144
 V3_APPROVED_BYTES=2*1024*1024*1024
+PREFLIGHT_START_DELAY_SECONDS=60
 
 
 class IncrementMeasurement:
@@ -228,8 +229,9 @@ def configure(dashboard,spec,mode,control_root):
     old=dashboard.app.router.lifespan_context
     stop=threading.Event();thread=None
     def worker():
-        # Let the original server/collector start under its normal lifecycle.
-        if stop.wait(1):return
+        # Let the original server/collector finish its startup scans first; in-host
+        # rounds started after 1 s ran directory windows 2-4x slower than idle.
+        if stop.wait(PREFLIGHT_START_DELAY_SECONDS):return
         try:run_preflight_series(dashboard,spec,control_root,stop)
         except Exception:
             # Failure reports contain a fixed code, no path/exception values.
