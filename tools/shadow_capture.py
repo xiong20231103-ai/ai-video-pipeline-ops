@@ -486,7 +486,7 @@ def _verified_media(plan,nodes,inventory,roots,budget,*,deadline,clock):
     return proofs,used
 
 
-def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024,max_entries=10000,max_hash_bytes=64*1024*1024,max_window_seconds=20,digest_cache=None,clock=time.monotonic,now=lambda:datetime.now(timezone.utc).isoformat()):
+def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024,max_entries=10000,max_hash_bytes=64*1024*1024,max_window_seconds=20,digest_cache=None,volatile_http=(),clock=time.monotonic,now=lambda:datetime.now(timezone.utc).isoformat()):
     roots,bindings=validate_plan(plan,destination)
     if type(max_window_seconds) not in (int,float) or not math.isfinite(max_window_seconds) or not 0<max_window_seconds<=20:raise CaptureError('capture_window_limit')
     started=clock();deadline=started+max_window_seconds;changes=ChangeReport();small_budget=SmallReadBudget();opened_at=now();source_path=no_links(source_path)
@@ -547,7 +547,17 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
             total+=target.stat().st_size
             databases[name]=target
         # Recheck the entire window, including external response bodies and PID birth identity.
-        if _observations(process_probe,http_probe)!=(processes,http,http_generation):raise CaptureError('external_or_process_changed')
+        latest_processes,latest_http,latest_generation=_observations(process_probe,http_probe)
+        # Processes and non-volatile responses must not change in the window. A
+        # declared volatile route (e.g. a status summary stamped with servedAt and
+        # polled every few seconds) only has to stay completely observed; the
+        # response from the window start is the captured fact.
+        stable=set(http)-set(volatile_http)
+        if (latest_processes!=processes or set(latest_http)!=set(http)
+                or any(latest_http[key]!=http[key] for key in stable)
+                or (latest_generation!=http_generation and not set(http)<=set(volatile_http))):
+            raise CaptureError('external_or_process_changed')
+        volatile_updates=sorted(key for key in set(http)&set(volatile_http) if latest_http[key]!=http[key])
         for name,path in copied.items():
             recheck_state(bindings[name],path.read_bytes(),before[name],limit=max_file_bytes,
                           changes=changes,logical_path=name,deadline=deadline,clock=clock,volatile=name in volatile)
@@ -582,7 +592,7 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
         ended_at=now();settings=plan.get('facts',{});_safe(settings)
         if set(settings)-{'machineName','settings','metrics','collectorAlive','scan','historyResetGeneration','historyResetAt','historyAliases'}:raise CaptureError('unexpected_capture_fact')
         facts={**settings,**processes,'http':http,'filesystem':nodes,'pathAliases':{str(p):name for name,p in roots.items()},'dependencyClosure':True,'absentPaths':sorted(missing),'completeDirectoryRoots':sorted(plan.get('trees',{})),'excludedPaths':sorted(plan.get('exclude',{}))}
-        facts['captureProof']={'schema':1,'openedAt':opened_at,'closedAt':ended_at,'processSha256':hashlib.sha256(canonical(processes)).hexdigest(),'httpSha256':hashlib.sha256(canonical(http)).hexdigest(),'inventorySha256':hashlib.sha256(canonical(inventory)).hexdigest(),'databaseSnapshotMethod':'sqlite-online-readonly','databaseSnapshots':database_proofs,'externalObservationGeneration':http_generation,'helperHashes':dependency_hashes}
+        facts['captureProof']={'schema':1,'openedAt':opened_at,'closedAt':ended_at,'processSha256':hashlib.sha256(canonical(processes)).hexdigest(),'httpSha256':hashlib.sha256(canonical(http)).hexdigest(),'inventorySha256':hashlib.sha256(canonical(inventory)).hexdigest(),'databaseSnapshotMethod':'sqlite-online-readonly','databaseSnapshots':database_proofs,'externalObservationGeneration':http_generation,'externalVolatileUpdates':volatile_updates,'helperHashes':dependency_hashes}
         facts['captureProof']['helperIdentities']=dependency_identities
         if fresh:
             facts['verifiedFinalMedia']=media_proofs

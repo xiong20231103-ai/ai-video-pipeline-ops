@@ -12,13 +12,13 @@ from tools.shadow_store import put_snapshot,usage
 MAX_APPROVED=2*1024*1024*1024
 class CapturePublisher:
     def __init__(self,plan,source,evidence_root,observer,process_probe,*,approved_total_bytes,
-                 retained_roots=(),max_capture_bytes=32*1024*1024,min_interval_seconds=60,clock=time.monotonic):
+                 retained_roots=(),max_capture_bytes=32*1024*1024,min_interval_seconds=60,volatile_http=(),clock=time.monotonic):
         if type(approved_total_bytes) is not int or not 1<=approved_total_bytes<=MAX_APPROVED:raise CaptureError('approved_capacity_required')
         if type(max_capture_bytes) is not int or max_capture_bytes<1 or min_interval_seconds<30:raise CaptureError('capture_limits_invalid')
         self.root=no_links(evidence_root);self.source=no_links(source);self.retained=tuple(map(no_links,retained_roots))
         self.plan=copy.deepcopy(plan);self.observer=observer;self.process_probe=process_probe;self.cap=approved_total_bytes
         self.max_bytes=max_capture_bytes;self.interval=min_interval_seconds;self.clock=clock;self.last=None;self.lock=threading.Lock()
-        self.digest_cache=DigestCache()
+        self.digest_cache=DigestCache();self.volatile_http=tuple(volatile_http)
         for other in [self.source.parent,*self.retained]:
             if self.root==other or self.root.is_relative_to(other) or other.is_relative_to(self.root):raise CaptureError('evidence_root_overlap')
         validate_plan(plan,self.root/'_validation_destination')
@@ -50,7 +50,7 @@ class CapturePublisher:
                 with tempfile.TemporaryDirectory(prefix='.capture-stage-',dir=self.root) as folder:
                     snapshot=aligned_capture(self.plan,Path(folder)/'snapshot',source_path=self.source,
                         process_probe=self.process_probe,http_probe=self.observer.observation,
-                        max_file_bytes=self.max_bytes,max_total_bytes=self.max_bytes,max_hash_bytes=64*1024*1024,digest_cache=self.digest_cache)
+                        max_file_bytes=self.max_bytes,max_total_bytes=self.max_bytes,max_hash_bytes=64*1024*1024,digest_cache=self.digest_cache,volatile_http=self.volatile_http)
                     stored=put_snapshot(snapshot,self.root/'store',approved_total_bytes=self.cap,
                         retained_roots=(*self.retained,Path(folder)))
                     # Atomic append-only handoff: no live paths or response values in report queue.

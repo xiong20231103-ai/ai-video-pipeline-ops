@@ -92,4 +92,46 @@ class AlignedWindowTests(unittest.TestCase):
         self.assertEqual(b'{"items":[]}',snap.read('workbench/state.json'))
 
 
+class VolatileRouteTests(AlignedWindowTests):
+    KEY='receiver:/api/pipeline/summary'
+
+    def capture_with(self,responses,processes=None,volatile=(KEY,)):
+        calls=[]
+        def http_probe():
+            calls.append(1)
+            return {'responses':responses[min(len(calls),len(responses))-1],'observationGeneration':len(calls)}
+        rows=processes or [{'processRecords':[],'processIds':[]}]
+        seen=[]
+        def process_probe():
+            seen.append(1);return copy.deepcopy(rows[min(len(seen),len(rows))-1])
+        return aligned_capture(self.plan,self.root/'snapshot',source_path=self.source,process_probe=process_probe,
+                               http_probe=http_probe,volatile_http=volatile)
+
+    def test_volatile_route_refreshed_in_window_keeps_the_first_response(self):
+        first={self.KEY:{'servedAt':'t1','projects':[]}};later={self.KEY:{'servedAt':'t2','projects':[]}}
+        snap=self.capture_with([first,later])
+        facts=snap.manifest['facts']
+        self.assertEqual(first,facts['http'])
+        self.assertEqual([self.KEY],facts['captureProof']['externalVolatileUpdates'])
+
+    def test_undeclared_route_change_still_rejects(self):
+        first={self.KEY:{'servedAt':'t1'}};later={self.KEY:{'servedAt':'t2'}}
+        with self.assertRaisesRegex(CaptureError,'external_or_process_changed'):
+            self.capture_with([first,later],volatile=())
+        self.assertFalse((self.root/'snapshot').exists())
+
+    def test_process_change_rejects_even_with_volatile_route(self):
+        first={self.KEY:{'servedAt':'t1'}}
+        rows=[{'processRecords':[{'pid':1,'name':'a.exe','cmdline':['a.exe'],'create_time':1.0}],'processIds':[1]},
+              {'processRecords':[{'pid':2,'name':'a.exe','cmdline':['a.exe'],'create_time':2.0}],'processIds':[2]}]
+        with self.assertRaisesRegex(CaptureError,'external_or_process_changed'):
+            self.capture_with([first,first],processes=rows)
+
+    def test_route_missing_at_window_end_rejects(self):
+        other='receiver:/api/health'
+        first={self.KEY:{'servedAt':'t1'},other:{'ok':True}};later={self.KEY:{'servedAt':'t2'}}
+        with self.assertRaisesRegex(CaptureError,'external_or_process_changed'):
+            self.capture_with([first,later],volatile=(self.KEY,other))
+
+
 if __name__=='__main__':unittest.main()
