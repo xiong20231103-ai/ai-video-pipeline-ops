@@ -117,4 +117,11 @@ class LinkDelivery:
             db.execute('UPDATE deliveries SET state=?,result=? WHERE id=?',(state,json.dumps(ack) if ack else None,request_id))
             if state=='sent':
                 db.execute("UPDATE records SET delivery='sent',cloud_decision=1 WHERE id IN (SELECT record_id FROM delivery_items WHERE delivery_id=?)",(request_id,))
+                for record in db.execute('SELECT * FROM records WHERE id IN (SELECT record_id FROM delivery_items WHERE delivery_id=?)',(request_id,)).fetchall():
+                    payload=json.loads(record['payload'])
+                    event={'id':record['id'],'source':record['source'],'platform':record['platform'],
+                           'video_id':record['video_id'],'judge_round':record['judge_round'],'delivery':'sent',
+                           'url':payload['url'],'receipt':ack,'replace_id':payload.get('replace_id')}
+                    db.execute('INSERT OR IGNORE INTO actions VALUES(?,?,?,?,?,?)',
+                               ('delivery:'+request_id+':'+record['id'],record['id'],'sent',actor,self.evidence.clock(),json.dumps(event)))
         return {'id':request_id,'state':state,'sent':state=='sent','cloudCommandId':row['command_id'],'receipt':ack}

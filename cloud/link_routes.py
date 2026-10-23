@@ -52,6 +52,14 @@ def mount_links(app, config, session, csrf, rate):
         session(request)
         return evidence.listing()
 
+    @app.get('/api/links/changes')
+    def changes(request:Request,source:str,after:int=0):
+        auth(request)
+        try:
+            return evidence.changes(source,after)
+        except ValueError:
+            raise HTTPException(400,'invalid_change_cursor') from None
+
     @app.get('/api/links/shots/{sha}')
     def shot(sha:str,request:Request):
         session(request)

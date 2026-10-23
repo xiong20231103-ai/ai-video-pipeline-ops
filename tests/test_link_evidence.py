@@ -27,6 +27,11 @@ def test_stale_and_cloud_decision(tmp_path):
     row=store.listing()['items'][0]
     assert (row['review'],row['delivery'])==('confirmed','waiting')
     assert row['seq']==2
+    changes=store.changes('test-company')
+    assert len(changes['items'])==1
+    assert changes['items'][0]['data']['review']=='confirmed'
+    assert store.changes('other-company')['items']==[]
+    assert store.changes('test-company',changes['nextCursor'])['items']==[]
 
 
 def test_retention_and_pending_protection(tmp_path):

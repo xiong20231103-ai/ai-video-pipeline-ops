@@ -163,11 +163,24 @@ class Evidence:
                 raise ValueError('revision_conflict')
             if decision=='confirmed' and (not r['sha'] or not json.loads(r['payload']).get('displayable')):
                 raise ValueError('not_displayable')
-            result = {'id':identifier,'review':decision,'revision':revision+1,'decidedAt':self.clock()}
+            snapshot=json.loads(r['payload'])
+            result = {'id':identifier,'review':decision,'revision':revision+1,'decidedAt':self.clock(),
+                      'source':r['source'],'platform':r['platform'],'video_id':r['video_id'],'judge_round':r['judge_round'],
+                      'sourceFingerprint':snapshot.get('sourceFingerprint'),'replace_id':snapshot.get('replace_id')}
             db.execute('UPDATE records SET review=?,decided=?,revision=revision+1,cloud_decision=1,delivery=? WHERE id=?',
                        (decision,result['decidedAt'],'waiting' if decision=='confirmed' else 'not_applicable',identifier))
             db.execute('INSERT INTO actions VALUES(?,?,?,?,?,?)',(request_id,identifier,decision,actor,self.clock(),json.dumps(result)))
             return result
+
+    def changes(self, source, after=0):
+        if not isinstance(source,str) or not 1<=len(source)<=256 or type(after) is not int or after<0:
+            raise ValueError('invalid_change_cursor')
+        with self.db() as db:
+            rows=db.execute('''SELECT a.rowid AS cursor,a.* FROM actions a JOIN records r ON r.id=a.record_id
+                               WHERE r.source=? AND a.rowid>? ORDER BY a.rowid LIMIT 100''',(source,after)).fetchall()
+        return {'items':[{'cursor':r['cursor'],'actionId':r['id'],'kind':r['kind'],'actor':r['actor'],
+                         'createdAt':r['created'],'data':json.loads(r['payload'])} for r in rows],
+                'nextCursor':rows[-1]['cursor'] if rows else after}
 
     def backup(self):
         folder = self.root/'db-backups'
