@@ -1,5 +1,45 @@
 # 影子回放当前源码版本登记（第二阶段）
 
+## 2026-10-23：d6a7211 精确字节档案与覆盖边界
+
+本次只检查 Git 对象、隔离 worktree 和冻结合同，没有读取生产目录。核对基线为 main `980d3a966607f81a9ea1533f75f8fdf26eed1918`，其中 app.py 最后修改仍为 d6a7211。
+
+### 源码身份核对
+
+| 对象 | SHA256 | 字节数 |
+| --- | --- | --- |
+| PR49 已登记的 LF 源文本，也是 `git show d6a7211:app.py` | `9b3ebded024ffa5d9db1662b2fe9fd2e3348e0630efd2f24d1c6bdd61f16d84a` | 333693 |
+| 用户提供的当前 CRLF 文件，档案 `contracts/legacy-app-d6a7211-crlf.txt` | `a02d25a6787e0b33725695d616a595396aa4280ed4c9049f309ad1f3b9d6e8b7` | 340806 |
+
+后者由 d6a7211 的 Git blob 将全部 7113 个 LF 替换为 CRLF 得到；没有 BOM 或其他字节变化。移除每个 CRLF 中的 CR 后逐字节相等；整个模块 AST、236 个函数/方法、2 个类相等。从 d6a7211 到本次基线没有 app.py 提交。因此 **PR49 到当前 app.py 没有业务行为变化**，这是同一行为的另一个精确字节身份，并非新版业务实现。
+
+原 aligned_capture 通过 read_text 统一换行后会得到 PR49 哈希。因此仅凭提供的 a02d… 原始哈希，不能认定它是现场 unreviewed_capture_source 的根因；现场包版本、实际输入路径和 helper 身份仍需以后只读核对。本 PR 不宣称解决了完整生产采集准入。
+
+档案通过 `.gitattributes` 的单文件 `-text` 保留 CRLF。捕获、安装预检和离线回放的源文件读取改为保留字节身份；删除单个 CR 后即使 Python AST 和统一换行后的文本相同，也必须拒绝。F78/PR49 的原有 LF 合同保留，合成夹具显式写 LF，不增加任意换行或 BOM 白名单。
+
+### Oracle R1–R6 逐项审计
+
+| 模块及现有合同 | PR49 → 当前 app.py 变化 | 现有回放适用范围及限制 |
+| --- | --- | --- |
+| R1：`r1-provenance.json` 的 38 个函数、Store/Collector、`collection_verified_final.normalize_task` | 无；完整模块文本和 AST 已核对 | 两个精确源码身份共用 PR49 normalizer 和冻结 helper 端口。现有 QC 成功、摘要冲突、缺摘要拒绝继续适用；不能退回 F78 normalizer。 |
+| R2：`contracts/history.py`、`contracts/timeline.py`，冻结 SQLite/文件事实 | 无；数据库写入、状态归一化与时间字段生成函数均未变化 | 历史回放仍依赖同一窗口的完整事实；缺失时间、未覆盖阶段不能推断，也不增加历史或真实批次通过标记。 |
+| R3：`r3-provenance.json` 的 25 个函数、`contracts/commands.py` | 无；命令目标、参数校验、回执及传输函数未变化 | 原隔离命令回放边界不变；只读采集不能验证 POST 的真实执行。未实际触发的命令仍待验收。 |
+| R4：`r4-provenance.json` 的 44 个函数 | 无；expectedTarget、资格证明、运行锁和原编号查询等函数未变化 | 只证明源码身份适配现有隔离回放；不证明工作台配对协议、人工对账或真实安全继续已通过，更不触发安全继续。 |
+| R5：`r5-provenance.json` 的 75 个函数，pending_delete/cleanup_tickets 依赖检查 | 无；预览票据、保护条件、回收/删除相关函数未变化 | 保留原 helper 哈希检查。实际清理未触发时仍无真实验收证据，不能为验证执行删除。 |
+| R6：`r6-provenance.json` 的 30 个函数、生命周期/退休门禁 | 无；app.py 内相关函数未变化 | 代理、看门狗、进程移交及 14 天退休门槛不由 app.py 哈希证明；本 PR 不更改这些模块和部署方式。 |
+
+### 依赖变化是独立缺口，不能借 app.py 身份放行
+
+`verified_final.py` 在 8cbb276 后发生了两项实际行为变化：删除 `_digest` 的 LRU 缓存，每次读取当前文件摘要；在读取前后增加 st_dev/st_ino 一致性校验。其规范化文本 SHA256 为 `57631ede4f2199db025163010e12dfe8ecc493784979194b87c4ead83b2aa818`。
+
+现有 Oracle 使用冻结的 PR49 helper（`contracts/legacy-verified-final-pr49.txt`，规范化文本 SHA256 `69b8b086e0502c506e75f1644fe2a3d28c8bac94c99c2b54870c2205fb9199e0`），并以同一快照的内容摘要事实替代媒体读取。它没有覆盖“缓存 stat 相同但正文变化”及“摘要过程中 inode/dev 变更”的跨读取语义。因此 **不登记新版 helper 组合**。当前 app.py 新档案只支持已覆盖的 PR49 helper；如果现场实际 helper 已更新，采集仍应拒绝，等待补齐对应 Oracle、事实端口与夹具后单独审查。
+
+捕获中 verified_final 的期望哈希改为冻结合同哈希，避免同时拿“仓库当前新版 helper”与“PR49 旧 helper”做两个互相矛盾的比较。pending_delete.py 和 cleanup_tickets.py 检查不变。没有取消任何依赖检查，没有把未知 helper 放进白名单。
+
+### 本次验证要求
+
+隔离测试覆盖：精确 CRLF 合同被捕获并保留 a02d… 身份；Oracle 和候选 R1 均使用原 PR49 行为；删除一个 CR 字节时捕获和 Oracle 都拒绝（即使 manifest 随改动重新计算）；新版 helper 在捕获及 Oracle 两侧都拒绝。既有缺摘要、QC 冲突、原黄金合同断言保留。所有合成回放仍不等于真实影子通过，不安装、不启用 observe、不恢复生产。
+
 本PR基于PR49。只补隔离回放与R1候选版本一致性，不安装新采集器，不切换生产读写权威，不修改迁移指针，不声明真实影子通过。
 
 ## 原因

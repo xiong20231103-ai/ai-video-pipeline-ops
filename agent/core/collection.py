@@ -38,9 +38,9 @@ class CollectionSession:
         namespace['Store']=_class(logic.Store,namespace)
         namespace['Collector']=_class(logic.Collector,namespace)
         if source_sha is not None:
-            from .source_profiles import PROFILES,PR49
+            from .source_profiles import PROFILES,PR49_BEHAVIOR
             if source_sha not in PROFILES:raise CollectionError('unsupported_collection_source')
-            if source_sha==PR49:
+            if source_sha in PR49_BEHAVIOR:
                 from .collection_verified_final import normalize_task
                 namespace['Collector'].normalize_task=_function(normalize_task,namespace)
 

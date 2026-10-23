@@ -9,7 +9,7 @@ from contextlib import closing
 from datetime import datetime,timezone
 from pathlib import Path
 from agent.core.snapshot import Snapshot,SnapshotError,canonical,capture,digest_file,no_links,relative,safe_facts,PRIVATE_FILES,sqlite_rows
-from agent.core.source_profiles import PROFILES,PR49,PR49_HELPER
+from agent.core.source_profiles import PROFILES,PR49_BEHAVIOR,PR49_HELPER,read_source
 from tools.shadow_capture_errors import CaptureError
 from tools.shadow_sqlite_snapshot import online_backup
 
@@ -440,10 +440,10 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
     if type(max_window_seconds) not in (int,float) or not math.isfinite(max_window_seconds) or not 0<max_window_seconds<=20:raise CaptureError('capture_window_limit')
     started=clock();deadline=started+max_window_seconds;changes=ChangeReport();small_budget=SmallReadBudget();opened_at=now();source_path=no_links(source_path)
     if source_path.stat().st_size>2*1024*1024:raise CaptureError('capture_source_byte_limit')
-    source=source_path.read_text(encoding='utf-8-sig');source_sha=hashlib.sha256(source.encode()).hexdigest()
+    source=read_source(source_path);source_sha=hashlib.sha256(source.encode()).hexdigest()
     if source_sha not in PROFILES:raise CaptureError('unreviewed_capture_source')
     helper=source_path.with_name('verified_final.py')
-    dependency_names=['pending_delete.py','cleanup_tickets.py']+(['verified_final.py'] if source_sha==PR49 else [])
+    dependency_names=['pending_delete.py','cleanup_tickets.py']+(['verified_final.py'] if source_sha in PR49_BEHAVIOR else [])
     package_root=Path(__file__).resolve().parents[1];dependency_hashes={}
     for name in dependency_names:
         installed=source_path.with_name(name)
@@ -451,10 +451,10 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
             if source_path.parent==package_root:raise CaptureError('capture_dependency_missing')
             continue # Synthetic source-only capture is not live evidence.
         actual=hashlib.sha256(installed.read_text(encoding='utf-8-sig').encode()).hexdigest()
-        expected=hashlib.sha256((package_root/name).read_text(encoding='utf-8-sig').encode()).hexdigest()
+        expected=PR49_HELPER if name=='verified_final.py' and source_sha in PR49_BEHAVIOR else hashlib.sha256((package_root/name).read_text(encoding='utf-8-sig').encode()).hexdigest()
         if actual!=expected:raise CaptureError('capture_dependency_not_reviewed')
         dependency_hashes[name]=actual
-    if source_sha==PR49 and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('capture_source_dependency_mismatch')
+    if source_sha in PR49_BEHAVIOR and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('capture_source_dependency_mismatch')
     processes,http,http_generation=_observations(process_probe,http_probe)
     nodes,inventory=_inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache,small_budget=small_budget,deadline=deadline,clock=clock)
     missing={k:_stat(bindings[k]) for k in plan.get('absent',{})}
@@ -497,7 +497,7 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
         latest=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0,small_budget=small_budget,baseline=inventory,deadline=deadline,clock=clock)[1]
         reconcile_inventory(nodes,inventory,latest,roots,digest_cache,changes=changes)
         if any(hashlib.sha256(source_path.with_name(name).read_text(encoding='utf-8-sig').encode()).hexdigest()!=value for name,value in dependency_hashes.items()):raise CaptureError('dependency_changed_in_window')
-        if source_path.read_text(encoding='utf-8-sig')!=source or source_sha==PR49 and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('source_changed_in_window')
+        if read_source(source_path)!=source or source_sha in PR49_BEHAVIOR and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('source_changed_in_window')
         if clock()-started>max_window_seconds:raise CaptureError('capture_window_exceeded')
         ended_at=now();settings=plan.get('facts',{});_safe(settings)
         if set(settings)-{'machineName','settings','metrics','collectorAlive','scan','historyResetGeneration','historyResetAt','historyAliases'}:raise CaptureError('unexpected_capture_fact')

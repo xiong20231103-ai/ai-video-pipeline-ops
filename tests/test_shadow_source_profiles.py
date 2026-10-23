@@ -5,7 +5,7 @@ from agent.core.oracle import Oracle
 from agent.core.replay import make_fixture,replay
 from agent.core.collection_replay import replay_collection
 from agent.core.collection import CollectionSession,CollectionError
-from agent.core.source_profiles import PR49,F78
+from agent.core.source_profiles import PR49,F78,D6A7211_CRLF,read_source
 from agent.core.snapshot import SnapshotError
 from agent.core.comparison import compare
 ROOT=Path(__file__).resolve().parents[1]
@@ -83,3 +83,28 @@ class ShadowSourceTests(unittest.TestCase):
   profile['facts']['captureProof']={'helperHashes':{'verified_final.py':hashlib.sha256((ROOT/'verified_final.py').read_text(encoding='utf-8-sig').encode()).hexdigest()}}
   snap=make_fixture(profile,self.source,self.root/'new-helper-snapshot')
   with self.assertRaisesRegex(SnapshotError,'source_dependency_hash_mismatch'):Oracle(self.source,snap,self.root/'unknown-helper')
+
+ def test_exact_current_crlf_archive_uses_existing_pr49_oracle_and_candidate(self):
+  raw=(ROOT/'contracts/legacy-app-d6a7211-crlf.txt').read_bytes()
+  self.assertEqual(D6A7211_CRLF,hashlib.sha256(raw).hexdigest())
+  self.assertEqual(self.source,raw.decode('utf-8').replace('\r\n','\n'))
+  self.source=read_source(ROOT/'contracts/legacy-app-d6a7211-crlf.txt')
+  snap=self.snapshot()
+  with Oracle(self.source,snap,self.root/'old',collect=False) as env:
+   self.assertEqual(D6A7211_CRLF,env.source_sha)
+   env.namespace['COLLECTOR'].metadata={'child':self.metadata(env)}
+   old=env.namespace['COLLECTOR'].normalize_task({'taskId':'child','status':'failed'},env.root/'status.json',1)
+   with CollectionSession(env.namespace,source_sha=D6A7211_CRLF) as candidate:
+    candidate.collector.metadata={'child':self.metadata(env)}
+    new=candidate.collector.normalize_task({'taskId':'child','status':'failed'},env.root/'status.json',1)
+   self.assertEqual('completed',old['state']);self.assertEqual(old,new)
+ def test_single_byte_cr_deletion_is_rejected_even_with_matching_manifest(self):
+  raw=(ROOT/'contracts/legacy-app-d6a7211-crlf.txt').read_bytes()
+  modified=raw.replace(b'\r\n',b'\n',1)
+  self.assertEqual(len(raw)-1,len(modified))
+  self.source=modified.decode('utf-8');snap=self.snapshot()
+  with self.assertRaisesRegex(SnapshotError,'legacy_source_hash_mismatch'):
+   Oracle(self.source,snap,self.root/'modified')
+ def test_current_archive_does_not_authorize_new_verified_final_helper(self):
+  self.source=read_source(ROOT/'contracts/legacy-app-d6a7211-crlf.txt')
+  self.test_new_candidate_helper_cannot_be_relabeled_as_deployed_pr49()

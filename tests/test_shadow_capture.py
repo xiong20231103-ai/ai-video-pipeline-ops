@@ -12,12 +12,26 @@ ROOT=Path(__file__).resolve().parents[1]
 class AlignedCaptureTests(unittest.TestCase):
  def setUp(self):
   self.temp=TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name);self.live=self.root/'live';self.live.mkdir();self.state=self.live/'state.json';self.state.write_text('{"items":[]}',encoding='utf-8')
-  self.source=self.root/'app.py';self.source.write_text((ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8'),encoding='utf-8')
+  self.source=self.root/'app.py';self.source.write_text((ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
   self.plan={'schema':1,'roots':{'workbench':str(self.live)},'files':{'workbench/state.json':{'root':'workbench','path':'state.json'}},'trees':{'workbench/metadata':{'root':'workbench','path':'metadata'}},'absent':{'workbench/missing.json':{'root':'workbench','path':'missing.json'}},'facts':{'historyResetGeneration':'fixture-reset','scan':False}}
   (self.live/'metadata').mkdir();(self.live/'metadata/output.mp4').write_bytes(b'fake-media-never-run')
   self.process={'processRecords':[{'pid':123,'name':'python.exe','cmdline':['python.exe','workbench.py'],'create_time':1700000000.0}],'processIds':[123]}
   self.http={'receiver:/api/pipeline/snapshot':{'ok':True,'items':[]}}
  def capture(self,**kwargs):return aligned_capture(self.plan,self.root/'snapshot',source_path=self.source,process_probe=lambda:copy.deepcopy(self.process),http_probe=lambda:copy.deepcopy(self.http),**kwargs)
+ def test_exact_current_source_is_captured_without_normalizing_byte_identity(self):
+  from agent.core.source_profiles import D6A7211_CRLF
+  self.source.write_bytes((ROOT/'contracts/legacy-app-d6a7211-crlf.txt').read_bytes())
+  self.source.with_name('verified_final.py').write_bytes((ROOT/'contracts/legacy-verified-final-pr49.txt').read_bytes())
+  snap=self.capture()
+  self.assertEqual(D6A7211_CRLF,snap.manifest['legacySha256'])
+ def test_current_source_one_byte_cr_deletion_fails_capture(self):
+  raw=(ROOT/'contracts/legacy-app-d6a7211-crlf.txt').read_bytes()
+  self.source.write_bytes(raw.replace(b'\r\n',b'\n',1))
+  with self.assertRaisesRegex(CaptureError,'unreviewed_capture_source'):self.capture()
+ def test_current_source_rejects_uncovered_helper(self):
+  self.source.write_bytes((ROOT/'contracts/legacy-app-d6a7211-crlf.txt').read_bytes())
+  self.source.with_name('verified_final.py').write_bytes((ROOT/'verified_final.py').read_bytes())
+  with self.assertRaisesRegex(CaptureError,'capture_dependency_not_reviewed'):self.capture()
  def test_aligned_snapshot_contains_exact_content_absence_process_and_external_facts(self):
   snap=self.capture();facts=snap.manifest['facts']
   self.assertEqual(self.state.read_bytes(),snap.read('workbench/state.json'));self.assertTrue(facts['dependencyClosure']);self.assertEqual(['workbench/missing.json'],facts['absentPaths']);self.assertEqual(self.http,facts['http']);self.assertEqual(self.process['processRecords'],facts['processRecords']);self.assertFalse(snap.manifest['realBatchEvidence'])
