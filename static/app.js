@@ -1,3 +1,25 @@
+function replenishmentQueueStatus(gap, queue) {
+  const missing = Math.max(0, Number(gap.missingCount ?? (Number(gap.expectedCount || 0) - Number(gap.completed || 0))) || 0);
+  const seen = new Set();
+  let count = 0;
+  let manual = false;
+  for (const child of Array.isArray(queue) ? queue : []) {
+    const id = String(child.taskId || "");
+    if (!id || seen.has(id) || !gap.taskId || child.replenishForTaskId !== gap.taskId || child.canonicalTaskId !== gap.taskId) continue;
+    if (String(child.date || child.productionDate || "") !== String(gap.date || gap.productionDate || "")) continue;
+    if (child.project !== gap.project || child.material !== gap.material || child.status !== "pending_confirmation") continue;
+    seen.add(id);
+    const urls = Array.isArray(child.urls) ? new Set(child.urls.filter(url => typeof url === "string" && url.trim())) : new Set();
+    if (!urls.size) continue;
+    count += urls.size;
+    if (!["auto_start_first", "auto_start_sequential"].includes(String(child.startMode || ""))) manual = true;
+  }
+  const queued = Math.min(missing, count);
+  const remaining = Math.max(0, missing - queued);
+  const message = queued ? `补链已收到 ${queued} 条，${manual ? "等待确认启动" : "排队中"}；素材仍缺 ${missing} 条${remaining ? `，另有 ${remaining} 条尚未补交` : "，请勿重复补交"}` : "";
+  return { queued, remaining, message };
+}
+
 function currentLocalDateLabel() {
   const value = new Date();
   return `${value.getMonth() + 1}.${value.getDate()}`;
@@ -5,7 +27,7 @@ function currentLocalDateLabel() {
 
 const state = {
   date: "", batchId: "", overview: null, templates: [], templateSignature: "",
-  gaps: {}, lastGoodDashboard: null, refreshBusy: false,
+  gaps: {}, replenishmentQueue: [], lastGoodDashboard: null, refreshBusy: false,
   step5Items: [], step5Filter: "",
   drafts: [], draftSnapshot: "", selectedDraftIds: new Set(), draftPreview: null,
   audioFiles: [], audioSnapshot: "", selectedAudioIds: new Set(), audioPreview: null,
@@ -888,10 +910,11 @@ function renderOverview(data, projectGaps = []) {
     const parked = (Array.isArray(projectGaps) ? projectGaps : []).filter(item => item.gapActive);
     if (parked.length) {
       const missing = parked.reduce((total, item) => total + Number(item.missingCount || 0), 0);
-      $("heroTitle").textContent = `没有正在运行的项目 · ${parked.length} 个项目等待补链（共缺 ${missing} 条）`;
+      const received = parked.filter(item => replenishmentQueueStatus(item, state.replenishmentQueue).queued > 0).length;
+      $("heroTitle").textContent = received ? `没有正在运行的项目 · ${received} 个项目补链已收到、排队中` : `没有正在运行的项目 · ${parked.length} 个项目等待补链（共缺 ${missing} 条）`;
       $("heroSubtitle").textContent = parked.slice(0, 4).map(item =>
         `${item.date || ""} ${item.project || "未分类"}/${item.material || "--"} 缺 ${Number(item.missingCount || 0)} 条`).join("；")
-        + "。点上方“补链”按钮提交链接。";
+        + (received ? "。已收到的补链等待执行，请勿重复补交。" : "。点上方“补链”按钮提交链接。");
     } else {
       $("heroTitle").textContent = "暂时没有生产任务";
       $("heroSubtitle").textContent = "Dashboard 正常运行，正在等待工作台或客户端写入状态。";
@@ -1007,11 +1030,12 @@ function renderGapQuickBar(items = []) {
     Number(item.expectedCount || 0) - Number(item.completed || 0),
   ));
   const totalMissing = active.reduce((total, item) => total + missingFor(item), 0);
-  title.textContent = active.length === 1 ? "当前项目需要补链" : `${active.length} 个项目需要补链`;
-  summary.textContent = `合计缺少 ${totalMissing} 条，点击项目直接补充`;
+  const queuedProjects = active.filter(item => replenishmentQueueStatus(item, state.replenishmentQueue).queued > 0).length;
+  title.textContent = queuedProjects ? `${active.length} 个项目仍有素材缺口 · ${queuedProjects} 个已收到补链` : (active.length === 1 ? "当前项目需要补链" : `${active.length} 个项目需要补链`);
+  summary.textContent = queuedProjects ? `有效素材仍缺 ${totalMissing} 条；已收到的补链等待下载核验，不要重复补交` : `合计缺少 ${totalMissing} 条，点击项目直接补充`;
   actions.innerHTML = active.map(item => `
     <button type="button" data-task-id="${escapeHtml(String(item.taskId || ""))}" onclick="openReplenishment(this.dataset.taskId)">
-      ${escapeHtml(item.project || "未分类")} / ${escapeHtml(item.material || "--")} · 缺 ${missingFor(item)} 条
+      ${escapeHtml(item.project || "未分类")} / ${escapeHtml(item.material || "--")} · ${escapeHtml(replenishmentQueueStatus(item, state.replenishmentQueue).message || `缺 ${missingFor(item)} 条`)}
     </button>`).join("");
   bar.classList.remove("hidden");
 }
@@ -1033,6 +1057,7 @@ function renderProjectGaps(items) {
       ? storedMissing
       : Math.max(0, expected - completed));
     const notStarted = Boolean(item.notStarted);
+    const queued = replenishmentQueueStatus(item, state.replenishmentQueue);
     const blocked = Boolean(item.gapActive);
     const historicalFailed = Number(item.historicalFailed || 0);
     const current = item.currentTask ? ` · 当前 ${item.currentTask}` : "";
@@ -1048,7 +1073,8 @@ function renderProjectGaps(items) {
       <p>${notStarted ? `计划 ${expected} · 尚未开始` : `总数 ${expected} · 已完成 ${completed} · 剩余 ${missing} · 当前失败 ${Number(item.failed || 0)}`}</p>
       <small>${escapeHtml((item.stateText || item.status || "--") + current + error)}</small>
       ${historicalFailed ? `<small class="history-note">历史失败 ${historicalFailed} 条，已被有效补链覆盖</small>` : ""}
-      ${blocked && taskId ? `<div class="queue-actions"><button class="start" data-task-id="${escapeHtml(taskId)}" onclick="openReplenishment(this.dataset.taskId)">按此缺口补链</button></div>` : ""}
+      ${queued.message ? `<small class="history-note">${escapeHtml(queued.message)}</small>` : ""}
+      ${blocked && taskId && !queued.queued ? `<div class="queue-actions"><button class="start" data-task-id="${escapeHtml(taskId)}" onclick="openReplenishment(this.dataset.taskId)">按此缺口补链</button></div>` : ""}
       ${taskRows}
     </div>`;
   }).join("");
@@ -1119,6 +1145,8 @@ function openReplenishment(taskId) {
   const panel = $("replenishPanel");
   const dialog = $("replenishDialog");
   if (!item || !panel) return;
+  const queued = replenishmentQueueStatus(item, state.replenishmentQueue);
+  if (queued.queued) { window.alert(queued.message); return; }
   const expected = Number(item.expectedCount || 0);
   const completed = Number(item.completed || 0);
   const missing = Number(item.missingCount ?? Math.max(0, expected - completed));
@@ -1666,6 +1694,7 @@ async function refresh() {
     }
     state.fullDashboardLoaded = true;
     state.date = data.selectedDate || state.date;
+    state.replenishmentQueue = data.receiverQueue?.error ? [] : (data.receiverQueue?.items || []);
     renderOverview(data.overview || {}, data.projectGaps?.items || []);
     renderPipelinePayload(data.pipeline || {}, data.currentProjectStatus || {});
     state.step5Items = data.tasks?.items || [];

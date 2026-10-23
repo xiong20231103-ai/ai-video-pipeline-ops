@@ -1,3 +1,4 @@
+import { replenishmentQueueStatus } from "@/data/replenishment-status";
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import {
@@ -517,6 +518,7 @@ export function GapsAndQueue({
             x.missingCount !== ''
               ? n(x.missingCount)
               : Math.max(0, n(x.expectedCount) - n(x.completed))
+          const received = replenishmentQueueStatus(x, o(data.receiverQueue).error ? [] : queue)
           const videos = Object.values(o(x.videos)).map(o)
           return (
             <article className="data-list-row" key={t(x.taskId, String(i))}>
@@ -539,7 +541,8 @@ export function GapsAndQueue({
               {n(x.historicalFailed) > 0 && (
                 <p>历史失败 {n(x.historicalFailed)} 条，已被有效补链覆盖</p>
               )}
-              {x.gapActive && x.taskId ? (
+              {received.message && <p>{received.message}</p>}
+              {x.gapActive && x.taskId && !received.queued ? (
                 actions ? (
                   <Button
                     disabled={!actions.available}

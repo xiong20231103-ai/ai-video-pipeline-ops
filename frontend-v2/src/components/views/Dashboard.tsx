@@ -1,3 +1,4 @@
+import { replenishmentQueueStatus } from "@/data/replenishment-status";
 import { CountUp } from "@/components/react-bits/Motion";
 import ResetAction from "./ResetAction";
 import ContinueActions from "./ContinueActions";
@@ -674,23 +675,25 @@ function GapQuickHint({
     (x) => x.gapActive && String(x.taskId || ""),
   );
   if (!active.length) return null;
+  const queue = o(data.receiverQueue).error ? [] : list(o(data.receiverQueue).items);
+  const received = active.filter(x => replenishmentQueueStatus(x, queue).queued > 0).length;
   const missing = (row: Row) =>
     n(row.missingCount ?? Math.max(0, n(row.expectedCount) - n(row.completed)));
   return (
     <div className="data-notice tone-warning">
       <strong>
-        {active.length === 1
+        {received ? `${active.length} 个项目仍有素材缺口 · ${received} 个已收到补链` : active.length === 1
           ? "当前项目需要补链"
           : `${active.length} 个项目需要补链`}
       </strong>
       <p>
         合计缺少 {active.reduce((sum, row) => sum + missing(row), 0)}{" "}
-        条，点击项目直接补充
+        条；已收到的补链等待下载核验，请勿重复补交
       </p>
       <div className="data-actions">
         {active.map((x, i) => (
-          <Button key={i} disabled={!canWrite} onClick={() => onReplenish(x)}>
-            {t(x.project, "未分类")} / {t(x.material)} · 缺 {missing(x)} 条
+          <Button key={i} disabled={!canWrite || replenishmentQueueStatus(x, queue).queued > 0} onClick={() => onReplenish(x)}>
+            {t(x.project, "未分类")} / {t(x.material)} · {replenishmentQueueStatus(x, queue).message || `缺 ${missing(x)} 条`}
           </Button>
         ))}
       </div>
