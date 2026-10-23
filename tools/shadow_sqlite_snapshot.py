@@ -6,6 +6,25 @@ import time
 from agent.core.snapshot import no_links
 from tools.shadow_capture_errors import CaptureError
 
+# Page keys per listing segment. A snapshot index names segments, so an
+# unchanged run of pages costs nothing beyond the first snapshot.
+SEGMENT_KEYS = 256
+
+
+def sqlite_page_size(path, *, maximum=64 * 1024):
+    """Header page size of a SQLite file, or None for anything else."""
+    with no_links(path).open('rb') as stream:
+        head = stream.read(100)
+    if len(head) < 100 or not head.startswith(b'SQLite format 3\x00'):
+        return None
+    size = int.from_bytes(head[16:18], 'big')
+    size = 65536 if size == 1 else size
+    return size if 512 <= size <= maximum and size & (size - 1) == 0 else None
+
+
+def page_listing_segment(keys):
+    return '\n'.join(keys).encode('ascii')
+
 
 def online_backup(source, destination, *, max_bytes, timeout_seconds=20, clock=time.monotonic):
     source = no_links(source)

@@ -9,6 +9,7 @@ from pathlib import Path
 from agent.core.snapshot import Snapshot,canonical,no_links,relative,digest_file
 from tools.shadow_capture import CaptureError,_safe
 from tools.shadow_archive import _walk
+from tools.shadow_sqlite_snapshot import sqlite_page_size,page_listing_segment,SEGMENT_KEYS
 CHUNK=64*1024
 
 def usage(root):return sum(p.stat().st_size for p in _walk(root)) if root.exists() else 0
@@ -26,15 +27,21 @@ def put_snapshot(snapshot,store,*,approved_total_bytes,retained_roots=()):
   os.close(fd);used=usage(store)+sum(usage(no_links(p)) for p in retained_roots)
   if used>=approved_total_bytes:raise CaptureError('evidence_store_quota_exhausted')
   index={'schema':1,'snapshot':snapshot.manifest,'files':{}};new={}
+  def add(body):
+   key=hashlib.sha256(body).hexdigest();target=store/'objects'/key
+   if target.exists():
+    if target.stat().st_size!=len(body) or digest_file(target)!=key:raise CaptureError('stored_chunk_corrupt')
+   else:new.setdefault(key,body)
+   return key
   for name,record in snapshot.manifest['files'].items():
-   chunks=[]
-   with (snapshot.root/relative(name)).open('rb') as stream:
-    for body in iter(lambda:stream.read(CHUNK),b''):
-     key=hashlib.sha256(body).hexdigest();chunks.append(key);target=store/'objects'/key
-     if target.exists():
-      if target.stat().st_size!=len(body) or digest_file(target)!=key:raise CaptureError('stored_chunk_corrupt')
-     else:new.setdefault(key,body)
-   index['files'][name]=chunks
+   path=snapshot.root/relative(name)
+   # A changed row rewrites one SQLite page; 64 KiB chunks inflated that ~8x.
+   page=sqlite_page_size(path) if record.get('kind')=='sqlite' else None
+   with path.open('rb') as stream:chunks=[add(body) for body in iter(lambda:stream.read(page or CHUNK),b'')]
+   if page:
+    segments=[add(page_listing_segment(chunks[i:i+SEGMENT_KEYS])) for i in range(0,len(chunks),SEGMENT_KEYS)]
+    index['files'][name]={'pageSize':page,'segments':segments}
+   else:index['files'][name]=chunks
   raw=canonical(index)
   if len(raw)>8*1024*1024:raise CaptureError('chunk_manifest_limit')
   destination=store/'snapshots'/(snapshot.manifest['sourceIdentity']+'.json')
@@ -54,6 +61,36 @@ def put_snapshot(snapshot,store,*,approved_total_bytes,retained_roots=()):
   return {'sourceIdentity':snapshot.manifest['sourceIdentity'],'newBytes':required,'deduplicated':False,'realShadowPassed':False}
  finally:lock.unlink(missing_ok=True)
 
+def _object(store,key):
+ import re
+ if not isinstance(key,str) or not re.fullmatch('[0-9a-f]{64}',key):raise CaptureError('chunk_key_invalid')
+ path=no_links(store/'objects'/key)
+ if path.stat().st_size>CHUNK:raise CaptureError('stored_chunk_limit')
+ body=path.read_bytes()
+ if hashlib.sha256(body).hexdigest()!=key:raise CaptureError('stored_chunk_corrupt')
+ return body
+
+def entry_keys(store,entry):
+ """Chunk keys of one indexed file: a plain list, or SQLite page segments."""
+ if isinstance(entry,list):return entry
+ if (not isinstance(entry,dict) or set(entry)!={'pageSize','segments'} or type(entry['pageSize']) is not int
+   or not 512<=entry['pageSize']<=CHUNK or entry['pageSize']&(entry['pageSize']-1) or not isinstance(entry['segments'],list)):
+  raise CaptureError('chunk_index_invalid')
+ keys=[]
+ for segment in entry['segments']:
+  rows=_object(store,segment).decode('ascii').split('\n')
+  if not 1<=len(rows)<=SEGMENT_KEYS:raise CaptureError('chunk_index_invalid')
+  keys.extend(rows)
+ return keys
+
+def referenced_objects(store,index):
+ """Every object one snapshot index needs, segment listings included."""
+ keys=set()
+ for entry in index['files'].values():
+  if isinstance(entry,dict):keys.update(entry['segments'])
+  keys.update(entry_keys(store,entry))
+ return keys
+
 def materialize_snapshot(store,identity,destination):
  store=no_links(store);destination=no_links(destination)
  if destination.exists() or destination==store or destination.is_relative_to(store) or store.is_relative_to(destination):raise CaptureError('fresh_materialization_required')
@@ -66,15 +103,12 @@ def materialize_snapshot(store,identity,destination):
  destination.parent.mkdir(parents=True,exist_ok=True)
  with tempfile.TemporaryDirectory(prefix='.materialize-',dir=destination.parent) as folder:
   stage=Path(folder)/'snapshot';stage.mkdir()
-  for name,keys in value['files'].items():
+  for name,entry in value['files'].items():
    relative(name);target=stage/name;target.parent.mkdir(parents=True,exist_ok=True);total=0
+   keys=entry_keys(store,entry)
    with target.open('xb') as output:
     for key in keys:
-     if not isinstance(key,str) or not re.fullmatch('[0-9a-f]{64}',key):raise CaptureError('chunk_key_invalid')
-     path=no_links(store/'objects'/key)
-     if path.stat().st_size>CHUNK:raise CaptureError('stored_chunk_limit')
-     body=path.read_bytes()
-     if hashlib.sha256(body).hexdigest()!=key:raise CaptureError('stored_chunk_corrupt')
+     body=_object(store,key)
      total+=len(body)
      if total>value['snapshot']['files'][name]['size']:raise CaptureError('materialized_file_limit')
      output.write(body)
