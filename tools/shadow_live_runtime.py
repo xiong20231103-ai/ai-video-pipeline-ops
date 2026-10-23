@@ -222,10 +222,96 @@ def run_preflight_series(dashboard,spec,control_root,stop,*,clock=time.monotonic
     return summary
 
 
+OBSERVE_MIN_INTERVAL_SECONDS=300
+
+
+def reviewed_preflight(control_root,plan):
+    """A completed 3-round series of this exact capture plan, every round measured."""
+    expected=hashlib.sha256(canonical(plan)).hexdigest()
+    control=no_links(control_root)
+    for path in sorted(control.glob('preflight-series-*.json')) if control.is_dir() else []:
+        if path.stat().st_size>1024*1024:continue
+        try:series=json.loads(path.read_text(encoding='utf-8'))
+        except (OSError,UnicodeError,json.JSONDecodeError):continue
+        rounds=series.get('rounds') if isinstance(series,dict) else None
+        if (series.get('status')=='completed' and series.get('planSha256')==expected and series.get('enabled') is False
+                and isinstance(rounds,list) and len(rounds)==3
+                and all(row.get('status')=='measured' and row.get('directoryChangeFailedRounds')==0
+                        and row.get('directoryUnmeasurableRounds')==0 for row in rounds)):
+            return path.name
+    raise CaptureError('observation_requires_reviewed_preflight')
+
+
+def observe_routes(spec):
+    """Only GETs the Dashboard already makes; keys are checked by the observer."""
+    from urllib.parse import urlsplit
+    routes=(spec.get('observe') or {}).get('routes')
+    if not isinstance(routes,dict) or not 1<=len(routes)<=16:raise CaptureError('observe_routes_required')
+    bindings={};ports={}
+    for url,key in routes.items():
+        parsed=urlsplit(url)
+        if parsed.hostname not in {'127.0.0.1','localhost','::1'}:raise CaptureError('observe_route_loopback_required')
+        bindings[url]=(parsed.port,parsed.path);ports[(parsed.port,parsed.path)]=key
+    return bindings,ports
+
+
+class _StatusPublisher:
+    """Writes a fixed-shape status after each tick; status failures never stop capture."""
+    def __init__(self,publisher,path,preflight):
+        self.publisher=publisher;self.observer=publisher.observer;self.path=path;self.preflight=preflight
+    def tick(self):
+        result=self.publisher.tick()
+        try:
+            value={'schema':1,'mode':'observe','enabled':True,'hostPid':os.getpid(),
+                   'updatedAtUtc':datetime.now(timezone.utc).isoformat(),'reviewedPreflight':self.preflight,
+                   **{k:result.get(k) for k in ('state','lastCode','published','rejected','captureAttempts',
+                                                'directoryChangeRejected','lastSourceIdentity')},
+                   'businessRequests':0,'realShadowPassed':False,'switchAccepted':False}
+            _safe(value)
+            temporary=self.path.with_name(self.path.name+'.tmp')
+            temporary.write_bytes(canonical(value));os.replace(temporary,self.path)
+        except Exception:pass
+        return result
+
+
+def configure_observe(dashboard,spec,control_root,*,interval_seconds=None):
+    from tools.shadow_agent_observer import AgentReadObserver
+    from tools.shadow_capture_runtime import CapturePublisher
+    from tools.shadow_dashboard_host import DashboardShadowHost,attach_lifespan
+    control=no_links(control_root);plan=spec.get('capturePlan')
+    preflight=reviewed_preflight(control,plan)
+    if spec.get('preflightOnly') is not False:raise CaptureError('observe_plan_required')
+    if no_links(dashboard.__file__)!=no_links(spec['source']):raise CaptureError('observe_not_original_host')
+    if type(spec.get('approvedBytes')) is not int or spec['approvedBytes']!=V3_APPROVED_BYTES:raise CaptureError('v3_fixed_capacity_required')
+    evidence=no_links(spec['evidenceRoot']);archive=no_links(spec['archivedRoot'])
+    for a,b in ((evidence,archive),(evidence,control),(archive,control)):
+        if a==b or a.is_relative_to(b) or b.is_relative_to(a):raise CaptureError('observe_root_overlap')
+    interval=interval_seconds if interval_seconds is not None else (spec.get('observe') or {}).get('intervalSeconds')
+    if type(interval) is not int or not OBSERVE_MIN_INTERVAL_SECONDS<=interval<=3600:raise CaptureError('observe_interval_invalid')
+    bindings,ports=observe_routes(spec)
+    observer=AgentReadObserver(ports)
+    def process_probe():
+        state=Path(os.environ.get('LOCALAPPDATA',''))/'OpsAgent/agent-runtime.json';agent_pid=None
+        if state.is_file() and state.stat().st_size<4096:
+            agent_pid=json.loads(state.read_text(encoding='utf-8-sig')).get('pid')
+        result=probe_processes(dashboard.psutil,agent_pid=agent_pid)
+        if result['preflight']['missing']:raise CaptureError('external_or_process_changed')
+        return {'processRecords':result['processRecords'],'processIds':result['processIds']}
+    publisher=CapturePublisher(plan,spec['source'],evidence,observer,process_probe,
+        approved_total_bytes=V3_APPROVED_BYTES,max_capture_bytes=spec['maxCaptureBytes'],
+        min_interval_seconds=interval)
+    stop_file=control/'STOP'
+    host=DashboardShadowHost(dashboard.__dict__,_StatusPublisher(publisher,control/'observe-status.json',preflight),
+        bindings,enabled=True,stop_requested=stop_file.exists,interval_seconds=interval)
+    attach_lifespan(dashboard.app,host)
+    return host
+
+
 def configure(dashboard,spec,mode,control_root):
-    if mode!='preflight':
-        # Deliberately cannot activate from a preliminary, unreviewed report.
-        raise CaptureError('observation_requires_reviewed_preflight')
+    if mode=='observe':
+        # Fails before serving, so the bootstrap falls back to the original entry.
+        return configure_observe(dashboard,spec,control_root)
+    if mode!='preflight':raise CaptureError('observation_requires_reviewed_preflight')
     old=dashboard.app.router.lifespan_context
     stop=threading.Event();thread=None
     def worker():
