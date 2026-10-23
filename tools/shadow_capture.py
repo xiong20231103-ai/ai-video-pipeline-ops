@@ -8,7 +8,7 @@ import hashlib,json,os,re,sqlite3,tempfile,time,stat,math
 from contextlib import closing
 from datetime import datetime,timezone
 from pathlib import Path
-from agent.core.snapshot import Snapshot,SnapshotError,canonical,capture,digest_file,no_links,relative,safe_facts,PRIVATE_FILES,sqlite_rows
+from agent.core.snapshot import Snapshot,SnapshotError,canonical,capture,digest_file,no_links,relative,safe_facts,PRIVATE_FILES,sqlite_rows,rows_sha256
 from agent.core.source_profiles import PROFILES,PR49_BEHAVIOR,PR49_HELPER,FRESH_HELPER,SOURCE_HELPER_PROFILES,read_source,validate_fresh_helper_identity
 from tools.shadow_capture_errors import CaptureError
 from tools.shadow_sqlite_snapshot import online_backup
@@ -283,7 +283,11 @@ class DigestCache:
 def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None,*,small_budget=None,baseline=None,deadline=None,clock=time.monotonic):
     nodes={};identity={};hashed=0
     excluded=[_source({k:no_links(v) for k,v in plan['roots'].items()},spec) for spec in plan.get('exclude',{}).values()]
-    def excluded_path(path):return any(path==base or path.is_relative_to(base) for base in excluded)
+    # Normalized prefixes: Path.is_relative_to per entry dominated large trees.
+    prefixes=[os.path.normcase(str(base)) for base in excluded]
+    def excluded_path(path):
+        text=os.path.normcase(str(path))
+        return any(text==base or text.startswith(base.rstrip(os.sep)+os.sep) for base in prefixes)
     def store(name,path,info,*,shallow=False):
         nonlocal hashed
         if name in plan.get('verifiedFinalMedia',[]):
@@ -486,6 +490,7 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
     roots,bindings=validate_plan(plan,destination)
     if type(max_window_seconds) not in (int,float) or not math.isfinite(max_window_seconds) or not 0<max_window_seconds<=20:raise CaptureError('capture_window_limit')
     started=clock();deadline=started+max_window_seconds;changes=ChangeReport();small_budget=SmallReadBudget();opened_at=now();source_path=no_links(source_path)
+    small_budget.hash_until=started+WINDOW_HASH_SECONDS
     if source_path.stat().st_size>2*1024*1024:raise CaptureError('capture_source_byte_limit')
     source=read_source(source_path);source_sha=hashlib.sha256(source.encode()).hexdigest()
     if source_sha not in PROFILES:raise CaptureError('unreviewed_capture_source')
@@ -528,14 +533,7 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
         for name in plan.get('files',{}):
             body,info=_read(bindings[name],max_file_bytes,changes=changes,logical_path=name,deadline=deadline,clock=clock,volatile=name in volatile);total+=len(body)
             if total>max_total_bytes:raise CaptureError('capture_total_limit')
-            try:
-                text=body.decode('utf-8-sig');_safe(text)
-                if bindings[name].suffix.lower()=='.json':
-                    try:_safe(json.loads(text))
-                    except json.JSONDecodeError:pass # Corrupt JSON itself must replay faithfully.
-                elif bindings[name].suffix.lower()=='.csv':
-                    import csv
-                    _safe({key:None for key in next(csv.reader(text.splitlines()),[])})
+            try:body.decode('utf-8-sig')
             except UnicodeError:raise CaptureError('state_content_not_utf8') from None
             target=scratch/'inputs'/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(body);os.utime(target,ns=(info['mtimeNs'],info['mtimeNs']))
             copied[name]=target;before[name]=info
@@ -547,7 +545,7 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
                                 timeout_seconds=max(.001,deadline-clock()),clock=clock)
             database_proofs[name]={**proof,'openedAt':opened,'closedAt':now()}
             total+=target.stat().st_size
-            _safe(sqlite_rows(target));databases[name]=target
+            databases[name]=target
         # Recheck the entire window, including external response bodies and PID birth identity.
         if _observations(process_probe,http_probe)!=(processes,http,http_generation):raise CaptureError('external_or_process_changed')
         for name,path in copied.items():
@@ -569,6 +567,18 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
         if any({**_stat(source_path.with_name(name)),'sha256':hashlib.sha256(source_path.with_name(name).read_bytes()).hexdigest()}!=identity for name,identity in dependency_identities.items()):raise CaptureError('dependency_changed_in_window')
         if read_source(source_path)!=source:raise CaptureError('source_changed_in_window')
         if clock()-started>max_window_seconds:raise CaptureError('capture_window_exceeded')
+        # The window is closed; these copies no longer change. Scanning them here
+        # keeps the same refusal before packaging without spending window time.
+        for name,path in copied.items():
+            text=path.read_bytes().decode('utf-8-sig');_safe(text)
+            if path.suffix.lower()=='.json':
+                try:_safe(json.loads(text))
+                except json.JSONDecodeError:pass # Corrupt JSON itself must replay faithfully.
+            elif path.suffix.lower()=='.csv':
+                import csv
+                _safe({key:None for key in next(csv.reader(text.splitlines()),[])})
+        for path in databases.values():
+            rows=sqlite_rows(path);_safe(rows);rows_sha256(path,rows)
         ended_at=now();settings=plan.get('facts',{});_safe(settings)
         if set(settings)-{'machineName','settings','metrics','collectorAlive','scan','historyResetGeneration','historyResetAt','historyAliases'}:raise CaptureError('unexpected_capture_fact')
         facts={**settings,**processes,'http':http,'filesystem':nodes,'pathAliases':{str(p):name for name,p in roots.items()},'dependencyClosure':True,'absentPaths':sorted(missing),'completeDirectoryRoots':sorted(plan.get('trees',{})),'excludedPaths':sorted(plan.get('exclude',{}))}

@@ -15,7 +15,7 @@ from datetime import datetime,timezone
 from pathlib import Path
 from agent.core.snapshot import canonical,no_links
 from tools.shadow_capture_errors import CaptureError
-from tools.shadow_store import referenced_objects
+from tools.shadow_store import referenced_objects,stored_keys,rewrite_packs
 
 IDENTITY=re.compile('[0-9a-f]{64}')
 CONCLUSIONS={'accepted','rejected','incomparable'}
@@ -56,9 +56,9 @@ def plan_compaction(store,verdict_path,*,drop,keep):
     needed=set()
     for identity,path in indexes.items():
         if identity not in drop:needed|=referenced_objects(store,_index(path))
-    objects={p.name:p for p in (store/'objects').iterdir() if p.is_file()}
+    objects=stored_keys(store)
     unreferenced=sorted(set(objects)-needed)
-    freed=sum(objects[k].stat().st_size for k in unreferenced)+sum(indexes[i].stat().st_size for i in drop)
+    freed=sum(objects[k][2] for k in unreferenced)+sum(indexes[i].stat().st_size for i in drop)
     return {'schema':1,'batchId':verdict['batchId'],'conclusion':verdict['conclusion'],
             'dropSnapshots':drop,'keepSnapshots':keep,'remainingSnapshots':len(indexes)-len(drop),
             'objectsRemoved':len(unreferenced),'bytesFreed':freed,'_unreferenced':unreferenced}
@@ -78,7 +78,10 @@ def apply_compaction(store,plan,*,now=lambda:datetime.now(timezone.utc).isoforma
         # published snapshot that points at removed objects.
         for identity in plan['dropSnapshots']:
             os.replace(store/'snapshots'/(identity+'.json'),retired/(identity+'.json'))
-        for key in plan['_unreferenced']:(store/'objects'/key).unlink(missing_ok=True)
+        # Recomputed under the lock from the remaining indexes, never from the plan.
+        needed=set()
+        for path in (store/'snapshots').glob('*.json'):needed|=referenced_objects(store,_index(path))
+        rewrite_packs(store,needed)
         record={k:v for k,v in plan.items() if not k.startswith('_')}
         record['appliedAt']=now()
         with (retired/'compaction.json').open('xb') as out:out.write(canonical(record))

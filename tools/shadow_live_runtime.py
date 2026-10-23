@@ -300,9 +300,21 @@ def configure_observe(dashboard,spec,control_root,*,interval_seconds=None):
     publisher=CapturePublisher(plan,spec['source'],evidence,observer,process_probe,
         approved_total_bytes=V3_APPROVED_BYTES,max_capture_bytes=spec['maxCaptureBytes'],
         min_interval_seconds=interval)
-    stop_file=control/'STOP'
-    host=DashboardShadowHost(dashboard.__dict__,_StatusPublisher(publisher,control/'observe-status.json',preflight),
-        bindings,enabled=True,stop_requested=stop_file.exists,interval_seconds=interval)
+    stop_file=control/'STOP';status_path=control/'observe-status.json';stopped=[]
+    def stop_requested():
+        if not stop_file.exists():return False
+        if not stopped:
+            # Visible proof for the STOP drill; a write failure never blocks stopping.
+            stopped.append(True)
+            try:
+                raw=canonical({'schema':1,'mode':'observe','enabled':True,'state':'stopped','hostPid':os.getpid(),
+                               'stoppedAtUtc':datetime.now(timezone.utc).isoformat(),'reviewedPreflight':preflight,
+                               'businessRequests':0,'realShadowPassed':False,'switchAccepted':False})
+                temporary=status_path.with_name(status_path.name+'.tmp');temporary.write_bytes(raw);os.replace(temporary,status_path)
+            except Exception:pass
+        return True
+    host=DashboardShadowHost(dashboard.__dict__,_StatusPublisher(publisher,status_path,preflight),
+        bindings,enabled=True,stop_requested=stop_requested,interval_seconds=interval)
     attach_lifespan(dashboard.app,host)
     return host
 
