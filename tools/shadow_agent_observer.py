@@ -7,8 +7,11 @@ class AgentReadObserver:
         self.ports=dict(ports)
         if not self.ports or len(self.ports)>16 or max_body_bytes<1 or max_body_bytes>8*1024*1024:raise CaptureError('observer_ports_required')
         for (port,target),key in self.ports.items():
-            if port not in {8765,8766} or not target.startswith('/api/') or '?' in target or not re.fullmatch(r'(receiver|control):/api/[A-Za-z0-9_/.:-]+',key):
+            if port not in {8765,8766,18790} or not target.startswith('/api/') or '?' in target or not re.fullmatch(r'(receiver|control):/api/[A-Za-z0-9_/.:-]+',key):
                 raise CaptureError('observer_port_invalid')
+            if key != ('receiver' if port == 8766 else 'control') + ':' + target:
+                raise CaptureError('observer_port_identity_mismatch')
+        if len(set(self.ports.values())) != len(self.ports):raise CaptureError('observer_port_identity_collision')
         if not 1<=max_age_seconds<=300:raise CaptureError('observer_age_limit')
         self.max_age=max_age_seconds;self.clock=clock;self.completed_at={}
         self.limit=max_body_bytes;self.lock=threading.RLock();self.serial=0
