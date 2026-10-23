@@ -2,7 +2,10 @@ import copy,hashlib,json,unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from agent.core.replay import make_fixture
-from tools.shadow_store import put_snapshot,materialize_snapshot,usage
+from tools.shadow_store import put_snapshot,materialize_snapshot,usage,stored_keys
+def corrupt(store,key):
+ pack,offset,length=stored_keys(store)[key]
+ path=store/'packs'/(pack+'.pack');raw=bytearray(path.read_bytes());raw[offset]^=0xff;path.write_bytes(bytes(raw))
 from tools.shadow_capture import CaptureError
 ROOT=Path(__file__).resolve().parents[1]
 class ChunkStoreTests(unittest.TestCase):
@@ -21,7 +24,7 @@ class ChunkStoreTests(unittest.TestCase):
   with self.assertRaisesRegex(CaptureError,'quota_exhausted'):put_snapshot(self.snap,self.store,approved_total_bytes=1000,retained_roots=[old])
   self.assertEqual(2000,(old/'retained.bin').stat().st_size)
  def test_corrupt_chunk_and_invalid_identity_refuse_no_partial_restore(self):
-  identity=put_snapshot(self.snap,self.store,approved_total_bytes=1024*1024)['sourceIdentity'];key=next((self.store/'objects').iterdir());key.write_bytes(b'corrupt')
+  identity=put_snapshot(self.snap,self.store,approved_total_bytes=1024*1024)['sourceIdentity'];corrupt(self.store,next(iter(stored_keys(self.store))))
   with self.assertRaisesRegex(CaptureError,'corrupt'):materialize_snapshot(self.store,identity,self.root/'restore')
   self.assertFalse((self.root/'restore').exists())
   with self.assertRaisesRegex(CaptureError,'identity_invalid'):materialize_snapshot(self.store,'../escape',self.root/'restore')

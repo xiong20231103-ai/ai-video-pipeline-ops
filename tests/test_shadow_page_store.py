@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from agent.core.snapshot import capture
 from tools.shadow_capture import CaptureError
-from tools.shadow_store import put_snapshot,materialize_snapshot,usage
+from tools.shadow_store import put_snapshot,materialize_snapshot,usage,stored_keys
 from tools.shadow_store_compact import plan_compaction,apply_compaction,main
 from tools.shadow_sqlite_snapshot import sqlite_page_size
 
@@ -49,7 +49,24 @@ class PageStoreTests(unittest.TestCase):
         stored=put_snapshot(self.snapshot(),self.store,approved_total_bytes=CAP)
         index=json.loads((self.store/'snapshots'/(stored['sourceIdentity']+'.json')).read_bytes())
         segment=index['files']['repository/data/ops.db']['segments'][0]
-        (self.store/'objects'/segment).write_bytes(b'not-a-listing')
+        pack,offset,length=stored_keys(self.store)[segment]
+        path=self.store/'packs'/(pack+'.pack');raw=bytearray(path.read_bytes());raw[offset]^=0xff;path.write_bytes(bytes(raw))
+        with self.assertRaisesRegex(CaptureError,'corrupt'):
+            materialize_snapshot(self.store,stored['sourceIdentity'],self.root/'restored')
+
+    def test_thousands_of_pages_publish_as_a_few_files(self):
+        # One file per page overflowed the 30000-entry usage walk at ~126 MiB.
+        for value in ('a','b','c'):
+            self.update_one_row(value*900);put_snapshot(self.snapshot(),self.store,approved_total_bytes=CAP)
+        files=[p for p in self.store.rglob('*') if p.is_file()]
+        self.assertGreater(len(stored_keys(self.store)),900)
+        self.assertLessEqual(len(files),9) # 3 x (pack + pack index + snapshot index)
+        self.assertEqual(sum(p.stat().st_size for p in files),usage(self.store))
+
+    def test_truncated_pack_is_refused_not_misread(self):
+        stored=put_snapshot(self.snapshot(),self.store,approved_total_bytes=CAP)
+        pack=next((self.store/'packs').glob('*.pack'));pack.write_bytes(pack.read_bytes()[:-1])
+        import tools.shadow_store as store_module;store_module._KEYS.clear()
         with self.assertRaisesRegex(CaptureError,'corrupt'):
             materialize_snapshot(self.store,stored['sourceIdentity'],self.root/'restored')
 
