@@ -6,7 +6,7 @@ The published manifest is consumed later by the offline CLI in another process.
 from pathlib import Path
 import copy,os,tempfile,threading,time
 from agent.core.snapshot import canonical,no_links
-from tools.shadow_capture import aligned_capture,CaptureError,validate_plan
+from tools.shadow_capture import aligned_capture,CaptureError,validate_plan,DigestCache
 from tools.shadow_store import put_snapshot,usage
 
 MAX_APPROVED=2*1024*1024*1024
@@ -18,6 +18,7 @@ class CapturePublisher:
         self.root=no_links(evidence_root);self.source=no_links(source);self.retained=tuple(map(no_links,retained_roots))
         self.plan=copy.deepcopy(plan);self.observer=observer;self.process_probe=process_probe;self.cap=approved_total_bytes
         self.max_bytes=max_capture_bytes;self.interval=min_interval_seconds;self.clock=clock;self.last=None;self.lock=threading.Lock()
+        self.digest_cache=DigestCache()
         for other in [self.source.parent,*self.retained]:
             if self.root==other or self.root.is_relative_to(other) or other.is_relative_to(self.root):raise CaptureError('evidence_root_overlap')
         validate_plan(plan,self.root/'_validation_destination')
@@ -45,7 +46,7 @@ class CapturePublisher:
                 with tempfile.TemporaryDirectory(prefix='.capture-stage-',dir=self.root) as folder:
                     snapshot=aligned_capture(self.plan,Path(folder)/'snapshot',source_path=self.source,
                         process_probe=self.process_probe,http_probe=self.observer.observation,
-                        max_file_bytes=self.max_bytes,max_total_bytes=self.max_bytes,max_hash_bytes=self.max_bytes)
+                        max_file_bytes=self.max_bytes,max_total_bytes=self.max_bytes,max_hash_bytes=64*1024*1024,digest_cache=self.digest_cache)
                     stored=put_snapshot(snapshot,self.root/'store',approved_total_bytes=self.cap,
                         retained_roots=(*self.retained,Path(folder)))
                     # Atomic append-only handoff: no live paths or response values in report queue.

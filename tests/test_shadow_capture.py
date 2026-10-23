@@ -21,14 +21,15 @@ class AlignedCaptureTests(unittest.TestCase):
  def test_aligned_snapshot_contains_exact_content_absence_process_and_external_facts(self):
   snap=self.capture();facts=snap.manifest['facts']
   self.assertEqual(self.state.read_bytes(),snap.read('workbench/state.json'));self.assertTrue(facts['dependencyClosure']);self.assertEqual(['workbench/missing.json'],facts['absentPaths']);self.assertEqual(self.http,facts['http']);self.assertEqual(self.process['processRecords'],facts['processRecords']);self.assertFalse(snap.manifest['realBatchEvidence'])
-  self.assertTrue(facts['captureProof']['databaseCopiedWithoutLiveSqlite']);self.assertNotIn('workbench/metadata/output.mp4',snap.manifest['files']);self.assertEqual('file',facts['filesystem']['workbench/metadata/output.mp4']['kind'])
+  self.assertEqual('sqlite-online-readonly',facts['captureProof']['databaseSnapshotMethod']);self.assertNotIn('workbench/metadata/output.mp4',snap.manifest['files']);self.assertEqual('file',facts['filesystem']['workbench/metadata/output.mp4']['kind'])
  def test_media_digest_is_explicit_bounded_and_not_media_copy(self):
   self.plan['hashMetadataFiles']=True;snap=self.capture();node=snap.manifest['facts']['filesystem']['workbench/metadata/output.mp4'];self.assertEqual(hashlib.sha256(b'fake-media-never-run').hexdigest(),node['contentSha256'])
   self.assertFalse((snap.root/'workbench/metadata/output.mp4').exists())
- def test_media_hash_budget_rejects_without_publishing(self):
+ def test_media_hash_budget_publishes_explicit_pending_digest(self):
   self.plan['hashMetadataFiles']=True
-  with self.assertRaisesRegex(CaptureError,'hash_byte_limit'):self.capture(max_hash_bytes=1)
-  self.assertFalse((self.root/'snapshot').exists())
+  snap=self.capture(max_hash_bytes=1)
+  self.assertTrue(snap.manifest['facts']['filesystem']['workbench/metadata/output.mp4']['hashPending'])
+  self.assertTrue((self.root/'snapshot').exists())
  def test_digest_cache_never_reuses_after_file_identity_changes(self):
   from tools.shadow_capture import DigestCache,_stat
   cache=DigestCache();file=self.live/'metadata/output.mp4';old=_stat(file);one,used=cache.hash(file,old);two,reused=cache.hash(file,_stat(file));self.assertEqual(one,two);self.assertGreater(used,0);self.assertEqual(0,reused)
@@ -70,14 +71,18 @@ class AlignedCaptureTests(unittest.TestCase):
   with self.assertRaisesRegex(CaptureError,'overlap'):aligned_capture(self.plan,self.live/'out',source_path=self.source,process_probe=lambda:self.process,http_probe=lambda:self.http)
   self.source.write_text('unreviewed source',encoding='utf-8')
   with self.assertRaisesRegex(CaptureError,'unreviewed'):self.capture()
- def test_sqlite_only_opens_copies_and_live_bytes_unchanged(self):
+ def test_sqlite_source_connection_is_readonly_and_live_bytes_unchanged(self):
   db=self.live/'data/ops.db';db.parent.mkdir()
   with sqlite3.connect(db) as conn:conn.execute('CREATE TABLE tasks(task_id TEXT)');conn.execute('INSERT INTO tasks VALUES(?)',('fixture',))
   conn.close()
   before=db.read_bytes();self.plan['roots']['repository']=str(self.live);self.plan['databases']={'repository/data/ops.db':{'root':'repository','path':'data/ops.db'}}
   import unittest.mock
   original=sqlite3.connect;calls=[]
-  def connect(path,*args,**kwargs):calls.append(str(path));self.assertNotEqual(db.absolute(),Path(path).absolute());return original(path,*args,**kwargs)
+  def connect(path,*args,**kwargs):
+   calls.append(str(path))
+   if str(path).startswith(db.absolute().as_uri()):self.assertIn('mode=ro',str(path));self.assertTrue(kwargs.get('uri'))
+   else:self.assertNotEqual(db.absolute(),Path(path).absolute())
+   return original(path,*args,**kwargs)
   with unittest.mock.patch('sqlite3.connect',side_effect=connect):snap=self.capture()
   self.assertTrue(calls);self.assertEqual(before,db.read_bytes());self.assertFalse(Path(str(db)+'-shm').exists());self.assertEqual('sqlite',snap.manifest['files']['repository/data/ops.db']['kind'])
  def test_budget_exceeded_and_existing_destination_never_overwrite(self):

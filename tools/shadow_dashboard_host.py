@@ -15,7 +15,7 @@ from tools.shadow_dashboard_binding import DashboardReadBinding
 
 class DashboardShadowHost:
     def __init__(self, namespace, publisher, routes, *, enabled=False,
-                 maintenance=lambda: False, interval_seconds=60,
+                 maintenance=lambda: False, stop_requested=lambda: False, interval_seconds=60,
                  join_seconds=2, clock=time.monotonic):
         if (type(enabled) is not bool
                 or not isinstance(interval_seconds, (int, float))
@@ -28,6 +28,8 @@ class DashboardShadowHost:
         self.routes = dict(routes)
         self.enabled = enabled
         self.maintenance = maintenance
+        self.stop_requested = stop_requested
+        self.owner_loop = None
         self.interval = interval_seconds
         self.join_seconds = join_seconds
         self.clock = clock
@@ -48,10 +50,14 @@ class DashboardShadowHost:
     def _loop(self):
         while not self.stop_event.is_set():
             try:
+                if self._stop_from_control():
+                    return
                 if self.maintenance():
                     self._state('paused', 'shadow_maintenance')
                 else:
                     result = self.publisher.tick()
+                    if self._stop_from_control():
+                        return
                     if self.stop_event.is_set():
                         break
                     if result.get('state') == 'blocked':
@@ -63,7 +69,26 @@ class DashboardShadowHost:
             except Exception:
                 # Neither live exception values nor caller-supplied status enter logs.
                 self._state('blocked', 'shadow_cycle_failed')
-            self.stop_event.wait(self.interval)
+            # STOP is checked while idle too; no extra HTTP or process control.
+            remaining = self.interval
+            while remaining > 0 and not self.stop_event.wait(min(1, remaining)):
+                remaining -= min(1, remaining)
+                try:
+                    if self._stop_from_control():
+                        return
+                except Exception:
+                    self._state('blocked', 'shadow_stop_probe_failed')
+
+    def _stop_from_control(self):
+        if not self.stop_requested():
+            return False
+        self.stop_event.set()
+        if self.owner_loop is not None and self.owner_loop.is_running():
+            asyncio.run_coroutine_threadsafe(self.close(), self.owner_loop)
+        else:
+            # Synchronous fixture/startup contexts have no application loop.
+            asyncio.run(self.close())
+        return True
 
     def start(self):
         with self.lock:
@@ -76,6 +101,14 @@ class DashboardShadowHost:
                 return self.status()
             self.started = True
             try:
+                try:
+                    self.owner_loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    self.owner_loop = None
+                if self.stop_requested():
+                    self.stop_event.set()
+                    self._state('stopped', 'shadow_stop_latched')
+                    return self.status()
                 self.binding = DashboardReadBinding(self.namespace, self.publisher.observer, self.routes)
                 self.thread = threading.Thread(target=self._loop, name='dashboard-shadow-capture', daemon=True)
                 self.cycle_started = self.clock()
@@ -100,7 +133,8 @@ class DashboardShadowHost:
         self.stop_event.set()
         thread = self.thread
         join_failed = False
-        if thread is not None and thread.is_alive():
+        own_worker = thread is threading.current_thread()
+        if thread is not None and thread.is_alive() and not own_worker:
             # Joining cannot block the Dashboard event loop or its heartbeat.
             try:
                 await asyncio.to_thread(thread.join, self.join_seconds)
@@ -111,7 +145,7 @@ class DashboardShadowHost:
             self._state('blocked', 'shadow_restore_owner_changed')
         elif join_failed:
             self._state('blocked', 'shadow_worker_join_failed')
-        elif thread is not None and thread.is_alive():
+        elif thread is not None and thread.is_alive() and not own_worker:
             self._state('blocked', 'shadow_worker_still_stopping')
         else:
             self._state('stopped' if self.enabled else 'disabled')
