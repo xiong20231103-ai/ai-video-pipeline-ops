@@ -158,7 +158,7 @@ class SingleInstance:
         if self.file: self.file.close()
 
 class ReadOnlyAgent:
-    def __init__(self,origin,token,state_dir,*,engine=None):
+    def __init__(self,origin,token,state_dir,*,engine=None,read_observer=None):
         parsed=urllib.parse.urlsplit(origin)
         if parsed.scheme!='https' or not parsed.hostname or not parsed.hostname.endswith('.ts.net') or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in {'','/'}:
             raise ValueError('Cloud origin must be the configured Tailnet HTTPS node')
@@ -170,6 +170,8 @@ class ReadOnlyAgent:
         self.authenticated=threading.Event()
         self.backup=BackupWorker(self)
         self.engine=engine
+        # Explicit injection only: no settings, extra threads, requests or writes.
+        self.read_observer=read_observer
         self.execution=ExecutionWorker(self,ordinary_backend=engine)
         self.demands=queue.PriorityQueue(maxsize=128); self.pending_demands=set(); self.prefetch_targets=[]; self.slow_demands=[]; self.force_reads=set(); self.paused_targets=set()
         # The old summary ETag omits scan clocks and its 304 has no scan header.
@@ -202,6 +204,11 @@ class ReadOnlyAgent:
             headers['If-None-Match']=old['etag']
         request=urllib.request.Request('http://'+HOME_HOST+':'+str(port)+target,headers=headers,method='GET')
         timeout=endpoint('GET',urllib.parse.urlsplit(target).path)['timeoutSeconds']
+        observation=None
+        observer=getattr(self,'read_observer',None)
+        if observer is not None and self.engine is None:
+            try: observation=observer.begin(port,target)
+            except Exception: pass
         previous_engine=self.engine_state
         if timeout>=60: self.engine_state='busy'
         started=time.monotonic(); mode='active' if self.schedule.active() else 'idle'; failed=True
@@ -215,6 +222,9 @@ class ReadOnlyAgent:
                 raw=response.read(8*1024*1024+1)
                 if len(raw)>8*1024*1024: raise ValueError('Source response exceeded limit')
                 body=json.loads(raw); failed=False
+                if observer is not None and observation is not None:
+                    try: observer.complete(observation,response.status,raw)
+                    except Exception: pass
                 if response.status==200: self.full_read_at[identity]=time.monotonic()
                 return response.status,body,response.headers.get('ETag','')
         except urllib.error.HTTPError as exc:
@@ -222,6 +232,9 @@ class ReadOnlyAgent:
             raise
         except http.client.IncompleteRead: raise OSError('Incomplete home response') from None
         finally:
+            if observer is not None and observation is not None:
+                try: observer.end(observation)
+                except Exception: pass
             if timeout>=60 and self.engine_state=='busy': self.engine_state=previous_engine
             self.ledger.note_request(target,port,mode,reason,time.monotonic()-started,failed)
     def collect(self,target,conditional=True,reason='periodic'):
