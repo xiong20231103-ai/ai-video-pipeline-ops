@@ -30,7 +30,7 @@ class AlignedCaptureTests(unittest.TestCase):
   with self.assertRaisesRegex(CaptureError,'unreviewed_capture_source'):self.capture()
  def test_current_source_rejects_uncovered_helper(self):
   self.source.write_bytes((ROOT/'contracts/legacy-app-d6a7211-crlf.txt').read_bytes())
-  self.source.with_name('verified_final.py').write_bytes((ROOT/'verified_final.py').read_bytes())
+  self.source.with_name('verified_final.py').write_bytes((ROOT/'verified_final.py').read_bytes()+b' ')
   with self.assertRaisesRegex(CaptureError,'capture_dependency_not_reviewed'):self.capture()
  def test_aligned_snapshot_contains_exact_content_absence_process_and_external_facts(self):
   snap=self.capture();facts=snap.manifest['facts']

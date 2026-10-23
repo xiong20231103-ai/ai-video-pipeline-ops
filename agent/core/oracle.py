@@ -59,8 +59,9 @@ class Oracle:
     def __init__(self,source,snapshot:Snapshot,scratch,*,collect=True):
         from .source_profiles import verify_source
         self.source_sha=verify_source(source,snapshot)
-        from .source_profiles import PR49_BEHAVIOR,legacy_verified_final_source
-        self.frozen_verified_final_source=legacy_verified_final_source() if self.source_sha in PR49_BEHAVIOR else None
+        from .source_profiles import PR49_BEHAVIOR,legacy_verified_final_source,reviewed_helper
+        self.helper_hash=reviewed_helper(self.source_sha,snapshot.manifest['facts']) if self.source_sha in PR49_BEHAVIOR else None
+        self.frozen_verified_final_source=legacy_verified_final_source(self.helper_hash) if self.helper_hash else None
         self.missing_hash_facts=[];self.missing_http_facts=[]
         self.collect=collect;self.snapshot=snapshot;self.root=snapshot.materialize(scratch);self.registry=Registry();self.stack=ExitStack();self.requests=[]
         self.effect_names={p.relative_to(self.root).as_posix() for p in self.root.rglob('*') if p.is_file()}
@@ -151,6 +152,12 @@ class Oracle:
                     raise SnapshotError('metadata_hash_fact_missing_or_mismatched')
                 return digest
             self.stack.enter_context(patch.object(verified_final,'_digest',side_effect=frozen_digest))
+            from .source_profiles import FRESH_HELPER
+            if self.helper_hash==FRESH_HELPER:
+                from .verified_final_replay import FreshHelperPorts
+                self.fresh_helper_ports=FreshHelperPorts(self.io,facts,self.missing_hash_facts)
+                self.stack.enter_context(patch.object(verified_final,'Path',self.fresh_helper_ports.path))
+                self.stack.enter_context(patch.object(verified_final,'_digest',side_effect=self.fresh_helper_ports.digest))
         n['CONFIG']=cfg;n['DATA_DIR'].mkdir(parents=True,exist_ok=True)
         n['STORE']=n['Store'](n['DB_PATH']);n['COLLECTOR']=n['Collector'](cfg,n['STORE'])
         old_process_status=n['process_status']

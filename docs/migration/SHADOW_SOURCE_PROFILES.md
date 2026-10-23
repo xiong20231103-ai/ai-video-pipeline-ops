@@ -1,5 +1,42 @@
 # 影子回放当前源码版本登记（第二阶段）
 
+## 2026-10-23：PR #68 后续——新版 helper 组合
+
+本分支以 PR #68 的 `12f8d938fce2f073639ca6ea90f4e383a46655b0` 为基线。以下内容补齐该 PR 明确保留的 helper 缺口；下面的 PR #68 审计记录作为历史保留。未读取生产目录、未安装或启动生产程序。
+
+### 固定组合与合同
+
+`SOURCE_HELPER_PROFILES` 仅允许 PR49 LF / d6a7211 CRLF 两个 app.py 精确身份，各自搭配旧 helper `69b8b086e0502c506e75f1644fe2a3d28c8bac94c99c2b54870c2205fb9199e0` 或新版 helper `57631ede4f2199db025163010e12dfe8ecc493784979194b87c4ead83b2aa818`。后者的独立冻结合同为 `contracts/legacy-verified-final-fresh.txt`，正文直接来自基线 Git 对象，规范化文本哈希必须匹配。不会导入可变的候选 helper 作为 Oracle。
+
+快照的 `captureProof.helperHashes` 明确选择 helper；没有新组合声明的历史快照仍走旧 helper。新组合必须额外包含 `helperIdentities`：每个已声明依赖文件的 size、mtimeNs、ctimeNs、device、inode 和原始字节 SHA256。新版 helper 原始字节只允许冻结正文的完整 LF 或完整 CRLF 形式，不允许 BOM、混合换行或单字节变化。新增组合不会将未知源码或 helper 加入白名单。
+
+### 两项行为差异及事实端口
+
+| 新版 helper 原实现 | 隔离回放端口与断言 |
+| --- | --- |
+| `_digest` 不再有 LRU 装饰器，每次读取当前摘要 | 每次调用均访问 `FreshHelperPorts.digest`，没有结果缓存。固定捕获时点使用该时点的完整对齐摘要；显式 `verifiedFinalReadSequences` 支持同一快照内按顺序记录的多次读取事实。夹具用完全相同的 size/mtime/ctime/dev/inode、不同的两次摘要，证明第二次调用不复用第一次结果。序列耗尽拒绝，不重复最后一项，也不从 scratch 推断。 |
+| 摘要前后比较 st_dev/st_ino | helper 独立 Path 端口在摘要前返回 `before`，摘要后返回 `after`。size、mtime、ctime、device、inode 均取自同一条事实；原函数亲自比较这些字段，dev 或 inode 改变时返回 False。端口不修改全局 Path、不读取宿主媒体、不使用 scratch 的文件身份替代生产事实。 |
+
+新版 helper 的函数正文原样执行，替换的只有 QC 文件读取/媒体 Path 及摘要 I/O 端口。QC JSON 仍由 SandboxIO 从同一快照的白名单正文读取。捕获的静态摘要记录必须与 filesystem 的身份和摘要相符；before/after 任一身份字段缺失、摘要缺失、序列缺项均拒绝。错误即使被旧业务代码捕获，也会通过 Oracle 退出检查强制报 `missing_frozen_content_hash`，不能变成“两边同样失败”的零差异。
+
+旧组合仍保留原有冻结 helper、原摘要端口、缺摘要拒绝及 QC 冲突结果；不会把新身份要求倒灌给旧快照。R1 候选和 Oracle 均按同一明确组合绑定 helper。R2–R6 的算法和真实验收门禁没有改变。
+
+新增事实端口及两个冻结 helper 合同一并列入 R6 精确构建清单，避免出现回放模块在仓库中却未进入未来对象包的问题。原 R6 文件集合保留为 `PREVIOUS_R6_FILES`，更新/回滚校验仍接受其完整原集合；隔离夹具演练旧 R6 → 新清单 → 旧 R6，并检查新增文件已撤回。这里只修改包构建定义，不生成或部署代理更新包，不修改任何已安装清单。
+
+### aligned_capture 新增事实与预算
+
+- 文件/目录节点输出实际 device/inode；依赖读取前后与窗口结束再核对完整身份及原始字节 SHA256，内容相同但依赖被替换也拒绝本窗口。
+- 新组合的媒体必须在计划 `verifiedFinalMedia` 中逐条列逻辑路径，且已经出现在白名单树的文件清单中；只接受 mp4/mov/mkv。不扩大目录树，不自动发现或读取计划外媒体。
+- 对这些媒体，在窗口开始和结束各重新打开一次，以 1 MiB 块计算 SHA256，不使用 DigestCache，不跨窗口累积部分摘要，不存媒体正文。显式媒体通过路径 lstat 刷新完整身份，避免依赖目录项缓存中的不完整文件编号。每次记录路径 before/after 和句柄 opened/closed：路径两次完整身份必须相同且与目录事实相符，句柄两次完整身份也必须相同；路径与句柄之间比较大小、mtime、dev/inode。Windows 两类 API 的 ctime 口径可能不同，必须分别如实保留并各自比较，不能互相覆盖或推断。记录 `alignment=single-open-fresh-sha256-v1`、readBytes 和摘要；第二次读取记录放在 `windowClose`。两个摘要必须相同，避免只靠 stat 放行同 stat 正文改写。回放也要求这些记录完整并相符。
+- 两次读取合计受现有 max_hash_bytes 和 64 MiB/轮中的较小值限制；首轮只使用一半额度，为结束复核预留另一半，因此默认单文件超过 32 MiB 将保持待补。仍遵守 20 秒总窗口，不增加额度。预算不够、写入中、结束时摘要或身份变化时，保留 hashPending 并不发布可比较摘要；helper 真正需要该文件时拒绝回放。小文件原有独立 32 MiB 预算保持不变。
+- 实际捕获器仅输出一个已对齐时点的 `verifiedFinalMedia`，不会伪造有序变化。`verifiedFinalReadSequences` 是显式多次读取事实端口，目前由隔离夹具验证语义；没有生产侧的实际序列证据时，不声称覆盖真实运行中的跨时点变化。
+
+### 测试和验收边界
+
+新增隔离夹具覆盖：新版组合从捕获到回放；Oracle/R1 候选一致；同 stat 下摘要变化不复用；dev/inode 分别改变时失败；媒体/依赖身份缺失时拒绝；摘要或序列缺失时拒绝；helper 混合换行的单 CR 字节删除拒绝；同正文依赖替换拒绝；每个窗口重新读取摘要；预算不足和写入中不伪造摘要；旧组合继续工作。原 PR #68 中“新版 helper 无身份事实时拒绝”测试保留并更新预期错误，不移除原组合覆盖。
+
+这些是隔离测试，不是完整真实批次证据。realShadowPassed、switchAccepted 仍为 False；不启用 observe、不部署、不恢复生产。Claude 审查重点是组合闭合、字节身份、读前/读后事实、缺项强制拒绝及媒体预算。
+
 ## 2026-10-23：d6a7211 精确字节档案与覆盖边界
 
 本次只检查 Git 对象、隔离 worktree 和冻结合同，没有读取生产目录。核对基线为 main `980d3a966607f81a9ea1533f75f8fdf26eed1918`，其中 app.py 最后修改仍为 d6a7211。
