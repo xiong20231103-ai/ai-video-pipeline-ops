@@ -72,8 +72,11 @@ class ContentStabilityTests(unittest.TestCase):
 
     def test_changed_heartbeat_content_rejects_state_window(self):
         def changed():self.state.write_bytes(b'{"ready":null}')
-        with self.assertRaisesRegex(CaptureError,'state_changed_in_window'):self.capture(between=changed)
+        with self.assertRaisesRegex(CaptureError,'state_changed_in_window') as caught:self.capture(between=changed)
         self.assertFalse((self.root/'snapshot').exists())
+        # The refusal names the logical file and change type, never its content.
+        self.assertIn({'path':'workbench/workbench.ready.json','type':'content-change'},caught.exception.diagnostics['changes'])
+        self.assertNotIn('null',json.dumps(caught.exception.diagnostics))
 
     def test_declared_volatile_heartbeat_keeps_first_read_and_reports_update(self):
         self.plan['volatileFiles']=['workbench/workbench.ready.json']

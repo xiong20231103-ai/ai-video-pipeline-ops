@@ -2,6 +2,7 @@ import json,os,tempfile,threading,unittest
 from pathlib import Path
 from unittest.mock import patch
 from tools.shadow_agent_observer import AgentReadObserver
+from tools import shadow_capture
 from tools.shadow_capture_runtime import CapturePublisher
 from tools.shadow_replay_worker import compare_ready
 from tools.shadow_capture import CaptureError
@@ -38,6 +39,18 @@ class CaptureRuntimeTests(unittest.TestCase):
         self.observer.completed_at={key:0 for key in self.observer.values}
         self.assertEqual('blocked',self.publisher.tick()['state'])
         self.assertFalse(self.publisher.root.exists())
+    def test_rejection_reports_changed_logical_file_then_clears_on_success(self):
+        state=self.live/'state.json';real=shadow_capture._read_version;calls=[]
+        def flapping(path,limit,**kw):
+            raw,opened,closed=real(path,limit,**kw)
+            if path==state:
+                calls.append(1);state.write_text('{"items":[%d]}'%len(calls),encoding='utf-8')
+            return raw,opened,closed
+        with patch.object(shadow_capture,'_read_version',side_effect=flapping):result=self.publisher.tick()
+        self.assertEqual('state_changed_in_window',result['lastCode'])
+        self.assertIn({'path':'workbench/state.json','type':'content-change'},result['lastChanges'])
+        self.tick+=60;self.complete()
+        result=self.publisher.tick();self.assertEqual('captured',result['state'],result);self.assertEqual([],result['lastChanges'])
     def test_plan_is_copied_not_changed_by_caller(self):
         self.plan['files'].clear()
         self.assertIn('workbench/state.json',self.publisher.plan['files'])

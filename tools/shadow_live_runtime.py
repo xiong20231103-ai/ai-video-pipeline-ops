@@ -267,7 +267,7 @@ class _StatusPublisher:
         try:
             value={'schema':1,'mode':'observe','enabled':True,'hostPid':os.getpid(),
                    'updatedAtUtc':datetime.now(timezone.utc).isoformat(),'reviewedPreflight':self.preflight,
-                   **{k:result.get(k) for k in ('state','lastCode','published','rejected','captureAttempts',
+                   **{k:result.get(k) for k in ('state','lastCode','lastChanges','published','rejected','captureAttempts',
                                                 'directoryChangeRejected','lastSourceIdentity')},
                    'businessRequests':0,'realShadowPassed':False,'switchAccepted':False}
             _safe(value)
