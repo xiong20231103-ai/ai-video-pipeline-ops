@@ -14,6 +14,8 @@ def mount_links(app, config, session, csrf, rate):
         return
     evidence = Evidence(config.get('link_evidence_dir','/srv/ops-console/link-evidence'))
     app.state.link_evidence = evidence
+    from cloud.link_delivery import LinkDelivery
+    delivery = LinkDelivery(evidence,app.state.commands) if hasattr(app.state,'commands') else None
 
     def auth(request):
         token = os.environ.get('LINK_EVIDENCE_TOKEN','')
@@ -78,3 +80,26 @@ def mount_links(app, config, session, csrf, rate):
     def page(request:Request):
         session(request)
         return HTMLResponse((Path(__file__).parent/'links.html').read_text(encoding='utf-8'))
+
+    @app.post('/api/links/deliveries')
+    async def submit_links(request:Request):
+        if config.get('link_delivery_enabled') is not True or delivery is None:
+            raise HTTPException(409,'link_delivery_not_enabled')
+        user=session(request);csrf(request,user);rate(request,'link-delivery',30)
+        data=await body(request)
+        actor='user:'+str(user['user_id'])
+        try:
+            delivery.prepare(actor,data.get('requestId'),data.get('ids'),data.get('payload'),data.get('kind'),data.get('confirm'))
+            return delivery.dispatch(actor,data['requestId'])
+        except ValueError:
+            raise HTTPException(409,'link_delivery_selection_or_identity_conflict') from None
+
+    @app.get('/api/links/deliveries/{request_id}')
+    def submission_status(request_id:str,request:Request):
+        user=session(request)
+        if delivery is None:
+            raise HTTPException(409,'link_delivery_not_enabled')
+        try:
+            return delivery.status('user:'+str(user['user_id']),request_id)
+        except ValueError:
+            raise HTTPException(404,'link_delivery_not_found') from None
