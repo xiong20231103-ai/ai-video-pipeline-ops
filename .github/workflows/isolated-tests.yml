@@ -71,8 +71,15 @@ jobs:
           ./tests/test_state_files.ps1
           ./tests/test_hidden_updater.ps1
           ./tests/test_m2a_deploy.ps1
+          ./tests/test_shadow_launch.ps1
       - name: Real loopback command HTTP with durable fixture databases
         run: python -B tests/command_transport_integration.py
+      - name: Real Windows PowerShell 5.1 shadow launcher processes
+        shell: powershell
+        run: |
+          $env:PYTHONPATH="$PWD\.test-deps"
+          python -B tests/shadow_launcher_process_integration.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Real Windows job lifecycle with synthetic services and no home HTTP
         shell: powershell
         run: |

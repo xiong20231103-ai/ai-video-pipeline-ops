@@ -41,4 +41,19 @@ Write-Host "Dashboard is running at $url" -ForegroundColor Green
 # The project directory contains spaces.  Passing a bare relative script name
 # lets a broken/inherited working directory split it at "New project" and the
 # watchdog then loops without ever bringing 8765 online.
+$shadowSettings = 'E:\Backup\ops-shadow-control-v3\host-settings.json'
+if (Test-Path -LiteralPath $shadowSettings -PathType Leaf) {
+    $shadowHelperReady=$false
+    try {
+        . (Join-Path $project 'deploy\shadow-launch.ps1')
+        $shadowHelperReady=$true
+    } catch {}
+    if ($shadowHelperReady) {
+        Invoke-ShadowOrLegacy -Python $python -Project $project -SettingsPath $shadowSettings
+        exit $LASTEXITCODE
+    }
+    # A missing/broken optional helper uses the unchanged entry exactly once.
+    & $python (Join-Path $project "app.py")
+    exit $LASTEXITCODE
+}
 & $python (Join-Path $project "app.py")
