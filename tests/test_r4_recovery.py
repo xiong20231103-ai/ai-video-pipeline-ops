@@ -29,7 +29,7 @@ class RecoveryExtractionTests(unittest.TestCase):
     def setUp(self):
         self.temp=TemporaryDirectory(prefix='r4-isolated-');self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name)
-        self.source=(ROOT/'app.py').read_text(encoding='utf-8')
+        self.source=(ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8')
 
     def test_exact_bodies_and_all_provenance_lines_match_pinned_source(self):
         manifest=json.loads((ROOT/'docs/migration/r4-provenance.json').read_text(encoding='utf-8'))

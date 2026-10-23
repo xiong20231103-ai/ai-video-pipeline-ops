@@ -50,7 +50,7 @@ class R3TestCase(unittest.TestCase):
 class ReplayTests(R3TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.source = (ROOT/'app.py').read_text(encoding='utf-8')
+        cls.source = (ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8')
         cls.cases = json.loads((ROOT/'tests/fixtures/r3/cases.json').read_text(encoding='utf-8'))
         cls.expected = json.loads((ROOT/'tests/fixtures/r3/expected.json').read_text(encoding='utf-8'))
 

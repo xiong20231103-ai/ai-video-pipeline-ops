@@ -221,7 +221,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cases', type=Path, default=ROOT / 'tests/fixtures/r3/cases.json')
     args = parser.parse_args()
-    source = (ROOT / 'app.py').read_text(encoding='utf-8')
+    source = (ROOT / 'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8')
     cases = json.loads(args.cases.read_text(encoding='utf-8'))
     differences = []
     with tempfile.TemporaryDirectory(prefix='r3-replay-') as directory:
