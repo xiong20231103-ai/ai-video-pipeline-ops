@@ -11,7 +11,7 @@ import json
 from agent.core.snapshot import canonical, no_links
 from agent.core.source_profiles import PROFILES
 from tools.shadow_agent_observer import AgentReadObserver
-from tools.shadow_capture import CaptureError, validate_plan, _source
+from tools.shadow_capture import CaptureError, validate_plan, _source, measure_directory_stability
 
 MAX_STORE = 2 * 1024 * 1024 * 1024
 
@@ -95,6 +95,9 @@ def preflight(plan, source, evidence_root, archived_root, *, approved_bytes,
     reserve = 6 * max_capture_bytes + 16 * 1024 * 1024
     if reserve >= approved_bytes:
         blockers.append('capture_scratch_reserve_exceeds_store_limit')
+    directory_stability=measure_directory_stability(plan,evidence/'_directory_preflight_only')
+    if directory_stability['unmeasurableRounds']:blockers.append('directory_stability_unmeasurable')
+    if directory_stability['directoryChangeFailedRounds']:blockers.append('directory_stability_requires_review')
     blockers = sorted(set(blockers))
     return {'schema': 1, 'sourceSha256': source_hash,
             'planSha256': hashlib.sha256(canonical(plan)).hexdigest(),
@@ -103,6 +106,7 @@ def preflight(plan, source, evidence_root, archived_root, *, approved_bytes,
             'maxCaptureBytes': max_capture_bytes, 'captureReserveBytes': reserve,
             'approvedNewStoreBytes': approved_bytes, 'oldStoreIncludedInNewQuota': False,
             'explicitAbsentPathCount': absent,
+            'directoryStability':directory_stability,
             'batchCoverage': 'resume-segment-only' if batch_started_before_capture else 'start-not-yet-observed',
             'completeBatchEligible': False, 'dependencyClosureVerified': False,
             'installationPermitted': False, 'reviewRequired': True,

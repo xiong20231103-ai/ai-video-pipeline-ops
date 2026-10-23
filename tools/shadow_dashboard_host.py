@@ -29,6 +29,7 @@ class DashboardShadowHost:
         self.enabled = enabled
         self.maintenance = maintenance
         self.stop_requested = stop_requested
+        self.stop_reason = None
         self.owner_loop = None
         self.interval = interval_seconds
         self.join_seconds = join_seconds
@@ -79,8 +80,15 @@ class DashboardShadowHost:
                 except Exception:
                     self._state('blocked', 'shadow_stop_probe_failed')
 
+    def _control_stop_value(self):
+        try:
+            return self.stop_requested()
+        except Exception:
+            self.stop_reason = 'shadow_stop_probe_failed'
+            return True  # An unreadable control path disables only the observer.
+
     def _stop_from_control(self):
-        if not self.stop_requested():
+        if not self._control_stop_value():
             return False
         self.stop_event.set()
         if self.owner_loop is not None and self.owner_loop.is_running():
@@ -105,9 +113,9 @@ class DashboardShadowHost:
                     self.owner_loop = asyncio.get_running_loop()
                 except RuntimeError:
                     self.owner_loop = None
-                if self.stop_requested():
+                if self._control_stop_value():
                     self.stop_event.set()
-                    self._state('stopped', 'shadow_stop_latched')
+                    self._state('stopped', self.stop_reason or 'shadow_stop_latched')
                     return self.status()
                 self.binding = DashboardReadBinding(self.namespace, self.publisher.observer, self.routes)
                 self.thread = threading.Thread(target=self._loop, name='dashboard-shadow-capture', daemon=True)
@@ -148,7 +156,7 @@ class DashboardShadowHost:
         elif thread is not None and thread.is_alive() and not own_worker:
             self._state('blocked', 'shadow_worker_still_stopping')
         else:
-            self._state('stopped' if self.enabled else 'disabled')
+            self._state('stopped' if self.enabled else 'disabled', self.stop_reason)
         return self.status()
 
     def status(self):

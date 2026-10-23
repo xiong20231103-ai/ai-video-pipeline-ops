@@ -40,7 +40,7 @@ def experiment(scratch_parent, *, target_bytes=132419584, rounds=8):
                 started = time.perf_counter()
                 with closing(sqlite3.connect(db.as_uri()+'?mode=ro', uri=True)) as reader, \
                         closing(sqlite3.connect(target)) as output:
-                    reader.backup(output, pages=128, sleep=0.001)
+                    reader.backup(output, pages=-1, sleep=0.001)
                 backup_seconds = time.perf_counter()-started
                 hashes = []
                 fresh = 0

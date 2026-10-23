@@ -22,14 +22,18 @@ class CapturePublisher:
         for other in [self.source.parent,*self.retained]:
             if self.root==other or self.root.is_relative_to(other) or other.is_relative_to(self.root):raise CaptureError('evidence_root_overlap')
         validate_plan(plan,self.root/'_validation_destination')
-        self.state={'schema':1,'state':'dormant','published':0,'rejected':0,'businessRequests':0,'realShadowPassed':False,'switchAccepted':False}
-    def status(self):return dict(self.state)
+        self.state={'schema':1,'state':'dormant','published':0,'rejected':0,'captureAttempts':0,
+                    'directoryChangeRejected':0,'businessRequests':0,'realShadowPassed':False,'switchAccepted':False}
+    def status(self):
+        attempts=self.state['captureAttempts']
+        return {**self.state,'directoryChangeFailureRatio':self.state['directoryChangeRejected']/attempts if attempts else None}
     def tick(self):
         if not self.lock.acquire(blocking=False):return {**self.status(),'state':'busy'}
         try:
             now=self.clock()
             if self.last is not None and now-self.last<self.interval:return self.status()
             self.last=now
+            self.state['captureAttempts']+=1
             # Check external completeness BEFORE creating a staging directory.
             self.observer.observation()
             self.root.mkdir(parents=True,exist_ok=True)
@@ -63,6 +67,7 @@ class CapturePublisher:
                 'state_changed_in_window','state_content_changed_in_window','external_or_process_changed',
                 'directory_changed_in_window','database_changed_in_window','capture_window_exceeded'} else 'capture_rejected'
             self.state.update(state='blocked',lastCode=code,rejected=self.state['rejected']+1)
+            if code=='directory_changed_in_window':self.state['directoryChangeRejected']+=1
         finally:self.lock.release()
         return self.status()
     def loop(self,stop):

@@ -43,6 +43,15 @@ class CaptureRuntimeTests(unittest.TestCase):
         self.assertIn('workbench/state.json',self.publisher.plan['files'])
     def test_rate_limit_no_duplicate_capture(self):
         self.publisher.tick();self.assertEqual(1,self.publisher.tick()['published'])
+    def test_directory_failure_ratio_counts_attempted_cycles_not_rate_limited_ticks(self):
+        self.assertIsNone(self.publisher.status()['directoryChangeFailureRatio'])
+        with patch('tools.shadow_capture_runtime.aligned_capture',side_effect=CaptureError('directory_changed_in_window')):
+            result=self.publisher.tick()
+        self.assertEqual(1,result['directoryChangeFailureRatio']);self.assertEqual(1,result['captureAttempts'])
+        self.publisher.tick();self.assertEqual(1,self.publisher.status()['captureAttempts'])
+        self.tick+=31
+        result=self.publisher.tick()
+        self.assertEqual('captured',result['state']);self.assertEqual(.5,result['directoryChangeFailureRatio'])
     def test_read_change_rejects_and_does_not_publish(self):
         old=self.publisher.process_probe;calls=[]
         def probe():

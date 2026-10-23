@@ -87,6 +87,7 @@ def validate_plan(plan,destination):
     bindings={}
     for name,spec in {**files,**databases,**absent,**trees,**shallow}.items():
         relative(name);path=_source(roots,spec);bindings[name]=path
+        if name in trees and path==Path(path.anchor):raise CaptureError('recursive_drive_inventory_forbidden')
         if any(path==p or path.is_relative_to(p) for p in exclusions.values()):raise CaptureError('excluded_capture_input')
         if name in files and (path.name.lower() in PRIVATE_FILES or path.suffix.lower() not in {'.json','.csv','.txt','.log'}):raise CaptureError('state_content_not_allowed')
         if name in databases and (name!='repository/data/ops.db' or spec!={'root':'repository','path':'data/ops.db'}):raise CaptureError('database_not_allowlisted')
@@ -102,17 +103,25 @@ class DigestCache:
         current=self.partial.get(key)
         if not current or current['identity']!=info:
             current={'identity':dict(info),'hash':hashlib.sha256(),'offset':0};self.partial[key]=current;self.values.pop(key,None)
-        amount=min(max(0,budget),info['size']-current['offset'])
-        if amount:
-            with path.open('rb') as stream:
-                stream.seek(current['offset']);raw=stream.read(amount)
-            if len(raw)!=amount or _stat(path)!=info:
-                self.partial.pop(key,None);raise CaptureError('metadata_file_changed')
-            current['hash'].update(raw);current['offset']+=len(raw)
+        amount=min(max(0,budget),info['size']-current['offset']);used=0
+        try:
+            if amount:
+                with path.open('rb') as stream:
+                    stream.seek(current['offset'])
+                    while used<amount:
+                        raw=stream.read(min(1024*1024,amount-used));used+=len(raw)
+                        if not raw:break
+                        current['hash'].update(raw);current['offset']+=len(raw)
+            if used!=amount or _stat(path)!=info:
+                self.invalidate(path);return None,used
+        except OSError:
+            self.invalidate(path);return None,used
         if current['offset']!=info['size']:return None,amount
         digest=current['hash'].hexdigest();self.partial.pop(key,None)
         self.values[key]={'identity':dict(info),'sha256':digest}
-        return digest,amount
+        return digest,used
+    def invalidate(self,path):
+        self.values.pop(str(path),None);self.partial.pop(str(path),None)
     def hash(self,path,info):
         key=str(path);previous=self.values.get(key)
         if previous and previous['identity']==info:return previous['sha256'],0
@@ -130,7 +139,7 @@ def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None):
         pending=[(prefix,bindings[prefix])]
         while pending:
             name,path=pending.pop();info=_stat(path)
-            if info is None:raise CaptureError('metadata_root_missing_use_explicit_absence')
+            if info is None:raise CaptureError('metadata_root_missing_use_explicit_absence' if name==prefix else 'directory_changed_in_window')
             if name==prefix and info['kind']!='directory':raise CaptureError('metadata_root_must_be_directory')
             if name in nodes:raise CaptureError('overlapping_metadata_trees')
             if len(nodes)>=max_entries:raise CaptureError('metadata_entry_limit')
@@ -150,7 +159,6 @@ def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None):
                 digest,used=cache.observe(path,info,max_hash_bytes-hashed);hashed+=used
                 if digest is None:nodes[name]['hashPending']=True
                 else:nodes[name]['contentSha256']=digest
-                if _stat(path)!=info:raise CaptureError('metadata_file_changed')
     # Shallow parents list immediate child identities, but never certify the
     # contents of unvisited children. Recursive trees above own their contents.
     for prefix in plan.get('shallow',{}):
@@ -169,6 +177,54 @@ def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None):
             if node['kind']=='directory':nodes[name]['contentsCaptured']=False
         nodes[prefix]['contentsCaptured']=True
     return nodes,identity
+
+def reconcile_inventory(nodes,before,after,roots,digest_cache=None):
+    """Only directory membership/identity must be stable across the window.
+
+    File sizes/timestamps may grow during export. Such files lose their digest
+    and remain pending; the final metadata is measured, not called stable.
+    """
+    if set(before)!=set(after):raise CaptureError('directory_changed_in_window')
+    for name,old in before.items():
+        latest=after[name]
+        if old==latest:continue
+        if old['kind']=='directory' or latest['kind']=='directory':raise CaptureError('directory_changed_in_window')
+        nodes[name].update({key:latest[key] for key in ('kind','size','mtimeNs','ctimeNs')})
+        nodes[name].pop('contentSha256',None)
+        nodes[name]['hashPending']=True;nodes[name]['hashState']='writing_or_changed'
+        if digest_cache is not None:
+            alias,_,relative_name=name.partition('/')
+            digest_cache.invalidate(roots[alias]/relative_name)
+
+
+def measure_directory_stability(plan,destination,*,rounds=3,max_entries=10000,between=lambda:None):
+    """Explicit disabled-preflight probe, metadata only; never hashes media.
+
+    A paused host's ratio cannot predict an active batch. Report sample counts
+    and missing rounds separately instead of silently treating failures as zero.
+    """
+    if type(rounds) is not int or not 2<=rounds<=20:raise CaptureError('directory_probe_round_limit')
+    roots,bindings=validate_plan(plan,destination)
+    if not plan.get('trees') and not plan.get('shallow'):
+        return {'rounds':0,'directoryChangeFailedRounds':0,'unmeasurableRounds':0,
+                'directoryChangeFailureRatio':None,'measurementScope':'no-directory-bindings',
+                'activeBatchRateVerified':False}
+    changed=missing=0
+    for _ in range(rounds):
+        try:
+            nodes,before=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0)
+            between()
+            after=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0)[1]
+            reconcile_inventory(nodes,before,after,roots)
+        except CaptureError as error:
+            if str(error)=='directory_changed_in_window':changed+=1
+            else:missing+=1
+        except OSError:missing+=1
+    return {'rounds':rounds,'directoryChangeFailedRounds':changed,'unmeasurableRounds':missing,
+            'directoryChangeFailureRatio':changed/rounds if not missing else None,
+            'measurementScope':'paired-metadata-windows-only',
+            'activeBatchRateVerified':False}
+
 
 def _observations(process_probe,http_probe):
     processes=process_probe();http=http_probe();generation=None
@@ -237,20 +293,24 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
             database_proofs[name]={**proof,'openedAt':opened,'closedAt':now()}
             total+=target.stat().st_size
             _safe(sqlite_rows(target));databases[name]=target
-        ended_at=now();settings=plan.get('facts',{});_safe(settings)
-        if set(settings)-{'machineName','settings','metrics','collectorAlive','scan','historyResetGeneration','historyResetAt','historyAliases'}:raise CaptureError('unexpected_capture_fact')
-        facts={**settings,**processes,'http':http,'filesystem':nodes,'pathAliases':{str(p):name for name,p in roots.items()},'dependencyClosure':True,'absentPaths':sorted(missing),'completeDirectoryRoots':sorted(plan.get('trees',{})),'excludedPaths':sorted(plan.get('exclude',{}))}
-        facts['captureProof']={'schema':1,'openedAt':opened_at,'closedAt':ended_at,'processSha256':hashlib.sha256(canonical(processes)).hexdigest(),'httpSha256':hashlib.sha256(canonical(http)).hexdigest(),'inventorySha256':hashlib.sha256(canonical(inventory)).hexdigest(),'databaseSnapshotMethod':'sqlite-online-readonly','databaseSnapshots':database_proofs,'externalObservationGeneration':http_generation,'helperHashes':dependency_hashes}
-        result=capture(scratch/'package',files=copied,databases=databases,facts=facts,frozen_at=ended_at,legacy_sha256=source_sha,max_file_bytes=max_file_bytes,max_total_bytes=max_total_bytes)
         # Recheck the entire window, including external response bodies and PID birth identity.
         if _observations(process_probe,http_probe)!=(processes,http,http_generation):raise CaptureError('external_or_process_changed')
         if {name:_stat(bindings[name]) for name in before}!=before:raise CaptureError('state_changed_in_window')
         for name,path in copied.items():
             if digest_file(bindings[name])!=digest_file(path):raise CaptureError('state_content_changed_in_window')
         if any(_stat(bindings[name]) is not None for name in missing):raise CaptureError('absence_changed_in_window')
-        if _inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0)[1]!=inventory:raise CaptureError('directory_changed_in_window')
+        latest=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0)[1]
+        reconcile_inventory(nodes,inventory,latest,roots,digest_cache)
         if any(hashlib.sha256(source_path.with_name(name).read_text(encoding='utf-8-sig').encode()).hexdigest()!=value for name,value in dependency_hashes.items()):raise CaptureError('dependency_changed_in_window')
         if source_path.read_text(encoding='utf-8-sig')!=source or source_sha==PR49 and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('source_changed_in_window')
         if clock()-started>max_window_seconds:raise CaptureError('capture_window_exceeded')
+        ended_at=now();settings=plan.get('facts',{});_safe(settings)
+        if set(settings)-{'machineName','settings','metrics','collectorAlive','scan','historyResetGeneration','historyResetAt','historyAliases'}:raise CaptureError('unexpected_capture_fact')
+        facts={**settings,**processes,'http':http,'filesystem':nodes,'pathAliases':{str(p):name for name,p in roots.items()},'dependencyClosure':True,'absentPaths':sorted(missing),'completeDirectoryRoots':sorted(plan.get('trees',{})),'excludedPaths':sorted(plan.get('exclude',{}))}
+        facts['captureProof']={'schema':1,'openedAt':opened_at,'closedAt':ended_at,'processSha256':hashlib.sha256(canonical(processes)).hexdigest(),'httpSha256':hashlib.sha256(canonical(http)).hexdigest(),'inventorySha256':hashlib.sha256(canonical(inventory)).hexdigest(),'databaseSnapshotMethod':'sqlite-online-readonly','databaseSnapshots':database_proofs,'externalObservationGeneration':http_generation,'helperHashes':dependency_hashes}
+        facts['captureProof'].update(inventoryEndSha256=hashlib.sha256(canonical(latest)).hexdigest(),
+            metadataComparisonPolicy='directories-stable-files-point-in-time',
+            mediaHashPendingCount=sum(bool(node.get('hashPending')) for node in nodes.values()))
+        result=capture(scratch/'package',files=copied,databases=databases,facts=facts,frozen_at=ended_at,legacy_sha256=source_sha,max_file_bytes=max_file_bytes,max_total_bytes=max_total_bytes)
         os.replace(result.root,destination)
     return Snapshot(destination)

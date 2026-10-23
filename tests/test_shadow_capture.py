@@ -30,6 +30,20 @@ class AlignedCaptureTests(unittest.TestCase):
   snap=self.capture(max_hash_bytes=1)
   self.assertTrue(snap.manifest['facts']['filesystem']['workbench/metadata/output.mp4']['hashPending'])
   self.assertTrue((self.root/'snapshot').exists())
+ def test_growing_export_does_not_reject_entire_aligned_capture(self):
+  from unittest.mock import patch
+  import tools.shadow_capture as capture_module
+  original=capture_module._inventory;calls=[]
+  self.plan['hashMetadataFiles']=True
+  def inventory(*args,**kw):
+   calls.append(1)
+   if len(calls)==2:
+    with (self.live/'metadata/output.mp4').open('ab') as stream:stream.write(b'export-growing')
+   return original(*args,**kw)
+  with patch.object(capture_module,'_inventory',side_effect=inventory):snap=self.capture()
+  node=snap.manifest['facts']['filesystem']['workbench/metadata/output.mp4']
+  self.assertTrue(node['hashPending']);self.assertEqual('writing_or_changed',node['hashState'])
+  self.assertNotIn('contentSha256',node);self.assertEqual(len(b'fake-media-never-runexport-growing'),node['size'])
  def test_digest_cache_never_reuses_after_file_identity_changes(self):
   from tools.shadow_capture import DigestCache,_stat
   cache=DigestCache();file=self.live/'metadata/output.mp4';old=_stat(file);one,used=cache.hash(file,old);two,reused=cache.hash(file,_stat(file));self.assertEqual(one,two);self.assertGreater(used,0);self.assertEqual(0,reused)

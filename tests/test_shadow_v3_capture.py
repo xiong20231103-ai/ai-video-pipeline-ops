@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from agent.core.sandbox import SandboxIO
-from tools.shadow_capture import validate_plan, _inventory, DigestCache, CaptureError
+from tools.shadow_capture import validate_plan, _inventory, DigestCache, CaptureError, _stat, measure_directory_stability
 from tools.shadow_sqlite_snapshot import online_backup
 
 
@@ -84,6 +84,84 @@ class CaptureV3Tests(unittest.TestCase):
         self.assertEqual(4,cache.partial[str(media)]['offset'])
         result,_=self.inventory(cache,4)
         self.assertEqual(hashlib.sha256(b'changed').hexdigest(),result['final/10.22/video.mp4']['contentSha256'])
+
+    def test_drive_root_tree_rejected_even_with_shallow_and_output_exclusion(self):
+        anchor=Path(self.root.anchor)
+        plan={'schema':1,'roots':{'final':str(anchor)},'shallow':{'final':{'root':'final','path':'.'}},
+              'trees':{'final/recursive':{'root':'final','path':'.'}},
+              'exclude':{'final/'+self.root.relative_to(anchor).as_posix():{'root':'final','path':self.root.relative_to(anchor).as_posix()}}}
+        # Validation only. Never enumerate an actual drive root.
+        with self.assertRaisesRegex(CaptureError,'recursive_drive_inventory_forbidden'):
+            validate_plan(plan,self.root/'new-output')
+
+    def test_digest_reads_at_most_one_mib_and_growth_only_invalidates_this_file(self):
+        media=self.drive/'10.22/video.mp4';media.write_bytes(b'x'*(3*1024*1024))
+        info=_stat(media);cache=DigestCache();reads=[];original=Path.open
+        class GrowingReader:
+            def __enter__(self):self.inner=original(media,'rb');return self
+            def __exit__(self,*args):self.inner.close()
+            def seek(self,*args):return self.inner.seek(*args)
+            def read(self,amount):
+                reads.append(amount);raw=self.inner.read(amount)
+                if len(reads)==1:
+                    with original(media,'ab') as writer:writer.write(b'growing')
+                return raw
+        with patch.object(Path,'open',return_value=GrowingReader()):
+            digest,used=cache.observe(media,info,64*1024*1024)
+        self.assertIsNone(digest);self.assertEqual(3*1024*1024,used)
+        self.assertTrue(reads);self.assertLessEqual(max(reads),1024*1024)
+        self.assertNotIn(str(media),cache.partial);self.assertNotIn(str(media),cache.values)
+        nodes,_=self.inventory(cache)
+        self.assertIn('contentSha256',nodes['final/10.22/video.mp4'])
+
+    def test_directory_failure_ratio_distinguishes_file_growth_and_new_entry(self):
+        media=self.drive/'10.22/video.mp4'
+        _,bindings=validate_plan(self.plan,self.root/'output')
+        def grow():
+            with media.open('ab') as stream:stream.write(b'grow')
+        report=measure_directory_stability(self.plan,self.root/'output',between=grow)
+        self.assertEqual(0,report['directoryChangeFailureRatio'])
+        calls=[]
+        def new_entry():
+            calls.append(1);(media.parent/('new-'+str(len(calls)))).write_text('new')
+        report=measure_directory_stability(self.plan,self.root/'output',between=new_entry)
+        self.assertEqual(1,report['directoryChangeFailureRatio'])
+        self.assertFalse(report['activeBatchRateVerified'])
+
+    def test_single_backup_step_has_no_restart_while_wal_writer_commits(self):
+        source=self.root/'single.db';out=self.root/'single-backup.db';original=sqlite3.connect
+        completed=threading.Event();allow_writer=threading.Event();writer_done=threading.Event();errors=[]
+        with closing(original(source)) as writer:
+            writer.execute('PRAGMA journal_mode=WAL');writer.execute('CREATE TABLE items(id,payload)')
+            writer.executemany('INSERT INTO items VALUES(?,?)',((i,'x'*8000) for i in range(1024)));writer.commit()
+            def update():
+                try:
+                    allow_writer.wait(3)
+                    with closing(original(source,timeout=1)) as conn:
+                        conn.execute('UPDATE items SET id=id+1');conn.commit()
+                    writer_done.set()
+                except Exception as error:errors.append(type(error).__name__)
+            thread=threading.Thread(target=update);thread.start();steps=[];callbacks=[]
+            class Reader:
+                def __init__(self,conn):self.conn=conn
+                def execute(self,*args):return self.conn.execute(*args)
+                def close(self):self.conn.close()
+                def backup(self,target,**options):
+                    steps.append(options['pages']);progress=options['progress']
+                    def on_progress(status,remaining,total):
+                        callbacks.append((status,remaining));allow_writer.set()
+                        if not writer_done.wait(2):raise AssertionError('WAL writer blocked during backup callback')
+                        progress(status,remaining,total)
+                    return self.conn.backup(target,**{**options,'progress':on_progress})
+            def connect(path,*args,**kw):
+                conn=original(path,*args,**kw)
+                return Reader(conn) if kw.get('uri') else conn
+            try:
+                with patch('tools.shadow_sqlite_snapshot.sqlite3.connect',side_effect=connect):
+                    online_backup(source,out,max_bytes=16*1024*1024)
+            finally:allow_writer.set();thread.join(3)
+            self.assertFalse(errors);self.assertFalse(thread.is_alive());self.assertTrue(writer_done.is_set())
+            self.assertEqual([-1],steps);self.assertEqual([(sqlite3.SQLITE_DONE,0)],callbacks)
 
     def test_readonly_online_backup_includes_wal_and_does_not_lock_out_writer(self):
         source=self.root/'source.db';out=self.root/'snapshot.db'

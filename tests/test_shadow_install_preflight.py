@@ -44,6 +44,10 @@ class PreflightTests(unittest.TestCase):
         self.assertFalse(result['installationPermitted'])
         self.assertFalse(result['dependencyClosureVerified'])
         self.assertEqual(before, (self.root/'live/state.json').read_bytes())
+        self.assertEqual(0,result['directoryStability']['rounds'])
+        self.assertIsNone(result['directoryStability']['directoryChangeFailureRatio'])
+        self.assertEqual('no-directory-bindings',result['directoryStability']['measurementScope'])
+        self.assertFalse(result['directoryStability']['activeBatchRateVerified'])
 
     def test_partial_batch_never_becomes_full_batch_or_zero_difference(self):
         result = self.call()

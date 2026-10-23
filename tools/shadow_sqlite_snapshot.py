@@ -30,8 +30,9 @@ def online_backup(source, destination, *, max_bytes, timeout_seconds=20, clock=t
                     raise CaptureError('online_backup_byte_limit')
                 if clock()-started > timeout_seconds:
                     raise CaptureError('online_backup_deadline')
+            # One uninterrupted backup step avoids restart on intervening commits.
             # No BEGIN IMMEDIATE, no producer lock and no checkpoint/VACUUM.
-            incoming.backup(outgoing, pages=128, progress=progress, sleep=0.001)
+            incoming.backup(outgoing, pages=-1, progress=progress, sleep=0.001)
             if outgoing.execute('PRAGMA quick_check').fetchone()[0] != 'ok':
                 raise CaptureError('online_backup_integrity_failed')
         if destination.stat().st_size > max_bytes:
