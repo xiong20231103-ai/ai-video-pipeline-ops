@@ -4,7 +4,7 @@ Only exact reviewed paths are accepted. Directory entries are facts, not media
 copies. Database snapshots use a bounded read-only SQLite online backup.
 """
 from __future__ import annotations
-import hashlib,json,os,re,sqlite3,tempfile,time,stat
+import hashlib,json,os,re,sqlite3,tempfile,time,stat,math
 from contextlib import closing
 from datetime import datetime,timezone
 from pathlib import Path
@@ -31,24 +31,130 @@ def _safe(value):
         for child in value:_safe(child)
     elif isinstance(value,str) and re.search(r'''(?i)["']?[^"'\s]*(?:token|password|secret|webhook|authorization|cookie|api.?key)[^"'\s]*["']\s*[:=]|-----BEGIN .*PRIVATE KEY-----|\bgh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}''',value):raise CaptureError('private_capture_string')
 
+SMALL_FILE_LIMIT=1024*1024
+SMALL_READ_LIMIT=32*1024*1024
+
+
+class ChangeReport:
+    def __init__(self):
+        self.rows=[];self.counts={};self.rewritten=0;self.sampled=set();self.truncated=False
+    def add(self,path,kind,*,rewritten=False):
+        self.counts[kind]=self.counts.get(kind,0)+1
+        if rewritten:self.rewritten+=1
+        key=(path,kind)
+        if key not in self.sampled:
+            if len(self.rows)<50:self.rows.append({'path':path,'type':kind});self.sampled.add(key)
+            else:self.truncated=True
+    def report(self):
+        return {'changes':list(self.rows),'changeCounts':dict(self.counts),
+                'rewrittenSameContentCount':self.rewritten,
+                'statOnlyChangeCount':self.counts.get('stat-only',0),
+                'changesTruncated':self.truncated}
+
+
+class SmallReadBudget:
+    def __init__(self,limit=SMALL_READ_LIMIT):
+        if type(limit) is not int or not 0<=limit<=SMALL_READ_LIMIT:raise CaptureError('small_read_budget_limit')
+        self.limit=limit;self.used=0;self.seconds=0.0;self.pending=0
+
+
+def _check_deadline(deadline,clock=time.monotonic):
+    if deadline is not None and clock()>deadline:raise CaptureError('capture_window_exceeded')
+
+
+def _info(s):
+    if getattr(s,'st_file_attributes',0)&getattr(stat,'FILE_ATTRIBUTE_REPARSE_POINT',1024):raise CaptureError('reparse_point_forbidden')
+    if not stat.S_ISREG(s.st_mode) and not stat.S_ISDIR(s.st_mode):raise CaptureError('special_file_forbidden')
+    return {'kind':'directory' if stat.S_ISDIR(s.st_mode) else 'file','size':s.st_size if stat.S_ISREG(s.st_mode) else 0,
+            'mtimeNs':s.st_mtime_ns,'ctimeNs':s.st_ctime_ns,'inode':s.st_ino,'device':s.st_dev}
+
+
 def _stat(path):
     path=no_links(path)
-    try:s=path.lstat()
+    try:return _info(path.lstat())
     except FileNotFoundError:return None
-    if getattr(s,'st_file_attributes',0)&getattr(__import__('stat'),'FILE_ATTRIBUTE_REPARSE_POINT',1024):raise CaptureError('reparse_point_forbidden')
-    if not stat.S_ISREG(s.st_mode) and not stat.S_ISDIR(s.st_mode):raise CaptureError('special_file_forbidden')
-    return {'kind':'directory' if stat.S_ISDIR(s.st_mode) else 'file','size':s.st_size if stat.S_ISREG(s.st_mode) else 0,'mtimeNs':s.st_mtime_ns,'ctimeNs':s.st_ctime_ns,'inode':s.st_ino,'device':s.st_dev}
 
-def _read(path,limit):
-    before=_stat(path)
-    if not before or before['kind']!='file':raise CaptureError('required_capture_file_missing')
-    if before['size']>limit:raise CaptureError('capture_file_limit')
-    with path.open('rb') as f:
-        opened=os.fstat(f.fileno())
-        if (opened.st_dev,opened.st_ino,opened.st_size,opened.st_mtime_ns)!=(before['device'],before['inode'],before['size'],before['mtimeNs']):raise CaptureError('capture_open_identity_changed')
-        data=f.read(limit+1)
-    if len(data)>limit or _stat(path)!=before:raise CaptureError('capture_file_changed')
-    return data,before
+
+def _read_version(path,limit,*,deadline=None,clock=time.monotonic,on_chunk=None):
+    _check_deadline(deadline,clock);path=no_links(path)
+    try:
+        with path.open('rb') as stream:
+            opened=_info(os.fstat(stream.fileno()))
+            if opened['kind']!='file' or opened['size']>limit:raise CaptureError('capture_file_limit')
+            parts=[];size=0
+            while size<limit:
+                _check_deadline(deadline,clock)
+                raw=stream.read(min(1024*1024,limit-size))
+                if not raw:break
+                if on_chunk is not None:on_chunk(len(raw))
+                parts.append(raw);size+=len(raw)
+            final=_info(os.fstat(stream.fileno()))
+            if final['size']>limit:raise CaptureError('capture_file_limit')
+        return b''.join(parts),opened,final
+    except FileNotFoundError:raise CaptureError('state_changed_in_window') from None
+
+
+def _same_version(a,b):
+    keys=('kind','size','mtimeNs','inode','device')
+    return a is not None and b is not None and all(a[k]==b[k] for k in keys)
+
+
+def _read(path,limit,*,changes=None,logical_path=None,deadline=None,clock=time.monotonic):
+    raw,opened,closed=_read_version(path,limit,deadline=deadline,clock=clock)
+    latest=_stat(path)
+    if _same_version(opened,closed) and _same_version(closed,latest):return raw,latest
+    second,second_open,second_close=_read_version(path,limit,deadline=deadline,clock=clock)
+    second_latest=_stat(path)
+    if (not _same_version(second_open,second_close) or not _same_version(second_latest,second_close)
+            or hashlib.sha256(raw).digest()!=hashlib.sha256(second).digest()):
+        if changes is not None:changes.add(logical_path,'content-change')
+        raise CaptureError('state_changed_in_window')
+    if changes is not None:changes.add(logical_path,'stat-only',rewritten=True)
+    return second,second_latest
+
+
+def recheck_state(path,raw,before,*,limit,changes,logical_path,deadline=None,clock=time.monotonic):
+    latest=_stat(path)
+    if latest==before:return latest
+    if latest is None:
+        changes.add(logical_path,'removed');raise CaptureError('state_changed_in_window')
+    if latest['kind']!='file':
+        changes.add(logical_path,'type-change');raise CaptureError('state_changed_in_window')
+    body,latest=_read(path,limit,deadline=deadline,clock=clock)
+    if hashlib.sha256(body).digest()!=hashlib.sha256(raw).digest():
+        changes.add(logical_path,'content-change');raise CaptureError('state_changed_in_window')
+    changes.add(logical_path,'stat-only',rewritten=True)
+    return latest
+
+
+def _small_digest(path,info,budget,*,deadline=None,clock=time.monotonic):
+    if info['size']>budget.limit-budget.used:
+        budget.pending+=1;return None,info
+    started=clock()
+    # Account actual reads, including one replacement retry, before each read.
+    def version():
+        remaining=budget.limit-budget.used
+        if info['size']>remaining:return None
+        def account(amount):budget.used+=amount
+        raw,opened,closed=_read_version(path,min(remaining,SMALL_FILE_LIMIT),deadline=deadline,clock=clock,on_chunk=account)
+        _safe(raw.decode('utf-8-sig'))
+        return hashlib.sha256(raw).hexdigest(),opened,closed
+    try:
+        one=version()
+        if one is None:budget.pending+=1;return None,info
+        latest=_stat(path)
+        if _same_version(one[1],one[2]) and _same_version(one[2],latest):return one[0],latest
+        two=version()
+        two_latest=_stat(path)
+        if two is not None and _same_version(two[1],two[2]) and _same_version(two[2],two_latest) and one[0]==two[0]:return two[0],two_latest
+        budget.pending+=1;return None,latest or info
+    except (OSError,UnicodeError):
+        budget.pending+=1;return None,info
+    except CaptureError as error:
+        if str(error)=='capture_window_exceeded':raise
+        budget.pending+=1;return None,info
+    finally:budget.seconds+=clock()-started
+
 
 def _source(roots,spec):
     if not isinstance(spec,dict) or set(spec)!={'root','path'} or spec['root'] not in roots:raise CaptureError('invalid_capture_binding')
@@ -131,99 +237,145 @@ class DigestCache:
         self.values[key]={'identity':dict(info),'sha256':digest}
         return digest,info['size']
 
-def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None):
+def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None,*,small_budget=None,baseline=None,deadline=None,clock=time.monotonic):
     nodes={};identity={};hashed=0
     excluded=[_source({k:no_links(v) for k,v in plan['roots'].items()},spec) for spec in plan.get('exclude',{}).values()]
     def excluded_path(path):return any(path==base or path.is_relative_to(base) for base in excluded)
+    def store(name,path,info,*,shallow=False):
+        nonlocal hashed
+        _check_deadline(deadline,clock)
+        if name in nodes:raise CaptureError('overlapping_metadata_trees')
+        if len(nodes)>=max_entries:raise CaptureError('metadata_entry_limit')
+        if path.suffix.lower()=='.lock' and info['kind']=='file':
+            nodes[name]={'kind':'file','exists':True,'metadataPolicy':'existence-only'}
+            identity[name]={'kind':'file','exists':True};return
+        node={k:info[k] for k in ('kind','size','mtimeNs','ctimeNs')}
+        if info['kind']=='file':
+            eligible=(not shallow and path.suffix.lower() in {'.json','.txt','.log'} and path.name.lower() not in PRIVATE_FILES and info['size']<=SMALL_FILE_LIMIT)
+            previous=(baseline or {}).get(name,{})
+            same=previous and {k:v for k,v in previous.items() if k!='contentSha256'}==info
+            if small_budget is not None and eligible:
+                if same and previous.get('contentSha256'):digest=previous['contentSha256']
+                else:digest,info=_small_digest(path,info,small_budget,deadline=deadline,clock=clock)
+                node.update({k:info[k] for k in ('kind','size','mtimeNs','ctimeNs')})
+                if digest is None:node.update(hashPending=True,hashState='content_comparison_pending')
+                else:node['contentSha256']=digest;info={**info,'contentSha256':digest}
+            elif small_budget is not None and not shallow:
+                node.update(hashPending=True,hashState='large_or_media_metadata_only')
+            elif not shallow and plan.get('hashMetadataFiles',False):
+                if path.name.lower() in PRIVATE_FILES or path.suffix.lower() in {'.env','.dat','.exe','.dll'}:
+                    node['hashUnavailable']='private_or_non_evidence_type'
+                else:
+                    digest,used=(digest_cache or DigestCache()).observe(path,info,max_hash_bytes-hashed);hashed+=used
+                    if digest is None:node['hashPending']=True
+                    else:node['contentSha256']=digest
+        if shallow and info['kind']=='directory':node['contentsCaptured']=False
+        identity[name]=info;nodes[name]=node
+    def children(path):
+        # Ancestors checked once per directory, not once for every sibling.
+        # The child stat never follows a link; every reparse/special node is rejected.
+        no_links(path)
+        rows=[]
+        with os.scandir(path) as entries:
+            for entry in entries:
+                _check_deadline(deadline,clock)
+                child=path/entry.name
+                if excluded_path(child):continue
+                try:info=_info(os.stat(child,follow_symlinks=False))
+                except FileNotFoundError:raise CaptureError('directory_changed_in_window') from None
+                rows.append((entry.name,child,info))
+                if len(rows)+len(nodes)>max_entries:raise CaptureError('metadata_entry_limit')
+        return sorted(rows,key=lambda row:row[0])
     for prefix in plan.get('trees',{}):
-        pending=[(prefix,bindings[prefix])]
+        pending=[(prefix,bindings[prefix],None)]
         while pending:
-            name,path=pending.pop();info=_stat(path)
+            name,path,info=pending.pop();_check_deadline(deadline,clock)
+            if info is None:info=_stat(path)
             if info is None:raise CaptureError('metadata_root_missing_use_explicit_absence' if name==prefix else 'directory_changed_in_window')
             if name==prefix and info['kind']!='directory':raise CaptureError('metadata_root_must_be_directory')
-            if name in nodes:raise CaptureError('overlapping_metadata_trees')
-            if len(nodes)>=max_entries:raise CaptureError('metadata_entry_limit')
-            identity[name]=info;nodes[name]={k:info[k] for k in ('kind','size','mtimeNs','ctimeNs')}
+            store(name,path,info)
             if info['kind']=='directory':
-                children=[]
-                for child in path.iterdir():
-                    if excluded_path(child):continue
-                    children.append(child)
-                    if len(children)+len(nodes)+len(pending)>max_entries:raise CaptureError('metadata_entry_limit')
-                children.sort(key=lambda p:p.name)
-                pending.extend((name+'/'+p.name,p) for p in reversed(children))
-            elif plan.get('hashMetadataFiles',False):
-                if path.name.lower() in PRIVATE_FILES or path.suffix.lower() in {'.env','.dat','.exe','.dll'}:
-                    nodes[name]['hashUnavailable']='private_or_non_evidence_type';continue
-                cache=digest_cache or DigestCache()
-                digest,used=cache.observe(path,info,max_hash_bytes-hashed);hashed+=used
-                if digest is None:nodes[name]['hashPending']=True
-                else:nodes[name]['contentSha256']=digest
-    # Shallow parents list immediate child identities, but never certify the
-    # contents of unvisited children. Recursive trees above own their contents.
+                rows=children(path)
+                if len(rows)+len(nodes)+len(pending)>max_entries:raise CaptureError('metadata_entry_limit')
+                pending.extend((name+'/'+leaf,child,node) for leaf,child,node in reversed(rows))
     for prefix in plan.get('shallow',{}):
         path=bindings[prefix];info=_stat(path)
         if info is None or info['kind']!='directory':raise CaptureError('shallow_directory_required')
-        rows=[(prefix,path,info)]
-        for child in sorted(path.iterdir(),key=lambda p:p.name):
-            if excluded_path(child):continue
-            child_info=_stat(child)
-            if child_info is None:raise CaptureError('directory_changed_in_window')
-            rows.append((prefix+'/'+child.name,child,child_info))
-            if len(rows)+len(nodes)>max_entries:raise CaptureError('metadata_entry_limit')
-        for name,child,node in rows:
-            if name in nodes:continue
-            identity[name]=node;nodes[name]={k:node[k] for k in ('kind','size','mtimeNs','ctimeNs')}
-            if node['kind']=='directory':nodes[name]['contentsCaptured']=False
+        if prefix not in nodes:store(prefix,path,info,shallow=True)
+        for leaf,child,node in children(path):
+            name=prefix+'/'+leaf
+            if name not in nodes:store(name,child,node,shallow=True)
         nodes[prefix]['contentsCaptured']=True
     return nodes,identity
 
-def reconcile_inventory(nodes,before,after,roots,digest_cache=None):
-    """Only directory membership/identity must be stable across the window.
 
-    File sizes/timestamps may grow during export. Such files lose their digest
-    and remain pending; the final metadata is measured, not called stable.
-    """
-    if set(before)!=set(after):raise CaptureError('directory_changed_in_window')
+def reconcile_inventory(nodes,before,after,roots,digest_cache=None,*,changes=None):
+    changes=changes if changes is not None else ChangeReport()
+    changed=False
+    for name in sorted(set(before)|set(after)):
+        if name not in before:changes.add(name,'added');changed=True
+        elif name not in after:changes.add(name,'removed');changed=True
+        elif before[name]['kind']!=after[name]['kind']:changes.add(name,'type-change');changed=True
+    if changed:raise CaptureError('directory_changed_in_window')
     for name,old in before.items():
         latest=after[name]
         if old==latest:continue
-        if old['kind']=='directory' or latest['kind']=='directory':raise CaptureError('directory_changed_in_window')
-        nodes[name].update({key:latest[key] for key in ('kind','size','mtimeNs','ctimeNs')})
+        nodes[name].update({k:latest[k] for k in ('kind','size','mtimeNs','ctimeNs') if k in latest})
+        if old['kind']=='directory':
+            # Membership and type were checked above. Preserve final timestamps.
+            changes.add(name,'stat-only');continue
+        if old.get('contentSha256') and old.get('contentSha256')==latest.get('contentSha256'):
+            nodes[name]['rewrittenSameContent']=True
+            nodes[name]['contentSha256']=latest['contentSha256']
+            nodes[name].pop('hashPending',None);nodes[name].pop('hashState',None)
+            changes.add(name,'stat-only',rewritten=True);continue
         nodes[name].pop('contentSha256',None)
         nodes[name]['hashPending']=True;nodes[name]['hashState']='writing_or_changed'
+        changes.add(name,'content-change' if old.get('contentSha256') and latest.get('contentSha256') else 'stat-unverified')
         if digest_cache is not None:
             alias,_,relative_name=name.partition('/')
-            digest_cache.invalidate(roots[alias]/relative_name)
+            # Invalidate by inventory path when a logical root has a named alias.
+            for key in list(digest_cache.values):
+                if str(roots[alias]/relative_name)==key:digest_cache.invalidate(Path(key))
+    return changes.report()
 
 
-def measure_directory_stability(plan,destination,*,rounds=3,max_entries=10000,between=lambda:None):
-    """Explicit disabled-preflight probe, metadata only; never hashes media.
-
-    A paused host's ratio cannot predict an active batch. Report sample counts
-    and missing rounds separately instead of silently treating failures as zero.
-    """
+def measure_directory_stability(plan,destination,*,rounds=3,max_entries=10000,between=lambda:None,clock=time.monotonic):
     if type(rounds) is not int or not 2<=rounds<=20:raise CaptureError('directory_probe_round_limit')
     roots,bindings=validate_plan(plan,destination)
+    changes=ChangeReport();budget=SmallReadBudget();timings=[];changed=missing=0
     if not plan.get('trees') and not plan.get('shallow'):
         return {'rounds':0,'directoryChangeFailedRounds':0,'unmeasurableRounds':0,
                 'directoryChangeFailureRatio':None,'measurementScope':'no-directory-bindings',
-                'activeBatchRateVerified':False}
-    changed=missing=0
-    for _ in range(rounds):
+                'activeBatchRateVerified':False,**changes.report(),'smallFileReadBytes':0,
+                'smallFileHashSeconds':0,'windows':[]}
+    for number in range(rounds):
+        started=clock();deadline=started+20;hash_start=budget.seconds;gap=0;entry_count=None
         try:
-            nodes,before=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0)
-            between()
-            after=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0)[1]
-            reconcile_inventory(nodes,before,after,roots)
+            nodes,before=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0,
+                                    small_budget=budget,deadline=deadline,clock=clock)
+            entry_count=len(before);gap_start=clock();between();gap=clock()-gap_start;_check_deadline(deadline,clock)
+            after=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0,
+                             small_budget=budget,baseline=before,deadline=deadline,clock=clock)[1]
+            reconcile_inventory(nodes,before,after,roots,changes=changes)
+            _check_deadline(deadline,clock)
+            status='measured'
         except CaptureError as error:
             if str(error)=='directory_changed_in_window':changed+=1
             else:missing+=1
-        except OSError:missing+=1
+            status=str(error)
+        except OSError:missing+=1;status='metadata_unavailable'
+        seconds=clock()-started
+        timings.append({'window':number+1,'seconds':seconds,'hashSeconds':budget.seconds-hash_start,
+                        'enumerationAndComparisonSeconds':max(0,seconds-(budget.seconds-hash_start)-gap),
+                        'betweenSeconds':gap,'entries':entry_count,
+                        'status':status,'within20Seconds':seconds<=20})
     return {'rounds':rounds,'directoryChangeFailedRounds':changed,'unmeasurableRounds':missing,
             'directoryChangeFailureRatio':changed/rounds if not missing else None,
-            'measurementScope':'paired-metadata-windows-only',
-            'activeBatchRateVerified':False}
+            'measurementScope':'content-aware-directory-windows','activeBatchRateVerified':False,
+            **changes.report(),'smallFileReadBytes':budget.used,'smallFileHashSeconds':budget.seconds,
+            'smallFileHashPendingCount':budget.pending,'windows':timings,
+            'maxWindowSeconds':max(row['seconds'] for row in timings)}
 
 
 def _observations(process_probe,http_probe):
@@ -243,8 +395,8 @@ def _observations(process_probe,http_probe):
 
 def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024,max_entries=10000,max_hash_bytes=64*1024*1024,max_window_seconds=20,digest_cache=None,clock=time.monotonic,now=lambda:datetime.now(timezone.utc).isoformat()):
     roots,bindings=validate_plan(plan,destination)
-    if max_window_seconds<=0 or max_window_seconds>60:raise CaptureError('capture_window_limit')
-    started=clock();opened_at=now();source_path=no_links(source_path)
+    if type(max_window_seconds) not in (int,float) or not math.isfinite(max_window_seconds) or not 0<max_window_seconds<=20:raise CaptureError('capture_window_limit')
+    started=clock();deadline=started+max_window_seconds;changes=ChangeReport();small_budget=SmallReadBudget();opened_at=now();source_path=no_links(source_path)
     if source_path.stat().st_size>2*1024*1024:raise CaptureError('capture_source_byte_limit')
     source=source_path.read_text(encoding='utf-8-sig');source_sha=hashlib.sha256(source.encode()).hexdigest()
     if source_sha not in PROFILES:raise CaptureError('unreviewed_capture_source')
@@ -262,7 +414,7 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
         dependency_hashes[name]=actual
     if source_sha==PR49 and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('capture_source_dependency_mismatch')
     processes,http,http_generation=_observations(process_probe,http_probe)
-    nodes,inventory=_inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache)
+    nodes,inventory=_inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache,small_budget=small_budget,deadline=deadline,clock=clock)
     missing={k:_stat(bindings[k]) for k in plan.get('absent',{})}
     if any(v is not None for v in missing.values()):raise CaptureError('declared_absence_exists')
     before={};copied={};database_proofs={};total=0
@@ -271,7 +423,7 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
     with tempfile.TemporaryDirectory(prefix='.aligned-capture-',dir=destination.parent) as folder:
         scratch=Path(folder)
         for name in plan.get('files',{}):
-            body,info=_read(bindings[name],max_file_bytes);total+=len(body)
+            body,info=_read(bindings[name],max_file_bytes,changes=changes,logical_path=name,deadline=deadline,clock=clock);total+=len(body)
             if total>max_total_bytes:raise CaptureError('capture_total_limit')
             try:
                 text=body.decode('utf-8-sig');_safe(text)
@@ -289,18 +441,18 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
             target=scratch/'database-normalized'/name;target.parent.mkdir(parents=True,exist_ok=True)
             opened=now()
             proof=online_backup(bindings[name],target,max_bytes=max_total_bytes-total,
-                                timeout_seconds=max_window_seconds,clock=clock)
+                                timeout_seconds=max(.001,deadline-clock()),clock=clock)
             database_proofs[name]={**proof,'openedAt':opened,'closedAt':now()}
             total+=target.stat().st_size
             _safe(sqlite_rows(target));databases[name]=target
         # Recheck the entire window, including external response bodies and PID birth identity.
         if _observations(process_probe,http_probe)!=(processes,http,http_generation):raise CaptureError('external_or_process_changed')
-        if {name:_stat(bindings[name]) for name in before}!=before:raise CaptureError('state_changed_in_window')
         for name,path in copied.items():
-            if digest_file(bindings[name])!=digest_file(path):raise CaptureError('state_content_changed_in_window')
+            recheck_state(bindings[name],path.read_bytes(),before[name],limit=max_file_bytes,
+                          changes=changes,logical_path=name,deadline=deadline,clock=clock)
         if any(_stat(bindings[name]) is not None for name in missing):raise CaptureError('absence_changed_in_window')
-        latest=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0)[1]
-        reconcile_inventory(nodes,inventory,latest,roots,digest_cache)
+        latest=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0,small_budget=small_budget,baseline=inventory,deadline=deadline,clock=clock)[1]
+        reconcile_inventory(nodes,inventory,latest,roots,digest_cache,changes=changes)
         if any(hashlib.sha256(source_path.with_name(name).read_text(encoding='utf-8-sig').encode()).hexdigest()!=value for name,value in dependency_hashes.items()):raise CaptureError('dependency_changed_in_window')
         if source_path.read_text(encoding='utf-8-sig')!=source or source_sha==PR49 and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('source_changed_in_window')
         if clock()-started>max_window_seconds:raise CaptureError('capture_window_exceeded')
@@ -309,7 +461,8 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
         facts={**settings,**processes,'http':http,'filesystem':nodes,'pathAliases':{str(p):name for name,p in roots.items()},'dependencyClosure':True,'absentPaths':sorted(missing),'completeDirectoryRoots':sorted(plan.get('trees',{})),'excludedPaths':sorted(plan.get('exclude',{}))}
         facts['captureProof']={'schema':1,'openedAt':opened_at,'closedAt':ended_at,'processSha256':hashlib.sha256(canonical(processes)).hexdigest(),'httpSha256':hashlib.sha256(canonical(http)).hexdigest(),'inventorySha256':hashlib.sha256(canonical(inventory)).hexdigest(),'databaseSnapshotMethod':'sqlite-online-readonly','databaseSnapshots':database_proofs,'externalObservationGeneration':http_generation,'helperHashes':dependency_hashes}
         facts['captureProof'].update(inventoryEndSha256=hashlib.sha256(canonical(latest)).hexdigest(),
-            metadataComparisonPolicy='directories-stable-files-point-in-time',
+            metadataComparisonPolicy='directory-membership-type-state-content',
+            stabilityChanges=changes.report(),smallFileReadBytes=small_budget.used,smallFileHashSeconds=small_budget.seconds,
             mediaHashPendingCount=sum(bool(node.get('hashPending')) for node in nodes.values()))
         result=capture(scratch/'package',files=copied,databases=databases,facts=facts,frozen_at=ended_at,legacy_sha256=source_sha,max_file_bytes=max_file_bytes,max_total_bytes=max_total_bytes)
         os.replace(result.root,destination)

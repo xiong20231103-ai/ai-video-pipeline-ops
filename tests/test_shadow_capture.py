@@ -23,7 +23,7 @@ class AlignedCaptureTests(unittest.TestCase):
   self.assertEqual(self.state.read_bytes(),snap.read('workbench/state.json'));self.assertTrue(facts['dependencyClosure']);self.assertEqual(['workbench/missing.json'],facts['absentPaths']);self.assertEqual(self.http,facts['http']);self.assertEqual(self.process['processRecords'],facts['processRecords']);self.assertFalse(snap.manifest['realBatchEvidence'])
   self.assertEqual('sqlite-online-readonly',facts['captureProof']['databaseSnapshotMethod']);self.assertNotIn('workbench/metadata/output.mp4',snap.manifest['files']);self.assertEqual('file',facts['filesystem']['workbench/metadata/output.mp4']['kind'])
  def test_media_digest_is_explicit_bounded_and_not_media_copy(self):
-  self.plan['hashMetadataFiles']=True;snap=self.capture();node=snap.manifest['facts']['filesystem']['workbench/metadata/output.mp4'];self.assertEqual(hashlib.sha256(b'fake-media-never-run').hexdigest(),node['contentSha256'])
+  self.plan['hashMetadataFiles']=True;snap=self.capture();node=snap.manifest['facts']['filesystem']['workbench/metadata/output.mp4'];self.assertTrue(node['hashPending']);self.assertEqual('large_or_media_metadata_only',node['hashState']);self.assertNotIn('contentSha256',node)
   self.assertFalse((snap.root/'workbench/metadata/output.mp4').exists())
  def test_media_hash_budget_publishes_explicit_pending_digest(self):
   self.plan['hashMetadataFiles']=True

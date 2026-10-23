@@ -189,6 +189,28 @@ class HostPreflightTests(unittest.TestCase):
         self.assertIsNone(result['rounds'][0]['directoryChangeFailedRounds'])
         self.assertNotIn('PRIVATE-CANARY',json.dumps(result))
 
+    def test_host_same_content_replacement_is_measured_and_diagnosed(self):
+        original=live.online_backup;body=self.state.read_bytes()
+        def backup(*args,**kwargs):
+            result=original(*args,**kwargs)
+            temporary=self.state.with_suffix('.tmp');temporary.write_bytes(body);os.replace(temporary,self.state)
+            return result
+        with patch.object(live,'online_backup',side_effect=backup):
+            report=live.run_preflight(self.dashboard,self.spec,self.control)
+        self.assertGreaterEqual(report['stabilityChanges']['rewrittenSameContentCount'],1)
+        self.assertIn('databaseBackupSeconds',report['phaseTimings'])
+        self.assertLess(report['phaseTimings']['inputWindowSeconds'],20)
+
+    def test_host_content_change_has_logical_path_diagnostics(self):
+        original=live.online_backup
+        def backup(*args,**kwargs):
+            result=original(*args,**kwargs);dump(self.state,{'state':'changed'});return result
+        with patch.object(live,'online_backup',side_effect=backup):
+            with self.assertRaisesRegex(live.CaptureError,'state_changed_in_window') as found:
+                live.run_preflight(self.dashboard,self.spec,self.control)
+        self.assertIn({'path':'repository/data/state.json','type':'content-change'},found.exception.diagnostics['changes'])
+        self.assertNotIn('changed',json.dumps(found.exception.diagnostics['changes']))
+
     def test_false_absence_and_missing_required_state_reported(self):
         self.state.unlink();(self.db.parent/'absent.json').write_text('{}')
         report=live.run_preflight(self.dashboard,self.spec,self.control)
