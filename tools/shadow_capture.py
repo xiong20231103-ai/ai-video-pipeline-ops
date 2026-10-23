@@ -15,21 +15,33 @@ from tools.shadow_sqlite_snapshot import online_backup
 
 ROOT_NAMES={'repository','workbench','voice','capcut','downloads','generation','final','drafts','audio','pending-delete'}
 
+_URL=re.compile(r'''https?://[^\s\x00-\x1f"'<>]+''')
+_URL_KEY=re.compile(r'token|password|secret|webhook|authorization|cookie|api.?key',re.I)
+_FIELD=re.compile(r'token|password|secret|webhook|authorization|cookie|api.?key|invitation',re.I)
+# The former leading ["']?[^"'\s]* can match empty, so dropping it never changes
+# whether a string matches; it only stops quadratic backtracking on large text.
+_PRIVATE_STRING=re.compile(r'''(?i)(?:token|password|secret|webhook|authorization|cookie|api.?key)[^"'\s]*["']\s*[:=]|-----BEGIN .*PRIVATE KEY-----|\bgh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}''')
+
 def _safe(value):
+    # safe_facts already walks the whole value; calling it again at every level
+    # (as before) rescanned each subtree once per ancestor.
     safe_facts(value)
+    _scan(value)
+
+def _scan(value):
     if isinstance(value,str):
         from urllib.parse import urlsplit,parse_qsl
-        for url in re.findall(r'''https?://[^\s\x00-\x1f"'<>]+''',value):
+        for url in _URL.findall(value):
             try:parts=urlsplit(url)
             except ValueError:raise CaptureError('invalid_capture_url') from None
-            if parts.username or parts.password or any(re.search(r'token|password|secret|webhook|authorization|cookie|api.?key',key,re.I) for key,_ in parse_qsl(parts.query)):raise CaptureError('private_capture_url')
+            if parts.username or parts.password or any(_URL_KEY.search(key) for key,_ in parse_qsl(parts.query)):raise CaptureError('private_capture_url')
     if isinstance(value,dict):
         for key,child in value.items():
-            if re.search(r'token|password|secret|webhook|authorization|cookie|api.?key|invitation',str(key),re.I):raise CaptureError('private_capture_field')
-            _safe(child)
+            if _FIELD.search(str(key)):raise CaptureError('private_capture_field')
+            _scan(child)
     elif isinstance(value,list):
-        for child in value:_safe(child)
-    elif isinstance(value,str) and re.search(r'''(?i)["']?[^"'\s]*(?:token|password|secret|webhook|authorization|cookie|api.?key)[^"'\s]*["']\s*[:=]|-----BEGIN .*PRIVATE KEY-----|\bgh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}''',value):raise CaptureError('private_capture_string')
+        for child in value:_scan(child)
+    elif isinstance(value,str) and _PRIVATE_STRING.search(value):raise CaptureError('private_capture_string')
 
 SMALL_FILE_LIMIT=1024*1024
 SMALL_READ_LIMIT=32*1024*1024

@@ -8,6 +8,8 @@ from pathlib import Path,PureWindowsPath
 SCHEMA=2
 TABLES={'tasks','task_history','events','heartbeats','source_health','sqlite_sequence'}
 SECRETS={'password','newpassword','oldpassword','invite','authorization','cookie','csrf','secret','signingsecret','webhook','accesstoken','access_token','api_key','apikey','agent_token','agent_token_sha256','invite_hash','password_hash','refresh_token','client_secret','token','authkey','tailscaleauthkey','invitationcode','sessiontoken'}
+# Normalized once: rebuilding it per dict key dominated large state scans.
+_SECRET_KEYS=frozenset(k.replace('_','') for k in SECRETS)
 PRIVATE_FILES={'config.json','task_receiver_config.json','baidu_upload_config.json','.env','notifications.json','agent.json'}
 
 class SnapshotError(ValueError): pass
@@ -38,7 +40,7 @@ def safe_facts(value):
     if isinstance(value,dict):
         for key,item in value.items():
             normalized=str(key).lower().replace('-','').replace('_','')
-            if normalized in {k.replace('_','') for k in SECRETS}:raise SnapshotError('credential_field_forbidden')
+            if normalized in _SECRET_KEYS:raise SnapshotError('credential_field_forbidden')
             safe_facts(item)
     elif isinstance(value,list):
         for item in value:safe_facts(item)
