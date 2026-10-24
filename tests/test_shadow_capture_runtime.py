@@ -24,7 +24,69 @@ class CaptureRuntimeTests(unittest.TestCase):
         identity=result['lastSourceIdentity'];self.assertTrue((self.root/'evidence/ready'/(identity+'.json')).exists())
         self.assertEqual(before,(self.live/'state.json').read_bytes());self.assertFalse(result['realShadowPassed']);self.assertEqual(0,result['businessRequests'])
     def test_missing_http_rejected_before_writes(self):
-        self.observer.begin(8766,'/api/health');self.assertEqual('blocked',self.publisher.tick()['state']);self.assertFalse(self.publisher.root.exists())
+        attempt=self.observer.begin(8766,'/api/health');self.observer.end(attempt)
+        self.assertEqual('blocked',self.publisher.tick()['state']);self.assertFalse(self.publisher.root.exists())
+    def test_read_in_flight_keeps_last_complete_value(self):
+        self.observer.begin(8766,'/api/health')
+        self.assertEqual('captured',self.publisher.tick()['state'])
+    def test_incomplete_observation_retried_until_next_poll(self):
+        attempt=self.observer.begin(8766,'/api/health');self.observer.end(attempt);sleeps=[]
+        def sleep(seconds):sleeps.append(seconds);self.complete()
+        self.publisher.observation_attempts=3;self.publisher.sleep=sleep
+        self.assertEqual('captured',self.publisher.tick()['state']);self.assertEqual([2],sleeps)
+    def test_retries_are_bounded(self):
+        attempt=self.observer.begin(8766,'/api/health');self.observer.end(attempt);sleeps=[]
+        self.publisher.observation_attempts=3;self.publisher.sleep=sleeps.append
+        self.assertEqual('observed_external_ports_incomplete',self.publisher.tick()['lastCode']);self.assertEqual(2,len(sleeps))
+    def fake_psutil(self,alive):
+        class NoSuchProcess(Exception):pass
+        class Process:
+            def __init__(self,pid):
+                if pid not in alive:raise NoSuchProcess(pid)
+                self.pid=pid
+            def create_time(self):return alive[self.pid]
+        return type('FakePsutil',(),{'Process':Process,'NoSuchProcess':NoSuchProcess})
+    def test_lock_of_dead_host_recovered_with_its_staging(self):
+        self.publisher.psutil=self.fake_psutil({os.getpid():1.0})
+        root=self.publisher.root;root.mkdir();stage=root/'.capture-stage-dead';stage.mkdir();(stage/'partial').write_bytes(b'x')
+        keep=root/'old-evidence';keep.write_bytes(b'keep')
+        (root/'.capture-writer.lock').write_text(json.dumps({'pid':999999,'createTime':5.0}),encoding='utf-8')
+        result=self.publisher.tick();self.assertEqual('captured',result['state'],result);self.assertEqual(1,result['staleLocksRecovered'])
+        self.assertFalse(stage.exists());self.assertEqual(b'keep',keep.read_bytes());self.assertFalse((root/'.capture-writer.lock').exists())
+    def test_reused_pid_with_other_birth_time_is_dead_owner(self):
+        self.publisher.psutil=self.fake_psutil({os.getpid():1.0,4242:9.0});self.publisher.root.mkdir()
+        (self.publisher.root/'.capture-writer.lock').write_text(json.dumps({'pid':4242,'createTime':5.0}),encoding='utf-8')
+        self.assertEqual('captured',self.publisher.tick()['state'])
+    def test_live_legacy_or_unverifiable_lock_still_blocks(self):
+        live={'pid':os.getpid(),'createTime':1.0}
+        for psutil,raw in ((self.fake_psutil({os.getpid():1.0}),json.dumps(live)),(self.fake_psutil({os.getpid():1.0}),''),
+                           (None,json.dumps({'pid':999999,'createTime':5.0}))):
+            self.publisher.psutil=psutil;self.publisher.last=None;self.publisher.root.mkdir(exist_ok=True)
+            (self.publisher.root/'.capture-writer.lock').write_text(raw,encoding='utf-8')
+            result=self.publisher.tick();self.assertEqual('capture_writer_busy',result['lastCode'],raw)
+            self.assertTrue((self.publisher.root/'.capture-writer.lock').exists())
+    def test_lock_records_owner_while_capturing(self):
+        self.publisher.psutil=self.fake_psutil({os.getpid():1.0});seen=[]
+        real=shadow_capture._read_version
+        def spy(path,limit,**kw):
+            seen.append(json.loads((self.publisher.root/'.capture-writer.lock').read_text(encoding='utf-8')));return real(path,limit,**kw)
+        with patch.object(shadow_capture,'_read_version',side_effect=spy):self.assertEqual('captured',self.publisher.tick()['state'])
+        self.assertEqual({'pid':os.getpid(),'createTime':1.0},seen[0])
+    def test_role_view_ignores_transient_worker_processes(self):
+        role={'pid':1,'ppid':0,'name':'receiver','exe':'python','cmdline':['python','receiver.py'],'create_time':1.0,'username':'fixture'}
+        calls=[]
+        def probe():
+            calls.append(1);worker=dict(role,pid=100+len(calls),ppid=1,name='CapCut',cmdline=['CapCut.exe'],create_time=float(len(calls)))
+            return {'processRecords':[role,worker],'processIds':[1,worker['pid']]}
+        self.publisher.process_probe=probe
+        self.assertEqual('external_or_process_changed',self.publisher.tick()['lastCode'])
+        self.tick+=60;self.publisher.process_view=lambda p:[row for row in p['processRecords'] if row['pid']==1]
+        self.assertEqual('captured',self.publisher.tick()['state'])
+        restarted=dict(role,create_time=2.0)
+        def probe_restart():
+            calls.append(1);return {'processRecords':[role if len(calls)%2 else restarted],'processIds':[1]}
+        self.tick+=60;self.publisher.process_probe=probe_restart
+        self.assertEqual('external_or_process_changed',self.publisher.tick()['lastCode'])
     def test_full_capacity_retains_old_evidence(self):
         self.publisher.cap=100;self.publisher.root.mkdir();old=self.publisher.root/'old';old.write_bytes(b'keep')
         self.assertEqual('capture_capacity_exhausted',self.publisher.tick()['lastCode']);self.assertEqual(b'keep',old.read_bytes())

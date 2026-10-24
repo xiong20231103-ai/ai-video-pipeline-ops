@@ -496,7 +496,7 @@ def aligned_capture(plan,destination,**options):
         raise
 
 
-def _aligned_capture(plan,destination,*,changes,source_path,process_probe,http_probe,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024,max_entries=10000,max_hash_bytes=64*1024*1024,max_window_seconds=20,digest_cache=None,volatile_http=(),clock=time.monotonic,now=lambda:datetime.now(timezone.utc).isoformat()):
+def _aligned_capture(plan,destination,*,changes,source_path,process_probe,http_probe,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024,max_entries=10000,max_hash_bytes=64*1024*1024,max_window_seconds=20,digest_cache=None,volatile_http=(),process_view=None,clock=time.monotonic,now=lambda:datetime.now(timezone.utc).isoformat()):
     roots,bindings=validate_plan(plan,destination)
     if type(max_window_seconds) not in (int,float) or not math.isfinite(max_window_seconds) or not 0<max_window_seconds<=20:raise CaptureError('capture_window_limit')
     started=clock();deadline=started+max_window_seconds;small_budget=SmallReadBudget();opened_at=now();source_path=no_links(source_path)
@@ -563,7 +563,10 @@ def _aligned_capture(plan,destination,*,changes,source_path,process_probe,http_p
         # polled every few seconds) only has to stay completely observed; the
         # response from the window start is the captured fact.
         stable=set(http)-set(volatile_http)
-        if (latest_processes!=processes or set(latest_http)!=set(http)
+        # ``process_view`` lets a host compare only its long-lived role processes;
+        # the window-start records stay the captured fact either way.
+        view=process_view or (lambda value:value)
+        if (view(latest_processes)!=view(processes) or set(latest_http)!=set(http)
                 or any(latest_http[key]!=http[key] for key in stable)
                 or (latest_generation!=http_generation and not set(http)<=set(volatile_http))):
             raise CaptureError('external_or_process_changed')

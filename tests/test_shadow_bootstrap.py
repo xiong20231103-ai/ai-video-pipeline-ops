@@ -322,7 +322,8 @@ class ObserveTests(unittest.TestCase):
         import time
         with TestClient(app) as client:
             self.assertEqual({'ok':True},client.get('/api/health').json())
-            deadline=time.monotonic()+5
+            # The first cycle retries an incomplete observation for up to ~9 s.
+            deadline=time.monotonic()+20
             while not status_path.exists() and time.monotonic()<deadline:time.sleep(.02)
             status=json.loads(status_path.read_text())
             # No Dashboard GET was observed, so nothing is captured or invented.
@@ -347,6 +348,21 @@ class ProcessProbeTests(unittest.TestCase):
         self.assertTrue(report['preflight']['complete'])
         self.assertEqual([os.getpid()],report['processIds'])
         self.assertEqual(123.0,report['processRecords'][0]['create_time'])
+
+    def test_transient_descendant_skipped_but_role_stays_strict(self):
+        psutil=fake_psutil();base=psutil.Process
+        class Process(base):
+            def children(self,recursive):return [SimpleNamespace(pid=987654)] if self.pid==os.getpid() else []
+            def as_dict(self,attrs):
+                if self.pid==987654:raise ProcessLookupError('worker exited')
+                return super().as_dict(attrs)
+        psutil.Process=Process
+        self.assertFalse(probe_processes(psutil,agent_pid=os.getpid())['preflight']['complete'])
+        report=probe_processes(psutil,agent_pid=os.getpid(),transient_children=True)
+        self.assertTrue(report['preflight']['complete']);self.assertEqual([os.getpid()],report['processIds'])
+        self.assertEqual(os.getpid(),report['roles']['receiver'])
+        denied=fake_psutil(denied=True)
+        self.assertFalse(probe_processes(denied,agent_pid=os.getpid(),transient_children=True)['preflight']['complete'])
 
     def test_missing_agent_not_complete(self):
         report=probe_processes(fake_psutil())

@@ -50,6 +50,15 @@ class AgentObserverTests(unittest.TestCase):
         with self.assertRaises(CaptureError):observer.observation()
         a=observer.begin(8766,'/api/health');observer.complete(a,200,b'x'*(observer.limit+1))
         with self.assertRaises(CaptureError):observer.observation()
+    def test_read_in_flight_keeps_previous_body_until_it_ends(self):
+        observer=self.observer();a=observer.begin(8766,'/api/health');observer.complete(a,200,b'{"n":1}')
+        b=observer.begin(8766,'/api/health')
+        self.assertEqual(observer.observation()['responses']['receiver:/api/health'],{'n':1})
+        observer.end(b)
+        with self.assertRaises(CaptureError):observer.observation()
+    def test_first_read_in_flight_is_still_incomplete(self):
+        observer=self.observer();observer.begin(8766,'/api/health')
+        with self.assertRaises(CaptureError):observer.observation()
     def test_unlisted_get_does_not_capture(self):
         observer=self.observer();agent=self.make(observer);self.assertEqual(agent.home('/api/dashboard/summary')[0],200)
         self.assertEqual(observer.serial,0)
