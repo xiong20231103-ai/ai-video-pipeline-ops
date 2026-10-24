@@ -5,7 +5,7 @@ from agent.core.oracle import Oracle
 from agent.core.replay import make_fixture,replay
 from agent.core.collection_replay import replay_collection
 from agent.core.collection import CollectionSession,CollectionError
-from agent.core.source_profiles import PR49,F78,D6A7211_CRLF,read_source
+from agent.core.source_profiles import PR49,F78,D6A7211_CRLF,SUBTITLE_IDLE,SUBTITLE_IDLE_CRLF,read_source
 from agent.core.snapshot import SnapshotError
 from agent.core.comparison import compare
 ROOT=Path(__file__).resolve().parents[1]
@@ -31,7 +31,7 @@ class ShadowSourceTests(unittest.TestCase):
   node=next(n for n in old.body if isinstance(n,ast.FunctionDef) and n.name=='normalize_task')
   extracted=ast.parse(textwrap.dedent(inspect.getsource(normalize_task))).body[0]
   self.assertEqual(ast.dump(node,include_attributes=False),ast.dump(extracted,include_attributes=False))
-  self.assertEqual(PR49,hashlib.sha256(self.source.encode()).hexdigest())
+  self.assertEqual(SUBTITLE_IDLE,hashlib.sha256(self.source.encode()).hexdigest())
  def test_metadata_hash_port_supports_both_old_and_candidate_without_media_reads(self):
   snap=self.snapshot()
   with Oracle(self.source,snap,self.root/'old',collect=False) as env:
@@ -87,7 +87,7 @@ class ShadowSourceTests(unittest.TestCase):
  def test_exact_current_crlf_archive_uses_existing_pr49_oracle_and_candidate(self):
   raw=(ROOT/'contracts/legacy-app-d6a7211-crlf.txt').read_bytes()
   self.assertEqual(D6A7211_CRLF,hashlib.sha256(raw).hexdigest())
-  self.assertEqual(self.source,raw.decode('utf-8').replace('\r\n','\n'))
+  self.assertEqual(PR49,hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest())
   self.source=read_source(ROOT/'contracts/legacy-app-d6a7211-crlf.txt')
   snap=self.snapshot()
   with Oracle(self.source,snap,self.root/'old',collect=False) as env:
@@ -95,6 +95,19 @@ class ShadowSourceTests(unittest.TestCase):
    env.namespace['COLLECTOR'].metadata={'child':self.metadata(env)}
    old=env.namespace['COLLECTOR'].normalize_task({'taskId':'child','status':'failed'},env.root/'status.json',1)
    with CollectionSession(env.namespace,source_sha=D6A7211_CRLF) as candidate:
+    candidate.collector.metadata={'child':self.metadata(env)}
+    new=candidate.collector.normalize_task({'taskId':'child','status':'failed'},env.root/'status.json',1)
+   self.assertEqual('completed',old['state']);self.assertEqual(old,new)
+ def test_subtitle_idle_archive_is_the_checked_in_source_with_crlf(self):
+  raw=(ROOT/'contracts/legacy-app-subtitle-idle-crlf.txt').read_bytes()
+  self.assertEqual(SUBTITLE_IDLE_CRLF,hashlib.sha256(raw).hexdigest())
+  self.assertEqual(self.source,raw.decode('utf-8').replace('\r\n','\n'))
+  self.source=read_source(ROOT/'contracts/legacy-app-subtitle-idle-crlf.txt');snap=self.snapshot()
+  with Oracle(self.source,snap,self.root/'old',collect=False) as env:
+   self.assertEqual(SUBTITLE_IDLE_CRLF,env.source_sha)
+   env.namespace['COLLECTOR'].metadata={'child':self.metadata(env)}
+   old=env.namespace['COLLECTOR'].normalize_task({'taskId':'child','status':'failed'},env.root/'status.json',1)
+   with CollectionSession(env.namespace,source_sha=SUBTITLE_IDLE_CRLF) as candidate:
     candidate.collector.metadata={'child':self.metadata(env)}
     new=candidate.collector.normalize_task({'taskId':'child','status':'failed'},env.root/'status.json',1)
    self.assertEqual('completed',old['state']);self.assertEqual(old,new)
