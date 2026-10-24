@@ -8,9 +8,14 @@ PR49 = '9b3ebded024ffa5d9db1662b2fe9fd2e3348e0630efd2f24d1c6bdd61f16d84a'
 PR49_HELPER = '69b8b086e0502c506e75f1644fe2a3d28c8bac94c99c2b54870c2205fb9199e0'
 FRESH_HELPER = '57631ede4f2199db025163010e12dfe8ecc493784979194b87c4ead83b2aa818'
 D6A7211_CRLF = 'a02d25a6787e0b33725695d616a595396aa4280ed4c9049f309ad1f3b9d6e8b7'
-PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF})
+# PR49 plus one route fix: /api/subtitle-verification/current returns an empty
+# inventory instead of a 500 when no task box is active (between batches).
+SUBTITLE_IDLE = '232545fa6c1f72f7a7c98635348d94f49782973024dd087fae6b2b62653a9ee0'
+SUBTITLE_IDLE_CRLF = 'f07466fdaf313ebf49419527769f355dbf1da6bdc0de8c52a18ba7813728638f'
+PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF})
 PROFILES = {F78:'f78db5a', PR49:'pr49-verified-final',
-            D6A7211_CRLF:'d6a7211-crlf-pr49-behavior'}
+            D6A7211_CRLF:'d6a7211-crlf-pr49-behavior',
+            SUBTITLE_IDLE:'pr49-subtitle-idle', SUBTITLE_IDLE_CRLF:'pr49-subtitle-idle-crlf'}
 SOURCE_HELPER_PROFILES = {
     (source, helper): name
     for source in PR49_BEHAVIOR

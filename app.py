@@ -6681,7 +6681,10 @@ def subtitle_verification_current(request: Request):
     require_control_permission(request)
     boxes = task_box_payloads()
     selected = authoritative_active_task_box(boxes)
-    current = selected.get("current") if isinstance(selected, dict) else {}
+    if not isinstance(selected, dict):
+        # Between batches no task box is active; there is nothing current to verify.
+        return {"generatedAt": now_iso(), "total": 0, "counts": {}, "items": []}
+    current = selected.get("current") or {}
     return subtitle_verification_inventory(
         str((current or {}).get("taskId") or ""),
         str(selected.get("productionDate") or (current or {}).get("productionDate") or ""),
