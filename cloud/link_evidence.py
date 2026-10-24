@@ -5,6 +5,7 @@ import hashlib
 from io import BytesIO
 import json
 import logging
+import math
 from pathlib import Path
 import sqlite3
 import time
@@ -50,7 +51,7 @@ class Evidence:
         finally:
             db.close()
 
-    def _cleanup(self, db, needed=0):
+    def _cleanup(self, db, needed=0, preserve_sha=None):
         freed = count = 0
         now = self.clock()
         # Shared images stay protected while ANY referencing record is pending.
@@ -59,7 +60,7 @@ class Evidence:
           FROM shots s LEFT JOIN records r ON r.sha=s.sha GROUP BY s.sha ORDER BY age''').fetchall()
         total = sum(r['size'] for r in rows)
         for r in rows:
-            if r['protected']:
+            if r['protected'] or r['sha']==preserve_sha:
                 continue
             if r['age'] is not None and now-r['age'] < 15*DAY and total+needed <= self.cap:
                 continue
@@ -90,7 +91,7 @@ class Evidence:
         if review not in {None,'pending','confirmed','rejected','expired'} or delivery not in {'not_applicable','waiting','sent','failed'}:
             raise ValueError('invalid_state')
         decided = event.get('decidedAt')
-        if decided is not None and (type(decided) not in (int,float) or decided <= 0 or decided > self.clock()+300):
+        if decided is not None and (type(decided) not in (int,float) or not math.isfinite(decided) or decided <= 0 or decided > self.clock()+300):
             raise ValueError('invalid_decision_time')
         raw = None
         if event.get('image'):
@@ -101,14 +102,14 @@ class Evidence:
             with Image.open(BytesIO(raw)) as im:
                 if im.format != 'JPEG' or max(im.size) > 1600:
                     raise ValueError('invalid_jpeg')
-                im.verify()
+                im.load()
         key = tuple(event[k] for k in required[:4])
         payload = {k:v for k,v in event.items() if k != 'image'}
         with self.db() as db:
             old = db.execute('SELECT * FROM records WHERE source=? AND platform=? AND video_id=? AND judge_round=?',key).fetchone()
-            if old and event['seq'] < old['seq'] and not raw:
-                return {'id':old['id'], 'stale':True, 'image':'unchanged'}
-            if old and event['seq'] == old['seq'] and not raw:
+            stale=bool(old and event['seq']<=old['seq'])
+            # Retries only repair missing images, never overwrite newer evidence.
+            if stale and (not raw or old['sha']):
                 return {'id':old['id'], 'stale':True, 'image':'unchanged'}
             # Equal-sequence retries may repair missing images, never replay state.
             if old and event['seq'] <= old['seq']:
@@ -121,7 +122,7 @@ class Evidence:
             if raw:
                 digest = hashlib.sha256(raw).hexdigest()
                 existing = db.execute('SELECT sha FROM shots WHERE sha=?',(digest,)).fetchone()
-                if existing or self._cleanup(db,len(raw)) + len(raw) <= self.cap:
+                if existing or self._cleanup(db,len(raw),preserve_sha=sha) + len(raw) <= self.cap:
                     if not existing:
                         relative = Path('shots') / time.strftime('%Y-%m-%d',time.gmtime(self.clock())) / (digest+'.jpg')
                         target = self.root / relative
@@ -142,7 +143,7 @@ class Evidence:
               payload=excluded.payload,review=excluded.review,delivery=excluded.delivery,decided=excluded.decided,sha=excluded.sha''',
               (identifier,*key,event['seq'],json.dumps(payload,ensure_ascii=False),old['uploaded'] if old else self.clock(),
                old['review'] if cloud else review, old['delivery'] if cloud else delivery, old['decided'] if cloud else decided,sha))
-            return {'id':identifier,'stale':False,'image':image_status}
+            return {'id':identifier,'stale':stale,'image':image_status}
 
     def listing(self,limit=1000,offset=0):
         if type(limit) is not int or not 1<=limit<=1000 or type(offset) is not int or offset<0:
