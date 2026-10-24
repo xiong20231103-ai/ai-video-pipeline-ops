@@ -1,5 +1,7 @@
 # AI视频生产线 OPS Dashboard
 
+设计、审查、迁移与部署说明在私有仓库 ai-video-pipeline-ops-private，不在此处。
+
 独立的本地“监控与安全控制中心”。通过 Tailscale 访问时，可以汇总状态并执行受限的队列确认、撤回、安全继续和上传补传操作：
 
 - TikHub 下载与 AI 去字幕实时状态。

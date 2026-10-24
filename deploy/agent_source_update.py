@@ -29,13 +29,13 @@ PREVIOUS_R6_FILES=FILES+(
     'agent/core/projection_store.py','agent/core/recovery.py','agent/core/recovery_logic.py',
     'agent/core/recovery_transport.py','agent/core/retirement_gate.py','agent/core/compatibility_logic.py',
     'agent/core/source_profiles.py','agent/core/collection_verified_final.py','verified_final.py',
-    'agent/core/snapshot.py','contracts/golden.py','docs/migration/r1-provenance.json',
-    'docs/migration/r6-provenance.json',
+    'agent/core/snapshot.py','contracts/golden.py','tests/fixtures/migration/r1-provenance.json',
+    'tests/fixtures/migration/r6-provenance.json',
     'agent/core/collection_replay.py','agent/core/comparison.py','agent/core/history_export.py',
     'agent/core/history_timeline.py','agent/core/history_transfer.py','agent/core/oracle.py',
     'agent/core/ordinary_ingress.py','agent/core/replay.py','agent/core/runtime_ports.py','agent/core/sandbox.py',
     'contracts/history.py','contracts/shadow.py','contracts/timeline.py','contracts/shadow_rules.json',
-    'docs/migration/r3-provenance.json','docs/migration/r4-provenance.json','docs/migration/r5-provenance.json',
+    'tests/fixtures/migration/r3-provenance.json','tests/fixtures/migration/r4-provenance.json','tests/fixtures/migration/r5-provenance.json',
     'deploy/agent_source_update.py',
 )
 R6_FILES=PREVIOUS_R6_FILES+(

@@ -1,12 +1,16 @@
 name: Isolated OPS tests
 on:
   pull_request:
-  push:
-    branches: ["codex/**"]
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   isolated-ops:
+    # While temporarily private, only the one explicitly requested manual run uses minutes.
+    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.repository.private }}
     runs-on: windows-latest
     timeout-minutes: 15
     steps:

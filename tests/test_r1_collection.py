@@ -39,7 +39,7 @@ class CollectionTests(unittest.TestCase):
         from agent.core import collection_logic
         original=ast.parse(self.source);candidate=ast.parse(Path(collection_logic.__file__).read_text(encoding='utf-8'))
         defs={n.name:n for n in original.body if isinstance(n,(ast.FunctionDef,ast.ClassDef))}
-        provenance=json.loads((ROOT/'docs/migration/r1-provenance.json').read_text(encoding='utf-8'))
+        provenance=json.loads((ROOT/'tests/fixtures/migration/r1-provenance.json').read_text(encoding='utf-8'))
         for node in candidate.body:
             if not isinstance(node,(ast.FunctionDef,ast.ClassDef)):continue
             old=defs[node.name]

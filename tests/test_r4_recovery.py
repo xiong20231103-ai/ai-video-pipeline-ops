@@ -32,7 +32,7 @@ class RecoveryExtractionTests(unittest.TestCase):
         self.source=(ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8')
 
     def test_exact_bodies_and_all_provenance_lines_match_pinned_source(self):
-        manifest=json.loads((ROOT/'docs/migration/r4-provenance.json').read_text(encoding='utf-8'))
+        manifest=json.loads((ROOT/'tests/fixtures/migration/r4-provenance.json').read_text(encoding='utf-8'))
         self.assertEqual(manifest['legacySha256'],hashlib.sha256(self.source.encode()).hexdigest())
         original={n.name:n for n in ast.parse(self.source).body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}
         candidate={n.name:n for n in ast.parse(Path(recovery_logic.__file__).read_text(encoding='utf-8')).body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}

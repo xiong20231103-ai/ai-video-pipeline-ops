@@ -174,7 +174,7 @@ class CaseEnvironment:
 def legacy_namespace(source, ports):
     if hashlib.sha256(source.encode()).hexdigest() != LEGACY_SOURCE_SHA256:
         raise ValueError('legacy_source_hash_mismatch')
-    provenance = json.loads((ROOT / 'docs/migration/r3-provenance.json').read_text(encoding='utf-8'))
+    provenance = json.loads((ROOT / 'tests/fixtures/migration/r3-provenance.json').read_text(encoding='utf-8'))
     names = {row['name'] for row in provenance['functions']}
     nodes = []
     for node in ast.parse(source).body:

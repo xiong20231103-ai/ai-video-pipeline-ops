@@ -27,7 +27,7 @@ from .ordinary_fence import FenceRejected
 class EngineHost:
     def __init__(self,session,lease,*,clock=time.time):
         self.session=session;self.namespace=session.namespace;self.lease=lease;self.clock=clock
-        manifest=json.loads((Path(__file__).parents[2]/'docs/migration/r6-provenance.json').read_text(encoding='utf-8'))
+        manifest=json.loads((Path(__file__).parents[2]/'tests/fixtures/migration/r6-provenance.json').read_text(encoding='utf-8'))
         self.routes=tuple(row for row in manifest['routes'] if not row['disabled'])
         self.scan_lock=threading.Lock()
         self.application=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)

@@ -26,7 +26,7 @@ def _class(original,namespace):
 
 class CollectionSession:
     def __init__(self,ports,*,source_sha=None,seed=None,max_bytes=50*1024*1024,max_rows=200000,store_factory=None):
-        provenance=json.loads((Path(__file__).parents[2]/'docs/migration/r1-provenance.json').read_text(encoding='utf-8'))
+        provenance=json.loads((Path(__file__).parents[2]/'tests/fixtures/migration/r1-provenance.json').read_text(encoding='utf-8'))
         required=set(provenance['requiredPorts'])-{'STORE','COLLECTOR'}
         missing=required-set(ports)
         if missing:raise CollectionError('missing_collection_ports:'+','.join(sorted(missing)))

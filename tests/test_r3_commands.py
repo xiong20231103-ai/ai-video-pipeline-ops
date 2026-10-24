@@ -66,7 +66,7 @@ class ReplayTests(R3TestCase):
                 self.assertFalse(new['switchAccepted'])
 
     def test_all_bodies_match_pinned_originals_and_provenance_lines(self):
-        provenance = json.loads((ROOT/'docs/migration/r3-provenance.json').read_text(encoding='utf-8'))
+        provenance = json.loads((ROOT/'tests/fixtures/migration/r3-provenance.json').read_text(encoding='utf-8'))
         self.assertEqual(provenance['legacySha256'], hashlib.sha256(self.source.encode()).hexdigest())
         original = {n.name:n for n in ast.parse(self.source).body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}
         candidate = {n.name:n for n in ast.parse(Path(ordinary_logic.__file__).read_text(encoding='utf-8')).body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}
