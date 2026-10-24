@@ -35,8 +35,8 @@ SETTINGS=frozenset({'schema','enabled','stateRoot','legacyRoot','legacyScripts',
 
 
 def build_digest(root):
-    from deploy.agent_source_update import R6_FILES
-    root=Path(root);files=[root/name for name in R6_FILES]
+    from deploy.agent_source_update import R6_RELOCATED_FILES
+    root=Path(root);files=[root/name for name in R6_RELOCATED_FILES]
     digest=hashlib.sha256()
     for path in sorted(files,key=lambda p:p.relative_to(root).as_posix()):
         require_plain_path(path)

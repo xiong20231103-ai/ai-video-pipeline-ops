@@ -43,6 +43,18 @@ R6_FILES=PREVIOUS_R6_FILES+(
     'contracts/legacy-verified-final-pr49.txt','contracts/legacy-verified-final-fresh.txt',
 )
 
+
+# Historical layouts must keep the exact paths recorded by installed manifests.
+INITIAL_R6_FILES=tuple(name for name in PREVIOUS_R6_FILES if name not in {
+    'agent/core/source_profiles.py','agent/core/collection_verified_final.py','verified_final.py',
+})
+R6_RELOCATED_FILES=tuple(name.replace('docs/migration/','contracts/migration/') for name in R6_FILES)
+SOURCE_WHITELISTS=tuple(frozenset(names) for names in (
+    LEGACY_FILES,PREVIOUS_FILES,CURRENT_FILES,BACKUP_FILES,FILES,
+    INITIAL_R6_FILES,PREVIOUS_R6_FILES,R6_FILES,R6_RELOCATED_FILES,
+))
+KNOWN_RUNTIME_FILES=frozenset().union(*SOURCE_WHITELISTS)
+
 class UpdateError(ValueError):
     def __init__(self,code): self.code=code;super().__init__(code)
 
@@ -60,7 +72,7 @@ def validate(root,expected=None):
     if len(commit)!=40 or any(char not in '0123456789abcdef' for char in commit): raise UpdateError('invalid_commit')
     if expected and commit!=expected: raise UpdateError('unexpected_commit')
     names=set(manifest.get('sha256',{}))
-    if names not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(BACKUP_FILES),set(FILES),set(PREVIOUS_R6_FILES),set(R6_FILES)): raise UpdateError('unexpected_source_whitelist')
+    if names not in SOURCE_WHITELISTS: raise UpdateError('unexpected_source_whitelist')
     for name in names:
         path=root/name;reject_link(path)
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=manifest['sha256'][name]:
@@ -76,8 +88,9 @@ def copy_code(source,target):
         try:
             shutil.copyfile(source/name,temporary);temporary.replace(destination)
         finally: temporary.unlink(missing_ok=True)
-    # Remove only the explicitly known additive runtime files on rollback.
-    for name in set(R6_FILES)-set(names):
+    # Remove only known package files absent from the selected layout, including
+    # both provenance locations during upgrades, rollbacks and failed applies.
+    for name in sorted(KNOWN_RUNTIME_FILES-set(names)):
         destination=target/name;reject_link(destination);destination.unlink(missing_ok=True)
 
 def prepare(source,target,backup,expected):
@@ -106,7 +119,7 @@ def restore(backup,target):
     if str(target.absolute())!=metadata['target']: raise UpdateError('rollback_target_mismatch')
     validate(backup,metadata['before']);reject_link(target)
     current=read_json(target/'deployment-manifest.json')
-    if current.get('commit') not in {metadata['before'],metadata['after']} or set(current.get('sha256',{})) not in (set(LEGACY_FILES),set(PREVIOUS_FILES),set(CURRENT_FILES),set(BACKUP_FILES),set(FILES),set(PREVIOUS_R6_FILES),set(R6_FILES)):
+    if current.get('commit') not in {metadata['before'],metadata['after']} or set(current.get('sha256',{})) not in SOURCE_WHITELISTS:
         raise UpdateError('rollback_source_identity_changed')
     copy_code(backup,target);validate(target,metadata['before'])
 
