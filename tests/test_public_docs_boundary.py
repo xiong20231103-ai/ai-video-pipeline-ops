@@ -16,9 +16,9 @@ class PublicDocsBoundaryTests(unittest.TestCase):
             (root/'家庭电脑部署说明.md').write_text('synthetic deployment',encoding='utf-8')
             self.assertEqual(violations(root),['docs/nested/review.md','交接记录_fixture.md','家庭电脑部署说明.md'])
 
-    def test_code_readmes_and_program_fixtures_are_allowed(self):
+    def test_code_readmes_and_runtime_contracts_are_allowed(self):
         with TemporaryDirectory(prefix='public-docs-boundary-') as folder:
-            root=Path(folder);(root/'tests'/'fixtures'/'migration').mkdir(parents=True)
-            (root/'tests'/'fixtures'/'migration'/'r1-provenance.json').write_text('{}',encoding='utf-8')
+            root=Path(folder);(root/'contracts'/'migration').mkdir(parents=True)
+            (root/'contracts'/'migration'/'r1-provenance.json').write_text('{}',encoding='utf-8')
             for name in ('README.md','AGENTS.md'):(root/name).write_text('synthetic',encoding='utf-8')
             self.assertEqual(violations(root),[])

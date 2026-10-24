@@ -14,7 +14,7 @@ ROOT=Path(__file__).resolve().parents[1]
 class CompositionTests(unittest.TestCase):
     def test_remaining_handlers_have_exact_reviewable_source(self):
         source=(ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8')
-        manifest=json.loads((ROOT/'tests/fixtures/migration/r6-provenance.json').read_text(encoding='utf-8'))
+        manifest=json.loads((ROOT/'contracts/migration/r6-provenance.json').read_text(encoding='utf-8'))
         self.assertEqual(manifest['legacySha256'],hashlib.sha256(source.encode()).hexdigest())
         old={n.name:n for n in ast.parse(source).body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}
         new={n.name:n for n in ast.parse(Path(compatibility_logic.__file__).read_text(encoding='utf-8')).body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}

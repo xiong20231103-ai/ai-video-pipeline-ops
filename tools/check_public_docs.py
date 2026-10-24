@@ -19,7 +19,7 @@ def main():
         print('Private documentation must not be committed to the code repository:')
         for name in found:print(name)
         return 1
-    print('Public documentation boundary OK; program fixtures live under tests/fixtures.')
+    print('Public documentation boundary OK; runtime contracts live under contracts; test fixtures live under tests/fixtures.')
     return 0
 
 
