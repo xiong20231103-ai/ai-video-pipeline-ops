@@ -132,7 +132,11 @@ def volatile_files(plan):
 
 
 def _read(path,limit,*,changes=None,logical_path=None,deadline=None,clock=time.monotonic,volatile=False):
-    raw,opened,closed=_read_version(path,limit,deadline=deadline,clock=clock)
+    try:raw,opened,closed=_read_version(path,limit,deadline=deadline,clock=clock)
+    except CaptureError as error:
+        # Name the file that vanished; the refusal used to carry no diagnostics.
+        if str(error)=='state_changed_in_window' and changes is not None:changes.add(logical_path,'removed')
+        raise
     latest=_stat(path)
     if _same_version(opened,closed) and _same_version(closed,latest):return raw,latest
     second,second_open,second_close=_read_version(path,limit,deadline=deadline,clock=clock)
@@ -541,6 +545,10 @@ def _aligned_capture(plan,destination,*,changes,source_path,process_probe,http_p
         scratch=Path(folder)
         volatile=volatile_files(plan)
         for name in plan.get('files',{}):
+            if name in volatile and _stat(bindings[name]) is None:
+                # A heartbeat is removed while its writer is stopped (the workbench
+                # between batches). That absence is the fact; it must hold to the end.
+                missing[name]=None;changes.add(name,'volatile-absent');continue
             body,info=_read(bindings[name],max_file_bytes,changes=changes,logical_path=name,deadline=deadline,clock=clock,volatile=name in volatile);total+=len(body)
             if total>max_total_bytes:raise CaptureError('capture_total_limit')
             try:body.decode('utf-8-sig')
