@@ -113,6 +113,34 @@ class CaptureRuntimeTests(unittest.TestCase):
         self.assertIn({'path':'workbench/state.json','type':'content-change'},result['lastChanges'])
         self.tick+=60;self.complete()
         result=self.publisher.tick();self.assertEqual('captured',result['state'],result);self.assertEqual([],result['lastChanges'])
+    def heartbeat_plan(self):
+        (self.live/'ready.json').write_text('{"pid":1}',encoding='utf-8')
+        # Heartbeat first, so its absence is recorded before the state file is read.
+        plan={**self.plan,'files':{'workbench/ready.json':{'root':'workbench','path':'ready.json'},**self.plan['files']},
+              'volatileFiles':['workbench/ready.json']}
+        return CapturePublisher(plan,self.source,self.root/'evidence',self.observer,lambda:{'processRecords':[]},
+                                approved_total_bytes=32*1024*1024,max_capture_bytes=1024,min_interval_seconds=30,clock=lambda:self.tick)
+    def test_absent_heartbeat_is_captured_as_absence(self):
+        publisher=self.heartbeat_plan();(self.live/'ready.json').unlink()
+        result=publisher.tick();self.assertEqual('captured',result['state'],result)
+        marker=next((publisher.root/'ready').iterdir());v=json.loads(marker.read_bytes());v['emitterPid']=os.getpid()+100
+        marker.write_text(json.dumps(v),encoding='utf-8')
+        # The offline replay accepts the snapshot whose heartbeat is declared absent.
+        report=compare_ready(publisher.root,result['lastSourceIdentity'],self.source,module='R1',targets=['/api/health'],
+                             approved_scratch_bytes=17*1024*1024,retained_limit_bytes=64*1024*1024)
+        self.assertFalse(report['realShadowPassed'])
+    def test_heartbeat_appearing_in_window_is_refused(self):
+        publisher=self.heartbeat_plan();ready=self.live/'ready.json';ready.unlink()
+        real=shadow_capture._read_version
+        def appear(path,limit,**kw):
+            ready.write_text('{"pid":2}',encoding='utf-8');return real(path,limit,**kw)
+        with patch.object(shadow_capture,'_read_version',side_effect=appear):result=publisher.tick()
+        self.assertEqual('absence_changed_in_window',result['lastCode'],result)
+        self.assertIn({'path':'workbench/ready.json','type':'volatile-absent'},result['lastChanges'])
+    def test_missing_non_volatile_file_names_the_file(self):
+        (self.live/'state.json').unlink()
+        result=self.publisher.tick();self.assertEqual('state_changed_in_window',result['lastCode'])
+        self.assertIn({'path':'workbench/state.json','type':'removed'},result['lastChanges'])
     def test_plan_is_copied_not_changed_by_caller(self):
         self.plan['files'].clear()
         self.assertIn('workbench/state.json',self.publisher.plan['files'])

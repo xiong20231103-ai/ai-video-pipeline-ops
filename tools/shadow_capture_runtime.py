@@ -114,7 +114,7 @@ class CapturePublisher:
             code=str(error) if isinstance(error,CaptureError) and str(error) in {
                 'observed_external_ports_incomplete','capture_capacity_exhausted','capture_writer_busy',
                 'state_changed_in_window','state_content_changed_in_window','external_or_process_changed',
-                'directory_changed_in_window','database_changed_in_window','capture_window_exceeded'} else 'capture_rejected'
+                'directory_changed_in_window','database_changed_in_window','capture_window_exceeded','absence_changed_in_window'} else 'capture_rejected'
             self.state.update(state='blocked',lastCode=code,rejected=self.state['rejected']+1)
             # Logical plan names and change types only; status writers screen it again.
             self.state['lastChanges']=list(getattr(error,'diagnostics',{}).get('changes',[]))[:20]
