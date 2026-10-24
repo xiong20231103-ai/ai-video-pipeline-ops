@@ -1,4 +1,4 @@
-"""Independent evidence store. Source events never overwrite cloud decisions."""
+"""Independent read-only evidence mirror; writes only arrive through ingest."""
 import base64
 from contextlib import contextmanager, closing
 import hashlib
@@ -28,12 +28,9 @@ class Evidence:
               video_id TEXT NOT NULL, judge_round TEXT NOT NULL, seq INTEGER NOT NULL,
               payload TEXT NOT NULL, uploaded REAL NOT NULL, review TEXT,
               delivery TEXT NOT NULL, decided REAL, revision INTEGER NOT NULL DEFAULT 0,
-              cloud_decision INTEGER NOT NULL DEFAULT 0, sha TEXT,
+              sha TEXT,
               UNIQUE(source,platform,video_id,judge_round));
             CREATE TABLE IF NOT EXISTS shots(sha TEXT PRIMARY KEY,path TEXT NOT NULL,size INTEGER NOT NULL);
-            CREATE TABLE IF NOT EXISTS actions(
-              id TEXT PRIMARY KEY,record_id TEXT NOT NULL,kind TEXT NOT NULL,
-              actor TEXT NOT NULL,created REAL NOT NULL,payload TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS evidence_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
             ''')
 
@@ -135,14 +132,13 @@ class Evidence:
                 else:
                     image_status = 'capacity_rejected'
                     db.execute("INSERT OR REPLACE INTO evidence_settings VALUES('capacity_blocked','1')")
-            cloud = old and old['cloud_decision']
             if old and decided is None and old['review']==review:
                 decided=old['decided']
             db.execute('''INSERT INTO records(id,source,platform,video_id,judge_round,seq,payload,uploaded,review,delivery,decided,sha)
               VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET seq=excluded.seq,
               payload=excluded.payload,review=excluded.review,delivery=excluded.delivery,decided=excluded.decided,sha=excluded.sha''',
               (identifier,*key,event['seq'],json.dumps(payload,ensure_ascii=False),old['uploaded'] if old else self.clock(),
-               old['review'] if cloud else review, old['delivery'] if cloud else delivery, old['decided'] if cloud else decided,sha))
+               review,delivery,decided,sha))
             return {'id':identifier,'stale':stale,'image':image_status}
 
     def listing(self,limit=1000,offset=0):
@@ -158,39 +154,6 @@ class Evidence:
         for r in rows:
             r['payload'] = json.loads(r['payload'])
         return {'items':rows,'total':record_count,'nextOffset':offset+len(rows) if offset+len(rows)<record_count else None,'pending':total,'displayable':displayable,'imageBytes':size,'imageCapacity':self.cap,'capacityReached':size>=self.cap or bool(capacity_blocked and capacity_blocked['value']=='1')}
-
-    def decide(self, identifier, revision, decision, request_id, actor):
-        if decision not in {'confirmed','rejected'} or not isinstance(request_id,str) or not 1<=len(request_id)<=128:
-            raise ValueError('invalid_decision')
-        with self.db() as db:
-            previous = db.execute('SELECT * FROM actions WHERE id=?',(request_id,)).fetchone()
-            if previous:
-                if previous['record_id']!=identifier or previous['kind']!=decision or previous['actor']!=actor:
-                    raise ValueError('request_id_conflict')
-                return json.loads(previous['payload'])
-            r = db.execute('SELECT * FROM records WHERE id=?',(identifier,)).fetchone()
-            if not r or r['revision']!=revision or r['review']!='pending':
-                raise ValueError('revision_conflict')
-            if decision=='confirmed' and (not r['sha'] or not json.loads(r['payload']).get('displayable')):
-                raise ValueError('not_displayable')
-            snapshot=json.loads(r['payload'])
-            result = {'id':identifier,'review':decision,'revision':revision+1,'decidedAt':self.clock(),
-                      'source':r['source'],'platform':r['platform'],'video_id':r['video_id'],'judge_round':r['judge_round'],
-                      'sourceFingerprint':snapshot.get('sourceFingerprint'),'replace_id':snapshot.get('replace_id')}
-            db.execute('UPDATE records SET review=?,decided=?,revision=revision+1,cloud_decision=1,delivery=? WHERE id=?',
-                       (decision,result['decidedAt'],'waiting' if decision=='confirmed' else 'not_applicable',identifier))
-            db.execute('INSERT INTO actions VALUES(?,?,?,?,?,?)',(request_id,identifier,decision,actor,self.clock(),json.dumps(result)))
-            return result
-
-    def changes(self, source, after=0):
-        if not isinstance(source,str) or not 1<=len(source)<=256 or type(after) is not int or after<0:
-            raise ValueError('invalid_change_cursor')
-        with self.db() as db:
-            rows=db.execute('''SELECT a.rowid AS cursor,a.* FROM actions a JOIN records r ON r.id=a.record_id
-                               WHERE r.source=? AND a.rowid>? ORDER BY a.rowid LIMIT 100''',(source,after)).fetchall()
-        return {'items':[{'cursor':r['cursor'],'actionId':r['id'],'kind':r['kind'],'actor':r['actor'],
-                         'createdAt':r['created'],'data':json.loads(r['payload'])} for r in rows],
-                'nextCursor':rows[-1]['cursor'] if rows else after}
 
     def backup(self):
         folder = self.root/'db-backups'

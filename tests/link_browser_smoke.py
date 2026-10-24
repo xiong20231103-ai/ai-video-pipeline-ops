@@ -27,7 +27,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='cloud-links-browser-') as directory:
         app=FastAPI()
         mount_links(app,{'link_evidence_enabled':True,'link_evidence_dir':directory},
-                    lambda r:{'user_id':1},lambda *a:None,lambda *a:None)
+                    lambda r:{'user_id':1},lambda *a:None)
         evidence=app.state.link_evidence
         for n in range(5):
             data={'source':'browser-test','platform':'douyin','video_id':str(100+n),'judge_round':'v1:1','seq':n+1,

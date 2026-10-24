@@ -132,7 +132,7 @@ class EvidenceTests(unittest.TestCase):
         def session(request):
             if request.headers.get('x-fixture-session')!='yes':raise HTTPException(401,'login_required')
             return {'user_id':1}
-        mount_links(app,{'link_evidence_enabled':True,'link_evidence_dir':str(self.root/'routes')},session,lambda *a:None,lambda *a:None)
+        mount_links(app,{'link_evidence_enabled':True,'link_evidence_dir':str(self.root/'routes')},session,lambda *a:None)
         with patch.dict(os.environ,{'LINK_EVIDENCE_TOKEN':token}),TestClient(app) as client:
             self.assertEqual(client.post('/api/links/ingest',json=event()).status_code,401)
             headers={'Authorization':'Bearer '+token}
@@ -150,6 +150,20 @@ class EvidenceTests(unittest.TestCase):
         first=self.store.listing(limit=2);second=self.store.listing(limit=2,offset=first['nextOffset'])
         self.assertEqual(first['total'],3);self.assertIsNone(second['nextOffset'])
         self.assertEqual(len({r['id'] for r in first['items']+second['items']}),3)
+
+    def test_exactly_four_routes_even_with_old_write_flags(self):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from cloud.link_routes import mount_links
+        app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
+        mount_links(app,{'link_evidence_enabled':True,'link_evidence_dir':str(self.root/'route-inventory'),
+                        'link_decisions_enabled':True,'link_delivery_enabled':True},lambda r:{'user_id':1},lambda *a:None)
+        routes={(method,r.path) for r in app.routes for method in r.methods}
+        self.assertEqual(routes,{('POST','/api/links/ingest'),('GET','/api/links'),('GET','/api/links/shots/{sha}'),('GET','/links')})
+        with TestClient(app) as client:
+            self.assertEqual(client.get('/api/links/changes?source=fixture').status_code,404)
+            self.assertEqual(client.post('/api/links/record/decision',json={}).status_code,404)
+            self.assertEqual(client.post('/api/links/deliveries',json={}).status_code,404)
 
 
 if __name__=='__main__':unittest.main()

@@ -11,4 +11,5 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
+UMask=0077
 ReadWritePaths=/srv/ops-console/link-evidence

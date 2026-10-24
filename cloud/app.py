@@ -103,7 +103,7 @@ def create_app(config=None,store=None,static_root=None):
     def rate(request,kind,maximum):
         if store.limited(kind+':'+rate_identity(request),maximum): raise HTTPException(429,'rate_limited')
     from cloud.link_routes import mount_links
-    mount_links(application,config,session,csrf,rate)
+    mount_links(application,config,session,rate)
     mount_backups(application,vault,agent,session,csrf,bounded_json)
     enqueue_command=mount_commands(application,commands,agent,session,csrf,bounded_json,rate,rate_identity,config['origin'])
     # R2 is additive and disabled by default. No old /api/cache/command path changes.
