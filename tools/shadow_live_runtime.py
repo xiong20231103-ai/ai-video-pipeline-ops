@@ -24,6 +24,10 @@ CHUNK_BYTES=64*1024
 MAX_DIGESTS=262144
 V3_APPROVED_BYTES=2*1024*1024*1024
 PREFLIGHT_START_DELAY_SECONDS=60
+# A Dashboard collector read can time out while the receiver is busy; the next
+# poll arrives within one scan, so a capture waits up to ~9 s before refusing.
+OBSERVE_OBSERVATION_ATTEMPTS=4
+OBSERVE_OBSERVATION_RETRY_SECONDS=3
 
 
 class IncrementMeasurement:
@@ -268,7 +272,7 @@ class _StatusPublisher:
             value={'schema':1,'mode':'observe','enabled':True,'hostPid':os.getpid(),
                    'updatedAtUtc':datetime.now(timezone.utc).isoformat(),'reviewedPreflight':self.preflight,
                    **{k:result.get(k) for k in ('state','lastCode','lastChanges','published','rejected','captureAttempts',
-                                                'directoryChangeRejected','lastSourceIdentity')},
+                                                'directoryChangeRejected','staleLocksRecovered','lastSourceIdentity')},
                    'businessRequests':0,'realShadowPassed':False,'switchAccepted':False}
             _safe(value)
             temporary=self.path.with_name(self.path.name+'.tmp')
@@ -293,17 +297,34 @@ def configure_observe(dashboard,spec,control_root,*,interval_seconds=None):
     if type(interval) is not int or not OBSERVE_MIN_INTERVAL_SECONDS<=interval<=3600:raise CaptureError('observe_interval_invalid')
     bindings,ports,volatile_http=observe_routes(spec)
     observer=AgentReadObserver(ports)
+    latest_roles={}
     def process_probe():
         state=Path(os.environ.get('LOCALAPPDATA',''))/'OpsAgent/agent-runtime.json';agent_pid=None
         if state.is_file() and state.stat().st_size<4096:
             agent_pid=json.loads(state.read_text(encoding='utf-8-sig')).get('pid')
-        result=probe_processes(dashboard.psutil,agent_pid=agent_pid)
+        # Per-video CapCut/ffmpeg descendants come and go during production.
+        result=probe_processes(dashboard.psutil,agent_pid=agent_pid,transient_children=True)
         if result['preflight']['missing']:raise CaptureError('external_or_process_changed')
+        latest_roles.clear();latest_roles.update(result['roles'])
         return {'processRecords':result['processRecords'],'processIds':result['processIds']}
+    def role_processes(processes):
+        # Compared with the roles of the latest probe: a restarted role (new
+        # PID or birth time) is absent from or different in the window start.
+        pids=set(latest_roles.values())
+        return sorted((row for row in processes['processRecords'] if row['pid'] in pids),key=lambda row:row['pid'])
+    stop_file=control/'STOP'
+    def retry_sleep(seconds):
+        # Retries never delay a STOP drill: they end as soon as STOP appears.
+        end=time.monotonic()+seconds
+        while time.monotonic()<end:
+            if stop_file.exists():raise CaptureError('observed_external_ports_incomplete')
+            time.sleep(.1)
     publisher=CapturePublisher(plan,spec['source'],evidence,observer,process_probe,
         approved_total_bytes=V3_APPROVED_BYTES,max_capture_bytes=spec['maxCaptureBytes'],
-        min_interval_seconds=interval,volatile_http=volatile_http)
-    stop_file=control/'STOP';status_path=control/'observe-status.json';stopped=[]
+        min_interval_seconds=interval,volatile_http=volatile_http,process_view=role_processes,psutil=dashboard.psutil,
+        observation_attempts=OBSERVE_OBSERVATION_ATTEMPTS,observation_retry_seconds=OBSERVE_OBSERVATION_RETRY_SECONDS,
+        sleep=retry_sleep)
+    status_path=control/'observe-status.json';stopped=[]
     def stop_requested():
         if not stop_file.exists():return False
         if not stopped:

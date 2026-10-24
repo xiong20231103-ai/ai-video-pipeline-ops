@@ -20,7 +20,9 @@ class AgentReadObserver:
         key=self.ports.get((port,target))
         if not key:return None
         with self.lock:
-            self.serial+=1;self.generations[key]=self.serial;self.values.pop(key,None)
+            # The last complete body stays valid while a newer read is in flight;
+            # an abandoned or rejected read still invalidates it (see end/complete).
+            self.serial+=1;self.generations[key]=self.serial
             self.pending[self.serial]=key
             return self.serial
     def complete(self,attempt,status,raw):
@@ -42,5 +44,10 @@ class AgentReadObserver:
                 self.values.pop(key,None);self.failures[key]='observer_read_incomplete'
     def observation(self):
         with self.lock:
-            if self.pending or self.failures or set(self.values)!=set(self.ports.values()) or any(not 0<=self.clock()-stamp<=self.max_age for stamp in self.completed_at.values()):raise CaptureError('observed_external_ports_incomplete')
+            # A Dashboard read in flight at this instant is not a gap: the
+            # collector polls every few seconds and used to make ~1 in 6 checks fail.
+            now=self.clock()
+            if (self.failures or set(self.values)!=set(self.ports.values())
+                    or any(not 0<=now-self.completed_at[key]<=self.max_age for key in self.values)):
+                raise CaptureError('observed_external_ports_incomplete')
             return {'responses':copy.deepcopy(self.values),'observationGeneration':self.serial}
