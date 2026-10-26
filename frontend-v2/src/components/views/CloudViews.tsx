@@ -21,6 +21,18 @@ import { commandLabels } from "./presentation";
 import { Panel, Status, Table, Empty, Field, DisabledWrite } from "./shared";
 import { Button } from "@/components/ui/button";
 
+// The home scan itself takes about 70s, so a minute-scale age is normal.
+const STALE_WARNING_SECONDS = 180;
+const STALE_DANGER_SECONDS = 600;
+
+function formatElapsed(seconds: number) {
+  const whole = Math.floor(seconds);
+  if (whole < 60) return `${whole} 秒`;
+  const minutes = Math.floor(whole / 60),
+    rest = whole % 60;
+  return rest ? `${minutes} 分 ${rest} 秒` : `${minutes} 分钟`;
+}
+
 export function Freshness({ snapshot }: { snapshot: Snapshot }) {
   const [tick, setTick] = useState(() => performance.now());
   const started = useRef(tick);
@@ -42,7 +54,12 @@ export function Freshness({ snapshot }: { snapshot: Snapshot }) {
       : (tick - (snapshot.receivedTick ?? started.current)) / 1000,
   );
   const received = Boolean(snapshot.receivedAt),
-    tone = age > 120 ? "danger" : age > 30 || !known ? "warning" : "neutral";
+    tone =
+      age > STALE_DANGER_SECONDS
+        ? "danger"
+        : age > STALE_WARNING_SECONDS || !known
+          ? "warning"
+          : "neutral";
   const stamp = cloud
     ? known && received
       ? formatClock(new Date(Date.now() - age * 1000))
@@ -58,10 +75,10 @@ export function Freshness({ snapshot }: { snapshot: Snapshot }) {
     >
       <span>
         数据截至 <strong>{stamp}</strong>{" "}
-        {received && <span>（{Math.floor(age)} 秒前）</span>}
+        {received && <span>（{formatElapsed(age)}前）</span>}
       </span>
       {cloud && <small>云端缓存 · 收到缓存不代表实时</small>}
-      {(age > 30 || !known) && <p>页面数据可能已过期，按 Ctrl+F5 刷新</p>}
+      {(age > STALE_WARNING_SECONDS || !known) && <p>页面数据可能已过期，按 Ctrl+F5 刷新</p>}
     </div>
   );
 }

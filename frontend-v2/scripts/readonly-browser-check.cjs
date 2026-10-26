@@ -56,7 +56,7 @@ async function run() {
         }
         if (width === 1440 && evidence) await page.screenshot({ path: path.join(evidence, `${mode}-light-${view}-1440.png`), animations: 'disabled' })
       }
-      if (mode === 'cloud' && width === 1440) for (const [age, name] of [[45, 'warning'], [130, 'stale']]) {
+      if (mode === 'cloud' && width === 1440) for (const [age, name] of [[200, 'warning'], [650, 'stale']]) {
         sourceAge = age
         await page.reload({ waitUntil: 'networkidle' })
         await page.getByText('页面数据可能已过期，按 Ctrl+F5 刷新', { exact: true }).waitFor()
