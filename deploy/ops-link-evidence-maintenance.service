@@ -1,0 +1,15 @@
+[Unit]
+Description=Clean temporary link screenshots and back up links SQLite
+
+[Service]
+Type=oneshot
+User=ops-console
+Group=ops-console
+WorkingDirectory=/opt/ops-console/current
+ExecStart=/opt/ops-console/current/.venv/bin/python -m cloud.link_maintenance --root /srv/ops-console/link-evidence
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+UMask=0077
+ReadWritePaths=/srv/ops-console/link-evidence

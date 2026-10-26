@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily link evidence retention and DB-only backup
+
+[Timer]
+OnCalendar=*-*-* 04:10:00 Asia/Shanghai
+Persistent=true
+Unit=ops-link-evidence-maintenance.service
+
+[Install]
+WantedBy=timers.target
