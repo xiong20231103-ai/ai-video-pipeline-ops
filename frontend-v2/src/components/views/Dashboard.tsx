@@ -484,7 +484,6 @@ export default function Dashboard({ view }: { view: View }) {
               ? "家里模式"
               : "正在确认运行模式"}
         </Status>
-        <span>V2 独立预览：操作资格由当前模式与服务状态决定</span>
         <Button variant="outline" size="sm" onClick={refresh}>
           刷新
         </Button>
@@ -592,10 +591,11 @@ export default function Dashboard({ view }: { view: View }) {
               <Events data={data} />
             </>
           )}
-          {snapshot.mode === "cloud" && (
+          {/* Account and cache sources live with health, not under every view. */}
+          {snapshot.mode === "cloud" && view === "health" && (
             <>
               <SourcePanel snapshot={snapshot} reader={reader.current} />
-              {view === "health" && <BackupPanel reader={reader.current} />}
+              <BackupPanel reader={reader.current} />
             </>
           )}
         </>
@@ -621,7 +621,6 @@ function Overview({
     metrics = metricValues(o(overview.metrics));
   return (
     <>
-      <GapQuickHint data={data} canWrite={canWrite} onReplenish={onReplenish} />
       <Panel
         title="当前生产状态"
         className="overview-hero"
@@ -644,6 +643,7 @@ function Overview({
             : "监控与安全控制中心"}
         </small>
       </Panel>
+      <GapQuickHint data={data} canWrite={canWrite} onReplenish={onReplenish} />
       <div className="resource-grid">
         {metrics.map((x) => (
           <Panel key={x.key} title={x.label}>

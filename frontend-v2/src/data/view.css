@@ -1,6 +1,6 @@
 .dashboard-content {
   display: grid;
-  gap: 22px;
+  gap: 18px;
 }
 .data-toolbar,
 .data-actions,
@@ -80,17 +80,25 @@
   background: color-mix(in srgb, var(--tone-color) 5%, transparent);
 }
 .freshness-banner {
-  padding: 14px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 10px 16px;
   font-size: 12px;
-  line-height: 1.9;
+  line-height: 1.7;
   border: 1px solid color-mix(in srgb, var(--tone-color) 25%, transparent);
   border-radius: 12px;
   color: var(--tone-color);
   background: color-mix(in srgb, var(--tone-color) 5%, transparent);
 }
 .freshness-banner small {
-  display: block;
-  font-size: 10px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+.freshness-banner p {
+  margin: 0;
+  font-weight: 500;
 }
 .freshness-banner strong {
   font-variant-numeric: tabular-nums;
@@ -159,9 +167,9 @@
   background: linear-gradient(110deg, var(--card), var(--surface-raised));
 }
 .overview-hero > h2 {
-  font-size: 24px;
-  letter-spacing: -0.5px;
-  line-height: 1.7;
+  font-size: 30px;
+  letter-spacing: -0.6px;
+  line-height: 1.3;
 }
 .taskbox-grid {
   display: grid;
@@ -427,6 +435,12 @@
   .pipeline-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+  }
+  .resource-grid > :last-child:nth-child(odd),
+  .safety-tiles > :last-child:nth-child(odd),
+  .service-tiles > :last-child:nth-child(odd),
+  .pipeline-cards > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
   .resource-grid .data-panel {
     padding: 16px;

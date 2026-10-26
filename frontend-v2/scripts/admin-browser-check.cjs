@@ -22,6 +22,8 @@ const csp="default-src 'self'; script-src 'self' ; style-src 'self' 'unsafe-inli
  for(const theme of ['dark','light']){if(theme==='light')await page.getByRole('button',{name:'切换到浅色主题'}).click();await page.getByRole('button',{name:'重置全部测试记录'}).click();await page.getByRole('status').filter({hasText:'隔离测试记录重置'}).waitFor();await snap(theme+'-reset');}
  }else{
  assert(await page.getByRole('button',{name:'重置全部测试记录'}).isDisabled());
+ // Cloud account actions live on the health view.
+ await page.evaluate(()=>{window.location.hash='health'});await page.getByRole('button',{name:'修改密码',exact:true}).waitFor();
  await page.getByRole('button',{name:'修改密码',exact:true}).click();const old=page.getByLabel('当前密码',{exact:true}),next=page.getByLabel('新密码（至少12个字符）',{exact:true});assert.equal(await old.getAttribute('maxlength'),'256');assert.equal(await next.getAttribute('minlength'),'12');assert.equal(await next.getAttribute('maxlength'),'256');
  await old.fill('synthetic-old');await next.fill('synthetic-new-only');await page.getByRole('button',{name:'保存新密码'}).click();await page.getByLabel('账号管理').getByText('未修改，请核对密码后重试',{exact:true}).waitFor();
  for(const theme of ['dark','light']){if(theme==='light')await page.getByRole('button',{name:'切换到浅色主题'}).click();await snap(theme+'-account');}
