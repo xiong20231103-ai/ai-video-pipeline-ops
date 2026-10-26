@@ -24,7 +24,8 @@ it("checked entries retain PR and corresponding worktree evidence paths", () => 
   for (const row of rows.filter((r) => r.implemented)) {
     expect(Number(row.pr)).toBeGreaterThanOrEqual(30);
     expect(Array.isArray(row.evidence) && row.evidence.length > 0).toBe(true);
-    for (const path of row.evidence as string[])
+    // Guides under docs/ moved to the private docs repository (ops PR #73).
+    for (const path of (row.evidence as string[]).filter((p) => !p.startsWith("docs/")))
       expect(existsSync(resolve(root, path)), row.id + ": " + path).toBe(true);
   }
 });

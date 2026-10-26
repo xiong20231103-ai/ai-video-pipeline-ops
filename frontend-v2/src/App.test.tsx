@@ -49,10 +49,9 @@ describe('V2-0 isolated presentation shell', () => {
     expect(
       await screen.findByRole('heading', { name: '当前生产状态' }),
     ).toBeVisible()
-    expect(screen.getByText('V2 功能预览')).toBeVisible()
-    expect(
-      screen.getByText('V2 独立预览：操作资格由当前模式与服务状态决定'),
-    ).toBeVisible()
+    // The default console carries no preview labels; the legacy page stays one click away.
+    expect(screen.queryByText(/V2 (功能|独立)预览/)).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /旧版控制台/ })).toBeVisible()
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(
       screen.queryByRole('button', { name: /安全继续|执行清理/ }),

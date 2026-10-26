@@ -56,11 +56,11 @@ export function Freshness({ snapshot }: { snapshot: Snapshot }) {
       role="status"
       data-testid="freshness"
     >
-      <div>
+      <span>
         数据截至 <strong>{stamp}</strong>{" "}
         {received && <span>（{Math.floor(age)} 秒前）</span>}
-        {cloud && <small>云端缓存 · 收到缓存不代表实时</small>}
-      </div>
+      </span>
+      {cloud && <small>云端缓存 · 收到缓存不代表实时</small>}
       {(age > 30 || !known) && <p>页面数据可能已过期，按 Ctrl+F5 刷新</p>}
     </div>
   );

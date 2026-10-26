@@ -5,10 +5,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import {
   Activity,
   ArrowUpRight,
-  Box,
   ChevronLeft,
-  CircleHelp,
-  ExternalLink,
   FolderClosed,
   Grid2X2,
   Menu,
@@ -20,9 +17,7 @@ import {
   Upload,
   Workflow,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -54,37 +49,31 @@ const sections = [
     id: "overview",
     label: "总览",
     icon: Grid2X2,
-    description: "从这里，掌握每一个创作环节。",
   },
   {
     id: "tasks",
     label: "任务与流程",
     icon: Workflow,
-    description: "任务箱、五个生产步骤与项目状态。",
   },
   {
     id: "uploads",
     label: "上传",
     icon: Upload,
-    description: "成片上传、云端核验与安全清理状态。",
   },
   {
     id: "files",
     label: "文件管理",
     icon: FolderClosed,
-    description: "草稿、音频、生产文件与待删区。",
   },
   {
     id: "commands",
     label: "安全继续与命令",
     icon: ShieldCheck,
-    description: "HTTP 回执与业务进度分别呈现。",
   },
   {
     id: "health",
     label: "健康与事件",
     icon: Activity,
-    description: "系统服务、确定性安全检查与最近事件。",
   },
 ] as const;
 
@@ -96,7 +85,7 @@ function Brand() {
       </span>
       <span className="brand-copy">
         <strong>自动剪辑</strong>
-        <span>WORKSPACE / V2</span>
+        <span>生产控制台</span>
       </span>
     </a>
   );
@@ -141,20 +130,6 @@ function Navigation({
   );
 }
 
-function SidebarFooter() {
-  return (
-    <div className="sidebar-footer">
-      <Separator />
-      <div className="sidebar-note">
-        <Box size={16} />
-        <span>独立预览空间</span>
-        <Badge variant="outline">V2-3</Badge>
-      </div>
-      <p>专注创作，让流程井然有序。</p>
-    </div>
-  );
-}
-
 export default function App() {
   const [theme, setTheme] = useState(initialTheme);
   const [view, setView] = useState(currentView);
@@ -163,7 +138,6 @@ export default function App() {
   );
   const [mobileOpen, setMobileOpen] = useState(false);
   const current = sections.find((section) => section.id === view)!;
-  const CurrentIcon = current.icon;
 
   useEffect(() => {
     const onHashChange = () => setView(currentView());
@@ -201,7 +175,6 @@ export default function App() {
           <Brand />
           <Navigation view={view} collapsed={collapsed} />
           <div className="sidebar-bottom">
-            <SidebarFooter />
             <Button
               variant="ghost"
               className="collapse-button"
@@ -247,7 +220,6 @@ export default function App() {
                     collapsed={false}
                     onNavigate={() => setMobileOpen(false)}
                   />
-                  <SidebarFooter />
                 </SheetContent>
               </Sheet>
               <span className="breadcrumb-root">控制台</span>
@@ -255,9 +227,6 @@ export default function App() {
               <span className="breadcrumb-current">{current.label}</span>
             </div>
             <div className="topbar-actions">
-              <Badge variant="outline" className="preview-badge">
-                V2 功能预览
-              </Badge>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -285,19 +254,9 @@ export default function App() {
 
           <main id="main-content" className="main-content" tabIndex={-1}>
             <div className="page-heading">
-              <div>
-                <div className="eyebrow">
-                  <span />
-                  WORKSPACE OVERVIEW
-                </div>
-                <h1>
-                  <BlurText text={current.label} />
-                </h1>
-                <p>{current.description}</p>
-              </div>
-              <span className="section-icon" aria-hidden="true">
-                <CurrentIcon size={24} strokeWidth={1.3} />
-              </span>
+              <h1>
+                <BlurText text={current.label} />
+              </h1>
             </div>
             <Suspense
               fallback={
@@ -310,28 +269,11 @@ export default function App() {
               <Dashboard view={view} />
             </Suspense>
 
-            <Card className="continuity-card">
-              <div className="continuity-icon">
-                <CircleHelp size={19} strokeWidth={1.5} />
-              </div>
-              <div>
-                <h2>原来的工作空间，随时可用</h2>
-                <p>
-                  当前预览不会代替旧页面。查看任务与执行操作，请继续使用旧版控制台。
-                </p>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <a href={legacyDestination} target="_blank" rel="noreferrer">
-                  打开旧页面
-                  <ExternalLink size={13} />
-                </a>
-              </Button>
-            </Card>
             <footer className="page-footer">
               <span>
-                自动剪辑 <span className="footer-dot">·</span> 控制台 V2
+                自动剪辑 <span className="footer-dot">·</span> 生产控制台
               </span>
-              <span>V2 独立预览 / 业务进度以家里状态为准</span>
+              <span>业务进度以家里状态为准</span>
             </footer>
           </main>
         </div>
