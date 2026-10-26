@@ -1,6 +1,6 @@
 """Explicit bounded snapshot capture; no discovery, credentials or live HTTP."""
 from __future__ import annotations
-import hashlib,json,os,shutil,sqlite3,tempfile,re,csv
+import hashlib,json,os,shutil,sqlite3,tempfile,re,csv,time
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path,PureWindowsPath
@@ -96,6 +96,37 @@ def rows_sha256(path,rows=None):
     return _ROWS_HASHES[key]
 
 
+def _publish_snapshot(stage, destination, *, timeout=1.0):
+    """Publish once, tolerating bounded Windows rename contention.
+
+    A temporary Windows directory handle can deny rename even after all of
+    our streams are closed. Keep the validated stage intact; never delete or
+    overwrite a destination to make a retry succeed. Permanent errors remain
+    errors, and a different source directory cannot be substituted on retry.
+    """
+    if not 0 <= timeout <= 5:
+        raise ValueError('snapshot_publish_timeout_out_of_range')
+    stage=no_links(stage);destination=no_links(destination)
+    identity=stage.stat()
+    if not stage.is_dir():raise SnapshotError('snapshot_stage_not_directory')
+    deadline=time.monotonic()+timeout
+    while True:
+        if destination.exists():raise SnapshotError('snapshot_destination_exists')
+        current=no_links(stage).stat()
+        if (current.st_dev,current.st_ino)!=(identity.st_dev,identity.st_ino):
+            raise SnapshotError('snapshot_stage_identity_changed')
+        try:
+            # Windows rename refuses an existing target atomically, including
+            # an empty directory created after the existence check above.
+            os.rename(stage,destination)
+            return
+        except OSError as error:
+            remaining=deadline-time.monotonic()
+            if os.name!='nt' or getattr(error,'winerror',None) not in {5,32,33} or remaining<=0:
+                raise
+            time.sleep(min(0.02,remaining))
+
+
 def capture(destination,*,files=None,databases=None,facts,frozen_at,legacy_sha256,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024):
     files=files or {};databases=databases or {};destination=no_links(destination)
     if destination.exists():raise SnapshotError('snapshot_destination_exists')
@@ -164,7 +195,7 @@ def capture(destination,*,files=None,databases=None,facts,frozen_at,legacy_sha25
         if len(encoded)>8*1024*1024:raise SnapshotError('snapshot_manifest_too_large')
         (stage/'snapshot.json').write_bytes(encoded)
         Snapshot(stage)
-        os.replace(stage,destination)
+        _publish_snapshot(stage,destination)
     return Snapshot(destination)
 
 class Snapshot:

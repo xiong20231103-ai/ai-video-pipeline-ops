@@ -15,6 +15,18 @@ def package(path,commit,names=FILES):
     (path/'deployment-manifest.json').write_text(json.dumps({'commit':commit,'sha256':hashes}),encoding='utf-8')
 
 class AgentSourceUpdateTests(unittest.TestCase):
+    def test_pre_pip_relocated_manifest_and_exact_rollback_remain_supported(self):
+        from deploy.agent_source_update import PRE_PIP_R6_RELOCATED_FILES,R6_RELOCATED_FILES
+        with TemporaryDirectory() as folder:
+            root=Path(folder);old=root/'old';new=root/'new';backup=root/'backup'
+            package(old,'a'*40,PRE_PIP_R6_RELOCATED_FILES);package(new,'b'*40,R6_RELOCATED_FILES)
+            prepare(new,old,backup,'b'*40);apply(new,old,backup,'b'*40)
+            self.assertEqual(set(R6_RELOCATED_FILES),set(validate(old)['sha256']))
+            restore(backup,old)
+            self.assertEqual(set(PRE_PIP_R6_RELOCATED_FILES),set(validate(old)['sha256']))
+            for name in set(R6_RELOCATED_FILES)-set(PRE_PIP_R6_RELOCATED_FILES):
+                self.assertFalse((old/name).exists())
+
     def test_previous_r6_manifest_remains_accepted_and_can_be_restored(self):
         with TemporaryDirectory() as folder:
             root=Path(folder);old=root/'old';new=root/'new';backup=root/'backup'

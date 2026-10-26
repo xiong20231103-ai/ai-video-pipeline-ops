@@ -48,10 +48,13 @@ R6_FILES=PREVIOUS_R6_FILES+(
 INITIAL_R6_FILES=tuple(name for name in PREVIOUS_R6_FILES if name not in {
     'agent/core/source_profiles.py','agent/core/collection_verified_final.py','verified_final.py',
 })
-R6_RELOCATED_FILES=tuple(name.replace('docs/migration/','contracts/migration/') for name in R6_FILES)
+PRE_PIP_R6_RELOCATED_FILES=tuple(name.replace('docs/migration/','contracts/migration/') for name in R6_FILES)
+R6_RELOCATED_FILES=PRE_PIP_R6_RELOCATED_FILES+(
+    'contracts/pip-console-startup.json','contracts/legacy-app-pip-console-crlf.txt',
+)
 SOURCE_WHITELISTS=tuple(frozenset(names) for names in (
     LEGACY_FILES,PREVIOUS_FILES,CURRENT_FILES,BACKUP_FILES,FILES,
-    INITIAL_R6_FILES,PREVIOUS_R6_FILES,R6_FILES,R6_RELOCATED_FILES,
+    INITIAL_R6_FILES,PREVIOUS_R6_FILES,R6_FILES,PRE_PIP_R6_RELOCATED_FILES,R6_RELOCATED_FILES,
 ))
 KNOWN_RUNTIME_FILES=frozenset().union(*SOURCE_WHITELISTS)
 
