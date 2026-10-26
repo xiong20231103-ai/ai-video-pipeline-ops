@@ -240,7 +240,7 @@ class HostPreflightTests(unittest.TestCase):
         self.control.mkdir()
         # Force preflight failure inside the optional worker, never the real app.
         def bad(*args,**kwargs):raise RuntimeError('PRIVATE-CANARY')
-        with patch.object(live,'run_preflight',bad):
+        with patch.object(live,'run_preflight',bad),patch.object(live,'PREFLIGHT_START_DELAY_SECONDS',0):
             live.configure(dashboard,self.spec,'preflight',self.control)
             with TestClient(app) as client:
                 self.assertEqual({'ok':True},client.get('/api/health').json())
@@ -253,12 +253,116 @@ class HostPreflightTests(unittest.TestCase):
         self.assertNotIn('PRIVATE-CANARY',''.join(p.read_text() for p in self.control.iterdir()))
 
 
+class ObserveTests(unittest.TestCase):
+    ROUTE='http://127.0.0.1:8766/api/pipeline/summary'
+
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
+        self.root=Path(self.temp.name)
+        repository=self.root/'repository';(repository/'data').mkdir(parents=True)
+        dump(repository/'data/state.json',{'state':'paused'})
+        source=repository/'app.py';source.write_text('# unchanged original fixture')
+        self.plan={'schema':1,'roots':{'repository':str(repository)},
+                   'files':{'repository/data/state.json':{'root':'repository','path':'data/state.json'}}}
+        self.spec=dict(source=str(source),evidenceRoot=str(self.root/'new'),archivedRoot=str(self.root/'old'),
+                       approvedBytes=2*1024**3,maxCaptureBytes=1024**2,preflightOnly=False,capturePlan=self.plan,
+                       observe={'intervalSeconds':300,'routes':{self.ROUTE:'receiver:/api/pipeline/summary'}})
+        self.control=self.root/'control';self.control.mkdir()
+        self.opened=[]
+        def urlopen(request,*args,**kwargs):
+            self.opened.append(request);raise OSError('fixture receiver offline')
+        self.urllib=SimpleNamespace(request=SimpleNamespace(urlopen=urlopen))
+        self.dashboard=SimpleNamespace(__file__=str(source),psutil=fake_psutil(),urllib=self.urllib,app=None)
+        self.environment=patch.dict(os.environ,{'LOCALAPPDATA':str(self.root/'local')});self.environment.start();self.addCleanup(self.environment.stop)
+
+    def series(self,*,plan=None,statuses=('measured',)*3,status='completed',name='preflight-series-1.json'):
+        rounds=[{'round':i+1,'status':s,'directoryChangeFailedRounds':0,'directoryUnmeasurableRounds':0} for i,s in enumerate(statuses)]
+        from agent.core.snapshot import canonical
+        dump(self.control/name,{'schema':1,'mode':'preflight','enabled':False,'status':status,'rounds':rounds,
+             'planSha256':hashlib.sha256(canonical(plan or self.plan)).hexdigest()})
+
+    def test_observe_requires_a_clean_three_round_preflight_of_the_same_plan(self):
+        with self.assertRaisesRegex(live.CaptureError,'observation_requires_reviewed_preflight'):
+            live.reviewed_preflight(self.control,self.plan)
+        self.series(statuses=('measured','blocked','measured'),name='preflight-series-1.json')
+        self.series(plan={**self.plan,'schema':2},name='preflight-series-2.json')
+        self.series(status='failed',name='preflight-series-3.json')
+        self.series(statuses=('measured','measured'),name='preflight-series-4.json')
+        with self.assertRaisesRegex(live.CaptureError,'observation_requires_reviewed_preflight'):
+            live.reviewed_preflight(self.control,self.plan)
+        self.series(name='preflight-series-5.json')
+        self.assertEqual('preflight-series-5.json',live.reviewed_preflight(self.control,self.plan))
+
+    def test_invalid_observe_settings_fail_before_serving(self):
+        self.series()
+        cases=[{'preflightOnly':True},{'observe':{'intervalSeconds':60,'routes':self.spec['observe']['routes']}},
+               {'observe':{'intervalSeconds':300,'routes':{}}},
+               {'observe':{'intervalSeconds':300,'routes':{'http://10.0.0.1:8766/api/pipeline/summary':'receiver:/api/pipeline/summary'}}},
+               {'evidenceRoot':str(self.control/'evidence')},{'approvedBytes':5*1024**3},
+               {'observe':{'intervalSeconds':300,'routes':self.spec['observe']['routes'],'volatileRoutes':['receiver:/api/other']}},
+               {'observe':{'intervalSeconds':300,'routes':self.spec['observe']['routes'],'volatileRoutes':'receiver:/api/pipeline/summary'}}]
+        for change in cases:
+            app=FastAPI();self.dashboard.app=app;before=app.router.lifespan_context
+            with self.subTest(change=list(change)),self.assertRaises(live.CaptureError):
+                live.configure(self.dashboard,{**self.spec,**change},'observe',self.control)
+            self.assertIs(before,app.router.lifespan_context);self.assertIs(self.urllib,self.dashboard.urllib)
+
+    def test_observe_without_external_facts_blocks_and_stop_file_restores_binding(self):
+        self.series()
+        events=[]
+        @asynccontextmanager
+        async def original(app):
+            events.append('start');yield;events.append('stop')
+        app=FastAPI(lifespan=original)
+        @app.get('/api/health')
+        def health():return {'ok':True}
+        self.dashboard.app=app
+        host=live.configure(self.dashboard,self.spec,'observe',self.control)
+        status_path=self.control/'observe-status.json'
+        import time
+        with TestClient(app) as client:
+            self.assertEqual({'ok':True},client.get('/api/health').json())
+            # The first cycle retries an incomplete observation for up to ~9 s.
+            deadline=time.monotonic()+20
+            while not status_path.exists() and time.monotonic()<deadline:time.sleep(.02)
+            status=json.loads(status_path.read_text())
+            # No Dashboard GET was observed, so nothing is captured or invented.
+            self.assertEqual('blocked',status['state']);self.assertEqual('observed_external_ports_incomplete',status['lastCode'])
+            self.assertEqual(0,status['published']);self.assertFalse(status['realShadowPassed'])
+            self.assertIsNot(self.urllib,self.dashboard.urllib)
+            (self.control/'STOP').write_text('')
+            deadline=time.monotonic()+5
+            while self.dashboard.urllib is not self.urllib and time.monotonic()<deadline:time.sleep(.02)
+            self.assertIs(self.urllib,self.dashboard.urllib)
+            self.assertEqual('stopped',host.status()['state'])
+            stopped=json.loads(status_path.read_text())
+            self.assertEqual('stopped',stopped['state']);self.assertEqual(os.getpid(),stopped['hostPid'])
+            self.assertEqual(200,client.get('/api/health').status_code)
+        self.assertEqual(['start','stop'],events);self.assertEqual([],self.opened)
+        self.assertFalse((self.root/'new'/'store').exists())
+
+
 class ProcessProbeTests(unittest.TestCase):
     def test_dynamic_identity_and_birth(self):
         report=probe_processes(fake_psutil(),agent_pid=os.getpid())
         self.assertTrue(report['preflight']['complete'])
         self.assertEqual([os.getpid()],report['processIds'])
         self.assertEqual(123.0,report['processRecords'][0]['create_time'])
+
+    def test_transient_descendant_skipped_but_role_stays_strict(self):
+        psutil=fake_psutil();base=psutil.Process
+        class Process(base):
+            def children(self,recursive):return [SimpleNamespace(pid=987654)] if self.pid==os.getpid() else []
+            def as_dict(self,attrs):
+                if self.pid==987654:raise ProcessLookupError('worker exited')
+                return super().as_dict(attrs)
+        psutil.Process=Process
+        self.assertFalse(probe_processes(psutil,agent_pid=os.getpid())['preflight']['complete'])
+        report=probe_processes(psutil,agent_pid=os.getpid(),transient_children=True)
+        self.assertTrue(report['preflight']['complete']);self.assertEqual([os.getpid()],report['processIds'])
+        self.assertEqual(os.getpid(),report['roles']['receiver'])
+        denied=fake_psutil(denied=True)
+        self.assertFalse(probe_processes(denied,agent_pid=os.getpid(),transient_children=True)['preflight']['complete'])
 
     def test_missing_agent_not_complete(self):
         report=probe_processes(fake_psutil())

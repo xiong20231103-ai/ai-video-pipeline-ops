@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import type { Row } from "@/data/types";
 const root = resolve(process.cwd(), ".."),
   inventory = JSON.parse(
-    readFileSync(resolve(root, "docs/v2/inventory.json"), "utf8"),
+    readFileSync(resolve(root, "tests/fixtures/frontend-v2/inventory.json"), "utf8"),
   ),
   rows = Object.values(inventory.groups).flat() as Row[];
 it("all 904 inventoried entries now have implementations and isolated evidence", () => {

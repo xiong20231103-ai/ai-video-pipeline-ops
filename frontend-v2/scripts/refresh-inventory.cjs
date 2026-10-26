@@ -1,7 +1,7 @@
 // Refresh only excerpts/coordinates. Preserve IDs, coverage, PRs and evidence.
 const fs=require('node:fs'),path=require('node:path'),ts=require('typescript');
-const root=path.resolve(__dirname,'../..'),file=path.join(root,'docs/v2/inventory.json'),md=path.join(root,'docs/v2/FUNCTIONAL_INVENTORY.md');
-const before=fs.readFileSync(file,'utf8'),data=JSON.parse(before),old=fs.readFileSync(md,'utf8'),lines=old.split('\n');
+const root=path.resolve(__dirname,'../..'),file=path.join(root,'tests/fixtures/frontend-v2/inventory.json'),md=process.env.OPS_PRIVATE_DOCS_ROOT?path.join(process.env.OPS_PRIVATE_DOCS_ROOT,'docs/v2/FUNCTIONAL_INVENTORY.md'):null;
+const before=fs.readFileSync(file,'utf8'),data=JSON.parse(before),old=md?fs.readFileSync(md,'utf8'):'',lines=old.split('\n');
 const files=[...new Set(data.groups.functions.map(row=>row.source))];let refreshed=0;
 for(const sourcePath of files){
  const text=fs.readFileSync(path.join(root,sourcePath),'utf8'),source=ts.createSourceFile(sourcePath,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS),nodes=[];
@@ -16,16 +16,18 @@ for(const sourcePath of files){
   // the outer IIFE/file preamble. Use the actual function node exclusively.
   entry.detail=node.getText(source).replace(/\s+/g,' ').slice(0,430);
   entry.excerptStartLine=start.line+1;entry.excerptStartColumn=start.character+1;entry.excerptEndLine=end.line+1;
+  if(md){
   const i=lines.findIndex(line=>new RegExp('^- \\[[ x]\\] \\*\\*'+entry.id+'\\*\\*').test(line));
   if(i<0)throw Error('Missing Markdown row: '+entry.id);
   const marker='原实现：`',a=lines[i+1].indexOf(marker)+marker.length,b=lines[i+1].indexOf('`',a);
   if(a<marker.length||b<a)throw Error('Invalid excerpt row: '+entry.id);
   lines[i+1]=lines[i+1].slice(0,a)+entry.detail.replaceAll('`','ˋ').replaceAll('|','¦')+lines[i+1].slice(b);
+  }
   refreshed++;
  });
 }
 const next=JSON.stringify(data,null,2)+'\n',markdown=lines.join('\n');
 if(process.argv.includes('--check')){
- if(JSON.stringify(data)!==JSON.stringify(JSON.parse(before))||markdown.replace(/\r\n/g,'\n')!==old.replace(/\r\n/g,'\n'))throw Error('Inventory excerpts stale; run npm run inventory:refresh');
-}else{fs.writeFileSync(file,next);fs.writeFileSync(md,markdown);}
+ if(JSON.stringify(data)!==JSON.stringify(JSON.parse(before))||(md&&markdown.replace(/\r\n/g,'\n')!==old.replace(/\r\n/g,'\n')))throw Error('Inventory excerpts stale; run npm run inventory:refresh');
+}else{fs.writeFileSync(file,next);if(md)fs.writeFileSync(md,markdown);}
 console.log(JSON.stringify({functionExcerpts:refreshed,coveragePreserved:true,checkOnly:process.argv.includes('--check')}));

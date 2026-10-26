@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from tools import shadow_capture
 from tools.shadow_capture import (aligned_capture,measure_directory_stability,validate_plan,
     _inventory,_stat,_read,recheck_state,ChangeReport,SmallReadBudget,CaptureError)
 
@@ -42,7 +43,7 @@ class ContentStabilityTests(unittest.TestCase):
         self.root=Path(self.temp.name);self.live=self.root/'live';self.tree=self.live/'metadata';self.tree.mkdir(parents=True)
         self.state=self.live/'workbench.ready.json';self.state.write_bytes(b'{"ready":true}')
         self.small=self.tree/'handoff.json';self.small.write_bytes(b'{"ready":true}')
-        self.source=self.root/'app.py';self.source.write_bytes((ROOT/'contracts/legacy-app-f78db5a.txt').read_bytes())
+        self.source=self.root/'app.py';self.source.write_bytes((ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8').encode())
         self.plan=dict(schema=1,roots={'workbench':str(self.live)},
             files={'workbench/workbench.ready.json':dict(root='workbench',path='workbench.ready.json')},
             trees={'workbench/metadata':dict(root='workbench',path='metadata')})
@@ -71,8 +72,44 @@ class ContentStabilityTests(unittest.TestCase):
 
     def test_changed_heartbeat_content_rejects_state_window(self):
         def changed():self.state.write_bytes(b'{"ready":null}')
-        with self.assertRaisesRegex(CaptureError,'state_changed_in_window'):self.capture(between=changed)
+        with self.assertRaisesRegex(CaptureError,'state_changed_in_window') as caught:self.capture(between=changed)
         self.assertFalse((self.root/'snapshot').exists())
+        # The refusal names the logical file and change type, never its content.
+        self.assertIn({'path':'workbench/workbench.ready.json','type':'content-change'},caught.exception.diagnostics['changes'])
+        self.assertNotIn('null',json.dumps(caught.exception.diagnostics))
+
+    def test_declared_volatile_heartbeat_keeps_first_read_and_reports_update(self):
+        self.plan['volatileFiles']=['workbench/workbench.ready.json']
+        def changed():self.state.write_bytes(b'{"ready":true,"at":2}')
+        snapshot=self.capture(between=changed)
+        self.assertEqual(b'{"ready":true}',snapshot.read('workbench/workbench.ready.json'))
+        changes=snapshot.manifest['facts']['captureProof']['stabilityChanges']
+        self.assertEqual(1,changes['changeCounts'].get('volatile-update'))
+        self.assertIn({'path':'workbench/workbench.ready.json','type':'volatile-update'},changes['changes'])
+
+    def test_volatile_heartbeat_removal_still_rejects_window(self):
+        self.plan['volatileFiles']=['workbench/workbench.ready.json']
+        with self.assertRaisesRegex(CaptureError,'state_changed_in_window'):self.capture(between=self.state.unlink)
+
+    def test_volatile_list_must_name_whitelisted_state_files_only(self):
+        for bad in ['workbench/workbench.ready.json',['workbench/metadata'],['other.json'],
+                    ['workbench/workbench.ready.json']*2,[f'f{i}' for i in range(9)]]:
+            with self.subTest(bad=bad),self.assertRaisesRegex(CaptureError,'volatile_files_invalid'):
+                validate_plan({**self.plan,'volatileFiles':bad},self.root/'check')
+
+    def test_volatile_read_accepts_a_settled_new_version(self):
+        changes=ChangeReport();original=_stat(self.state);calls=[]
+        real=_stat
+        def stat(path):
+            # The first post-read stat reports a newer heartbeat than was opened.
+            calls.append(path)
+            if len(calls)==1:self.state.write_bytes(b'{"ready":true,"at":3}')
+            return real(path)
+        with patch('tools.shadow_capture._stat',side_effect=stat):
+            body,info=_read(self.state,1024,changes=changes,logical_path='hb',volatile=True)
+        self.assertEqual(b'{"ready":true,"at":3}',body)
+        self.assertEqual({'volatile-update':1},changes.report()['changeCounts'])
+        self.assertNotEqual(original,info)
 
     def test_changed_tree_small_file_is_pending_without_rejecting_window(self):
         snapshot=self.capture(between=lambda:self.small.write_bytes(b'{"ready":null}'))
@@ -142,6 +179,29 @@ class ContentStabilityTests(unittest.TestCase):
         self.assertEqual(50,len(report['changes']));self.assertTrue(report['changesTruncated'])
         self.assertNotIn('PRIVATE-BODY-CANARY',json.dumps(report))
         self.assertTrue(all(set(row)=={'path','type'} for row in report['changes']))
+
+    def slow_small_reads(self,count,seconds_per_read=3):
+        for i in range(count):(self.tree/('state-%02d.json'%i)).write_bytes(b'{"ready":true}')
+        ticks=[0.0];real=shadow_capture._read_version
+        def slow(*args,**kwargs):
+            ticks[0]+=seconds_per_read;return real(*args,**kwargs)
+        return ticks,patch('tools.shadow_capture._read_version',side_effect=slow)
+
+    def test_slow_small_file_hashing_is_capped_and_defers_instead_of_expiring(self):
+        # Ten 3-second reads would take 30 s; the cap leaves the rest pending.
+        ticks,slow=self.slow_small_reads(10)
+        with slow:report=measure_directory_stability(self.plan,self.root/'probe',clock=lambda:ticks[0])
+        self.assertEqual(0,report['unmeasurableRounds']);self.assertEqual(0,report['directoryChangeFailedRounds'])
+        self.assertTrue(all(row['within20Seconds'] for row in report['windows']))
+        self.assertGreater(report['smallFileHashDeferredCount'],0)
+        self.assertTrue(all(row['hashSeconds']<=shadow_capture.WINDOW_HASH_SECONDS+3 for row in report['windows']))
+
+    def test_capped_hashing_still_fails_on_added_file(self):
+        ticks,slow=self.slow_small_reads(10)
+        with slow:
+            report=measure_directory_stability(self.plan,self.root/'probe',clock=lambda:ticks[0],
+                between=lambda:(self.tree/('added-%d.json'%ticks[0])).write_text('{}'))
+        self.assertEqual(3,report['directoryChangeFailedRounds']);self.assertEqual(0,report['unmeasurableRounds'])
 
     def test_expired_window_is_unmeasurable_and_limit_cannot_be_increased(self):
         ticks=[0]

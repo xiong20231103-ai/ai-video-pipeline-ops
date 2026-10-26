@@ -21,7 +21,7 @@ class PreflightTests(unittest.TestCase):
         (live / 'state.json').write_text('{"ok":true}', encoding='utf-8')
         source = self.root / 'code' / 'app.py'
         source.parent.mkdir()
-        source.write_text((ROOT / 'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8'), encoding='utf-8')
+        source.write_text((ROOT / 'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8'), encoding='utf-8', newline='\n')
         self.plan = {'schema': 1, 'roots': {'workbench': str(live)},
                      'files': {'workbench/state.json': {'root': 'workbench', 'path': 'state.json'}},
                      'absent': {'workbench/missing.json': {'root': 'workbench', 'path': 'missing.json'}}}

@@ -2,6 +2,7 @@
 import argparse,json,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from agent.core.source_profiles import read_source
 from agent.core.snapshot import capture,Snapshot,canonical
 from agent.core.replay import replay,read_targets
 from agent.core.comparison import compare,evidence_gate
@@ -20,7 +21,7 @@ def main(argv=None):
         print(json.dumps({'schema':2,'sourceIdentity':snap.manifest['sourceIdentity'],'files':len(snap.manifest['files']),'mode':'isolated','realShadowPassed':False}));return 0
     if args.action=='replay':
         contract=json.loads((Path(__file__).resolve().parents[1]/'contracts/endpoints.json').read_text(encoding='utf-8'))
-        result=replay(args.source.read_text(encoding='utf-8'),Snapshot(args.snapshot),args.scratch,read_targets(contract))
+        result=replay(read_source(args.source),Snapshot(args.snapshot),args.scratch,read_targets(contract))
     elif args.action=='compare':
         left=json.loads(args.expected.read_text(encoding='utf-8'));right=json.loads(args.actual.read_text(encoding='utf-8'))
         if left.get('sourceIdentity')!=right.get('sourceIdentity'):raise ValueError('unaligned_source_identity')

@@ -8,7 +8,10 @@ import math
 from tools.shadow_capture import _safe, CaptureError
 
 
-def probe_processes(psutil,*,agent_pid=None,extra_pids=(),include_children=True):
+def probe_processes(psutil,*,agent_pid=None,extra_pids=(),include_children=True,transient_children=False):
+    """``transient_children`` skips a descendant (e.g. a per-video CapCut or
+    ffmpeg worker) that exits or hides its fields mid-probe instead of
+    reporting the whole probe incomplete. Role processes stay strict."""
     roles={'dashboard':os.getpid()}
     wanted={8765:'dashboard',8766:'receiver',18790:'control'}
     missing=[]
@@ -22,7 +25,7 @@ def probe_processes(psutil,*,agent_pid=None,extra_pids=(),include_children=True)
         else:missing.append({'role':role,'code':'listener_identity_missing_or_ambiguous'})
     if type(agent_pid) is int and agent_pid>0:roles['agent']=agent_pid
     else:missing.append({'role':'agent','code':'agent_status_missing'})
-    pids=set(roles.values())|set(extra_pids)
+    pids=set(roles.values())|set(extra_pids);strict=set(pids)
     if include_children:
         for pid in list(pids):
             try:pids.update(row.pid for row in psutil.Process(pid).children(recursive=True))
@@ -44,7 +47,8 @@ def probe_processes(psutil,*,agent_pid=None,extra_pids=(),include_children=True)
                 raise CaptureError('private_process_argument')
             records.append(row)
         except Exception:
+            if transient_children and pid not in strict:continue
             missing.append({'roles':role_names,'code':'process_fields_missing_or_private'})
-    return {'processRecords':records,'processIds':[row['pid'] for row in records],
+    return {'processRecords':records,'processIds':[row['pid'] for row in records],'roles':dict(roles),
             'preflight':{'hostPid':os.getpid(),'missing':missing,'complete':not missing,
                          'businessRequests':0,'productionWrites':False}}

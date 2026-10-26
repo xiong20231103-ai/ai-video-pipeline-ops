@@ -2088,6 +2088,14 @@ class OpsTests(unittest.TestCase):
         self.assertEqual(1, payload["counts"]["residual_detected"])
         self.assertTrue(all(item["historicalAuditOnly"] for item in payload["items"]))
 
+    def test_current_subtitle_verification_is_empty_between_batches(self):
+        # The cloud agent polls this route every minute; a 500 here was reported
+        # as "home engine unavailable" whenever no task box was active.
+        with patch("app.require_control_permission"), patch("app.task_box_payloads", return_value=[]),                 patch("app.authoritative_active_task_box", return_value=None),                 patch("app.subtitle_verification_inventory") as inventory:
+            payload = app.subtitle_verification_current(object())
+        inventory.assert_not_called()
+        self.assertEqual((0, {}, []), (payload["total"], payload["counts"], payload["items"]))
+
 
 if __name__ == "__main__":
     unittest.main()

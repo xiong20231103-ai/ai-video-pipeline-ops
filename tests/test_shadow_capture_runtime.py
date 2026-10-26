@@ -2,6 +2,7 @@ import json,os,tempfile,threading,unittest
 from pathlib import Path
 from unittest.mock import patch
 from tools.shadow_agent_observer import AgentReadObserver
+from tools import shadow_capture
 from tools.shadow_capture_runtime import CapturePublisher
 from tools.shadow_replay_worker import compare_ready
 from tools.shadow_capture import CaptureError
@@ -11,7 +12,7 @@ class CaptureRuntimeTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.root=Path(self.tmp.name)
         self.live=self.root/'live';self.live.mkdir();(self.live/'state.json').write_text('{"items":[]}',encoding='utf-8')
-        src=self.root/'source-app';src.mkdir();self.source=src/'app.py';self.source.write_text((ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8'),encoding='utf-8')
+        src=self.root/'source-app';src.mkdir();self.source=src/'app.py';self.source.write_text((ROOT/'contracts/legacy-app-f78db5a.txt').read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
         self.plan={'schema':1,'roots':{'workbench':str(self.live)},'files':{'workbench/state.json':{'root':'workbench','path':'state.json'}},'facts':{'scan':False}}
         self.observer=AgentReadObserver({(8766,'/api/health'):'receiver:/api/health'})
         self.complete();self.tick=100
@@ -23,7 +24,69 @@ class CaptureRuntimeTests(unittest.TestCase):
         identity=result['lastSourceIdentity'];self.assertTrue((self.root/'evidence/ready'/(identity+'.json')).exists())
         self.assertEqual(before,(self.live/'state.json').read_bytes());self.assertFalse(result['realShadowPassed']);self.assertEqual(0,result['businessRequests'])
     def test_missing_http_rejected_before_writes(self):
-        self.observer.begin(8766,'/api/health');self.assertEqual('blocked',self.publisher.tick()['state']);self.assertFalse(self.publisher.root.exists())
+        attempt=self.observer.begin(8766,'/api/health');self.observer.end(attempt)
+        self.assertEqual('blocked',self.publisher.tick()['state']);self.assertFalse(self.publisher.root.exists())
+    def test_read_in_flight_keeps_last_complete_value(self):
+        self.observer.begin(8766,'/api/health')
+        self.assertEqual('captured',self.publisher.tick()['state'])
+    def test_incomplete_observation_retried_until_next_poll(self):
+        attempt=self.observer.begin(8766,'/api/health');self.observer.end(attempt);sleeps=[]
+        def sleep(seconds):sleeps.append(seconds);self.complete()
+        self.publisher.observation_attempts=3;self.publisher.sleep=sleep
+        self.assertEqual('captured',self.publisher.tick()['state']);self.assertEqual([2],sleeps)
+    def test_retries_are_bounded(self):
+        attempt=self.observer.begin(8766,'/api/health');self.observer.end(attempt);sleeps=[]
+        self.publisher.observation_attempts=3;self.publisher.sleep=sleeps.append
+        self.assertEqual('observed_external_ports_incomplete',self.publisher.tick()['lastCode']);self.assertEqual(2,len(sleeps))
+    def fake_psutil(self,alive):
+        class NoSuchProcess(Exception):pass
+        class Process:
+            def __init__(self,pid):
+                if pid not in alive:raise NoSuchProcess(pid)
+                self.pid=pid
+            def create_time(self):return alive[self.pid]
+        return type('FakePsutil',(),{'Process':Process,'NoSuchProcess':NoSuchProcess})
+    def test_lock_of_dead_host_recovered_with_its_staging(self):
+        self.publisher.psutil=self.fake_psutil({os.getpid():1.0})
+        root=self.publisher.root;root.mkdir();stage=root/'.capture-stage-dead';stage.mkdir();(stage/'partial').write_bytes(b'x')
+        keep=root/'old-evidence';keep.write_bytes(b'keep')
+        (root/'.capture-writer.lock').write_text(json.dumps({'pid':999999,'createTime':5.0}),encoding='utf-8')
+        result=self.publisher.tick();self.assertEqual('captured',result['state'],result);self.assertEqual(1,result['staleLocksRecovered'])
+        self.assertFalse(stage.exists());self.assertEqual(b'keep',keep.read_bytes());self.assertFalse((root/'.capture-writer.lock').exists())
+    def test_reused_pid_with_other_birth_time_is_dead_owner(self):
+        self.publisher.psutil=self.fake_psutil({os.getpid():1.0,4242:9.0});self.publisher.root.mkdir()
+        (self.publisher.root/'.capture-writer.lock').write_text(json.dumps({'pid':4242,'createTime':5.0}),encoding='utf-8')
+        self.assertEqual('captured',self.publisher.tick()['state'])
+    def test_live_legacy_or_unverifiable_lock_still_blocks(self):
+        live={'pid':os.getpid(),'createTime':1.0}
+        for psutil,raw in ((self.fake_psutil({os.getpid():1.0}),json.dumps(live)),(self.fake_psutil({os.getpid():1.0}),''),
+                           (None,json.dumps({'pid':999999,'createTime':5.0}))):
+            self.publisher.psutil=psutil;self.publisher.last=None;self.publisher.root.mkdir(exist_ok=True)
+            (self.publisher.root/'.capture-writer.lock').write_text(raw,encoding='utf-8')
+            result=self.publisher.tick();self.assertEqual('capture_writer_busy',result['lastCode'],raw)
+            self.assertTrue((self.publisher.root/'.capture-writer.lock').exists())
+    def test_lock_records_owner_while_capturing(self):
+        self.publisher.psutil=self.fake_psutil({os.getpid():1.0});seen=[]
+        real=shadow_capture._read_version
+        def spy(path,limit,**kw):
+            seen.append(json.loads((self.publisher.root/'.capture-writer.lock').read_text(encoding='utf-8')));return real(path,limit,**kw)
+        with patch.object(shadow_capture,'_read_version',side_effect=spy):self.assertEqual('captured',self.publisher.tick()['state'])
+        self.assertEqual({'pid':os.getpid(),'createTime':1.0},seen[0])
+    def test_role_view_ignores_transient_worker_processes(self):
+        role={'pid':1,'ppid':0,'name':'receiver','exe':'python','cmdline':['python','receiver.py'],'create_time':1.0,'username':'fixture'}
+        calls=[]
+        def probe():
+            calls.append(1);worker=dict(role,pid=100+len(calls),ppid=1,name='CapCut',cmdline=['CapCut.exe'],create_time=float(len(calls)))
+            return {'processRecords':[role,worker],'processIds':[1,worker['pid']]}
+        self.publisher.process_probe=probe
+        self.assertEqual('external_or_process_changed',self.publisher.tick()['lastCode'])
+        self.tick+=60;self.publisher.process_view=lambda p:[row for row in p['processRecords'] if row['pid']==1]
+        self.assertEqual('captured',self.publisher.tick()['state'])
+        restarted=dict(role,create_time=2.0)
+        def probe_restart():
+            calls.append(1);return {'processRecords':[role if len(calls)%2 else restarted],'processIds':[1]}
+        self.tick+=60;self.publisher.process_probe=probe_restart
+        self.assertEqual('external_or_process_changed',self.publisher.tick()['lastCode'])
     def test_full_capacity_retains_old_evidence(self):
         self.publisher.cap=100;self.publisher.root.mkdir();old=self.publisher.root/'old';old.write_bytes(b'keep')
         self.assertEqual('capture_capacity_exhausted',self.publisher.tick()['lastCode']);self.assertEqual(b'keep',old.read_bytes())
@@ -38,6 +101,46 @@ class CaptureRuntimeTests(unittest.TestCase):
         self.observer.completed_at={key:0 for key in self.observer.values}
         self.assertEqual('blocked',self.publisher.tick()['state'])
         self.assertFalse(self.publisher.root.exists())
+    def test_rejection_reports_changed_logical_file_then_clears_on_success(self):
+        state=self.live/'state.json';real=shadow_capture._read_version;calls=[]
+        def flapping(path,limit,**kw):
+            raw,opened,closed=real(path,limit,**kw)
+            if path==state:
+                calls.append(1);state.write_text('{"items":[%d]}'%len(calls),encoding='utf-8')
+            return raw,opened,closed
+        with patch.object(shadow_capture,'_read_version',side_effect=flapping):result=self.publisher.tick()
+        self.assertEqual('state_changed_in_window',result['lastCode'])
+        self.assertIn({'path':'workbench/state.json','type':'content-change'},result['lastChanges'])
+        self.tick+=60;self.complete()
+        result=self.publisher.tick();self.assertEqual('captured',result['state'],result);self.assertEqual([],result['lastChanges'])
+    def heartbeat_plan(self):
+        (self.live/'ready.json').write_text('{"pid":1}',encoding='utf-8')
+        # Heartbeat first, so its absence is recorded before the state file is read.
+        plan={**self.plan,'files':{'workbench/ready.json':{'root':'workbench','path':'ready.json'},**self.plan['files']},
+              'volatileFiles':['workbench/ready.json']}
+        return CapturePublisher(plan,self.source,self.root/'evidence',self.observer,lambda:{'processRecords':[]},
+                                approved_total_bytes=32*1024*1024,max_capture_bytes=1024,min_interval_seconds=30,clock=lambda:self.tick)
+    def test_absent_heartbeat_is_captured_as_absence(self):
+        publisher=self.heartbeat_plan();(self.live/'ready.json').unlink()
+        result=publisher.tick();self.assertEqual('captured',result['state'],result)
+        marker=next((publisher.root/'ready').iterdir());v=json.loads(marker.read_bytes());v['emitterPid']=os.getpid()+100
+        marker.write_text(json.dumps(v),encoding='utf-8')
+        # The offline replay accepts the snapshot whose heartbeat is declared absent.
+        report=compare_ready(publisher.root,result['lastSourceIdentity'],self.source,module='R1',targets=['/api/health'],
+                             approved_scratch_bytes=17*1024*1024,retained_limit_bytes=64*1024*1024)
+        self.assertFalse(report['realShadowPassed'])
+    def test_heartbeat_appearing_in_window_is_refused(self):
+        publisher=self.heartbeat_plan();ready=self.live/'ready.json';ready.unlink()
+        real=shadow_capture._read_version
+        def appear(path,limit,**kw):
+            ready.write_text('{"pid":2}',encoding='utf-8');return real(path,limit,**kw)
+        with patch.object(shadow_capture,'_read_version',side_effect=appear):result=publisher.tick()
+        self.assertEqual('absence_changed_in_window',result['lastCode'],result)
+        self.assertIn({'path':'workbench/ready.json','type':'volatile-absent'},result['lastChanges'])
+    def test_missing_non_volatile_file_names_the_file(self):
+        (self.live/'state.json').unlink()
+        result=self.publisher.tick();self.assertEqual('state_changed_in_window',result['lastCode'])
+        self.assertIn({'path':'workbench/state.json','type':'removed'},result['lastChanges'])
     def test_plan_is_copied_not_changed_by_caller(self):
         self.plan['files'].clear()
         self.assertIn('workbench/state.json',self.publisher.plan['files'])

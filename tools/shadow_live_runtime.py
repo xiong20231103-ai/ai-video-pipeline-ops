@@ -14,24 +14,40 @@ import threading
 import time
 
 from agent.core.snapshot import canonical,no_links
-from tools.shadow_capture import CaptureError, _safe, _stat, _read, _source, validate_plan, measure_directory_stability, ChangeReport, recheck_state, _check_deadline
+from tools.shadow_capture import CaptureError, _safe, _stat, _read, _source, validate_plan, measure_directory_stability, ChangeReport, recheck_state, _check_deadline, volatile_files
 from tools.shadow_process_preflight import probe_processes
-from tools.shadow_sqlite_snapshot import online_backup
+from tools.shadow_sqlite_snapshot import online_backup, sqlite_page_size, page_listing_segment, SEGMENT_KEYS
 
 
 CHUNK_BYTES=64*1024
-MAX_DIGESTS=32768
+# A 126 MiB database alone is ~32k pages of 4 KiB; leave room for growth.
+MAX_DIGESTS=262144
+V3_APPROVED_BYTES=2*1024*1024*1024
+PREFLIGHT_START_DELAY_SECONDS=60
+# A Dashboard collector read can time out while the receiver is busy; the next
+# poll arrives within one scan, so a capture waits up to ~9 s before refusing.
+OBSERVE_OBSERVATION_ATTEMPTS=4
+OBSERVE_OBSERVATION_RETRY_SECONDS=3
 
 
 class IncrementMeasurement:
     """In-memory estimate only: never creates evidence blobs or an index file."""
-    def __init__(self):self.seen=set();self.new_bytes=0
+    def __init__(self,*,coarse=True):
+        self.seen=set();self.new_bytes=0
+        self.coarse=IncrementMeasurement(coarse=False) if coarse else None
+    def copy(self):
+        clone=IncrementMeasurement(coarse=self.coarse is not None);clone.seen=self.seen.copy()
+        if self.coarse is not None:clone.coarse.seen=self.coarse.seen.copy()
+        return clone
+    def commit(self,staged):
+        self.seen=staged.seen
+        if self.coarse is not None:self.coarse.seen=staged.coarse.seen
     def observe(self,raw):
-        digest=hashlib.sha256(raw).hexdigest()
+        digest=hashlib.sha256(raw).digest()
         if digest not in self.seen:
             if len(self.seen)>=MAX_DIGESTS:raise CaptureError('preflight_digest_limit')
             self.seen.add(digest);self.new_bytes+=len(raw)
-        return digest
+        return digest.hex()
     def chunks(self,raw):
         return [self.observe(raw[i:i+CHUNK_BYTES]) for i in range(0,len(raw),CHUNK_BYTES)]
 
@@ -54,7 +70,7 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
     started=time.monotonic();deadline=started+20;control=no_links(control_root)
     measurement=measurement if measurement is not None else IncrementMeasurement()
     # Commit digest history only when this entire round succeeds.
-    staged=IncrementMeasurement();staged.seen=measurement.seen.copy()
+    staged=measurement.copy()
     index={}
     sampled_at=datetime.now(timezone.utc).isoformat()
     evidence=no_links(spec['evidenceRoot']);archive=no_links(spec['archivedRoot'])
@@ -78,14 +94,14 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
         agent_pid=json.loads(state.read_text(encoding='utf-8-sig')).get('pid')
     phase=time.monotonic();process=probe_processes(dashboard.psutil,agent_pid=agent_pid)
     timings['processProbeSeconds']=time.monotonic()-phase
-    missing=[];file_bytes=0;state_versions={};phase=time.monotonic()
+    missing=[];file_bytes=0;state_versions={};phase=time.monotonic();volatile=volatile_files(plan)
     for name in plan.get('files',{}):
         path=bindings[name];info=_stat(path)
         if not info or info['kind']!='file':missing.append({'path':name,'code':'required_file_missing'});continue
         if info['size']>spec['maxCaptureBytes']-file_bytes:raise CaptureError('preflight_state_byte_limit')
         # Read only explicit state, privacy-screen in memory, never copy its body
         # into the diagnostic report. Native config/profile paths are forbidden.
-        raw,info=_read(path,spec['maxCaptureBytes']-file_bytes,changes=changes,logical_path=name,deadline=deadline);_safe(raw.decode('utf-8-sig'))
+        raw,info=_read(path,spec['maxCaptureBytes']-file_bytes,changes=changes,logical_path=name,deadline=deadline,volatile=name in volatile);_safe(raw.decode('utf-8-sig'))
         state_versions[name]=(raw,info)
         if path.suffix.lower()=='.json':
             try:_safe(json.loads(raw))
@@ -105,11 +121,19 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
             result=online_backup(bindings[name],Path(folder)/'backup.db',max_bytes=spec['maxCaptureBytes']-file_bytes,timeout_seconds=max(.001,deadline-time.monotonic()))
             results.append({'path':name,**result})
             phase=time.monotonic()
+            # Same layout the evidence store publishes: one object per SQLite
+            # page plus deduplicated page-listing segments. 64 KiB is kept only
+            # as a comparison figure for the review.
+            page=sqlite_page_size(Path(folder)/'backup.db') or CHUNK_BYTES
             with (Path(folder)/'backup.db').open('rb') as stream:
                 chunks=[]
-                while raw:=stream.read(CHUNK_BYTES):
+                while raw:=stream.read(page):
                     _check_deadline(deadline);chunks.append(staged.observe(raw))
-                index[name]=chunks
+            with (Path(folder)/'backup.db').open('rb') as stream:
+                while raw:=stream.read(CHUNK_BYTES):
+                    _check_deadline(deadline);staged.coarse.observe(raw)
+            segments=[staged.observe(page_listing_segment(chunks[i:i+SEGMENT_KEYS])) for i in range(0,len(chunks),SEGMENT_KEYS)]
+            index[name]={'pageSize':page,'segments':segments}
             digest_seconds+=time.monotonic()-phase
             (Path(folder)/'backup.db').unlink()
     timings['databaseBackupSeconds']=sum(row['seconds'] for row in results)
@@ -117,7 +141,7 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
     phase=time.monotonic()
     for name,(body,info) in state_versions.items():
         recheck_state(bindings[name],body,info,limit=spec['maxCaptureBytes'],changes=changes,
-                      logical_path=name,deadline=deadline)
+                      logical_path=name,deadline=deadline,volatile=name in volatile)
     timings['stateRecheckSeconds']=time.monotonic()-phase
     _check_deadline(deadline);timings['inputWindowSeconds']=time.monotonic()-started
     phase=time.monotonic()
@@ -141,6 +165,7 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
             'measurementScope':'disabled-state-and-database-chunks-only',
             'deduplicatedIncrementBytes':staged.new_bytes+index_bytes,
             'newChunkBytes':staged.new_bytes,'estimatedIndexBytes':index_bytes,
+            'databaseNewBytesAt64KiB':staged.coarse.new_bytes,
             'incrementEstimateComplete':not missing,
             'incrementEstimateExcludes':['media-content','directory-evidence','change-journal','replay','logs'],
             'directoryStability':directory,'phaseTimings':timings,'stabilityChanges':combined,
@@ -156,7 +181,7 @@ def _run_preflight(dashboard,spec,control_root,*,measurement,changes,timings):
     _safe(report)
     target=control/('preflight-'+str(time.time_ns())+'.json')
     with target.open('xb') as stream:stream.write(canonical(report))
-    measurement.seen=staged.seen
+    measurement.commit(staged)
     return report
 
 
@@ -201,15 +226,134 @@ def run_preflight_series(dashboard,spec,control_root,stop,*,clock=time.monotonic
     return summary
 
 
+OBSERVE_MIN_INTERVAL_SECONDS=300
+
+
+def reviewed_preflight(control_root,plan):
+    """A completed 3-round series of this exact capture plan, every round measured."""
+    expected=hashlib.sha256(canonical(plan)).hexdigest()
+    control=no_links(control_root)
+    for path in sorted(control.glob('preflight-series-*.json')) if control.is_dir() else []:
+        if path.stat().st_size>1024*1024:continue
+        try:series=json.loads(path.read_text(encoding='utf-8'))
+        except (OSError,UnicodeError,json.JSONDecodeError):continue
+        rounds=series.get('rounds') if isinstance(series,dict) else None
+        if (series.get('status')=='completed' and series.get('planSha256')==expected and series.get('enabled') is False
+                and isinstance(rounds,list) and len(rounds)==3
+                and all(row.get('status')=='measured' and row.get('directoryChangeFailedRounds')==0
+                        and row.get('directoryUnmeasurableRounds')==0 for row in rounds)):
+            return path.name
+    raise CaptureError('observation_requires_reviewed_preflight')
+
+
+def observe_routes(spec):
+    """Only GETs the Dashboard already makes; keys are checked by the observer."""
+    from urllib.parse import urlsplit
+    routes=(spec.get('observe') or {}).get('routes')
+    if not isinstance(routes,dict) or not 1<=len(routes)<=16:raise CaptureError('observe_routes_required')
+    bindings={};ports={}
+    for url,key in routes.items():
+        parsed=urlsplit(url)
+        if parsed.hostname not in {'127.0.0.1','localhost','::1'}:raise CaptureError('observe_route_loopback_required')
+        bindings[url]=(parsed.port,parsed.path);ports[(parsed.port,parsed.path)]=key
+    volatile=(spec.get('observe') or {}).get('volatileRoutes',[])
+    if (not isinstance(volatile,list) or len(volatile)!=len(set(volatile))
+            or any(key not in set(routes.values()) for key in volatile)):raise CaptureError('observe_volatile_routes_invalid')
+    return bindings,ports,tuple(volatile)
+
+
+class _StatusPublisher:
+    """Writes a fixed-shape status after each tick; status failures never stop capture."""
+    def __init__(self,publisher,path,preflight):
+        self.publisher=publisher;self.observer=publisher.observer;self.path=path;self.preflight=preflight
+    def tick(self):
+        result=self.publisher.tick()
+        try:
+            value={'schema':1,'mode':'observe','enabled':True,'hostPid':os.getpid(),
+                   'updatedAtUtc':datetime.now(timezone.utc).isoformat(),'reviewedPreflight':self.preflight,
+                   **{k:result.get(k) for k in ('state','lastCode','lastChanges','published','rejected','captureAttempts',
+                                                'directoryChangeRejected','staleLocksRecovered','lastSourceIdentity')},
+                   'businessRequests':0,'realShadowPassed':False,'switchAccepted':False}
+            _safe(value)
+            temporary=self.path.with_name(self.path.name+'.tmp')
+            temporary.write_bytes(canonical(value));os.replace(temporary,self.path)
+        except Exception:pass
+        return result
+
+
+def configure_observe(dashboard,spec,control_root,*,interval_seconds=None):
+    from tools.shadow_agent_observer import AgentReadObserver
+    from tools.shadow_capture_runtime import CapturePublisher
+    from tools.shadow_dashboard_host import DashboardShadowHost,attach_lifespan
+    control=no_links(control_root);plan=spec.get('capturePlan')
+    preflight=reviewed_preflight(control,plan)
+    if spec.get('preflightOnly') is not False:raise CaptureError('observe_plan_required')
+    if no_links(dashboard.__file__)!=no_links(spec['source']):raise CaptureError('observe_not_original_host')
+    if type(spec.get('approvedBytes')) is not int or spec['approvedBytes']!=V3_APPROVED_BYTES:raise CaptureError('v3_fixed_capacity_required')
+    evidence=no_links(spec['evidenceRoot']);archive=no_links(spec['archivedRoot'])
+    for a,b in ((evidence,archive),(evidence,control),(archive,control)):
+        if a==b or a.is_relative_to(b) or b.is_relative_to(a):raise CaptureError('observe_root_overlap')
+    interval=interval_seconds if interval_seconds is not None else (spec.get('observe') or {}).get('intervalSeconds')
+    if type(interval) is not int or not OBSERVE_MIN_INTERVAL_SECONDS<=interval<=3600:raise CaptureError('observe_interval_invalid')
+    bindings,ports,volatile_http=observe_routes(spec)
+    observer=AgentReadObserver(ports)
+    latest_roles={}
+    def process_probe():
+        state=Path(os.environ.get('LOCALAPPDATA',''))/'OpsAgent/agent-runtime.json';agent_pid=None
+        if state.is_file() and state.stat().st_size<4096:
+            agent_pid=json.loads(state.read_text(encoding='utf-8-sig')).get('pid')
+        # Per-video CapCut/ffmpeg descendants come and go during production.
+        result=probe_processes(dashboard.psutil,agent_pid=agent_pid,transient_children=True)
+        if result['preflight']['missing']:raise CaptureError('external_or_process_changed')
+        latest_roles.clear();latest_roles.update(result['roles'])
+        return {'processRecords':result['processRecords'],'processIds':result['processIds']}
+    def role_processes(processes):
+        # Compared with the roles of the latest probe: a restarted role (new
+        # PID or birth time) is absent from or different in the window start.
+        pids=set(latest_roles.values())
+        return sorted((row for row in processes['processRecords'] if row['pid'] in pids),key=lambda row:row['pid'])
+    stop_file=control/'STOP'
+    def retry_sleep(seconds):
+        # Retries never delay a STOP drill: they end as soon as STOP appears.
+        end=time.monotonic()+seconds
+        while time.monotonic()<end:
+            if stop_file.exists():raise CaptureError('observed_external_ports_incomplete')
+            time.sleep(.1)
+    publisher=CapturePublisher(plan,spec['source'],evidence,observer,process_probe,
+        approved_total_bytes=V3_APPROVED_BYTES,max_capture_bytes=spec['maxCaptureBytes'],
+        min_interval_seconds=interval,volatile_http=volatile_http,process_view=role_processes,psutil=dashboard.psutil,
+        observation_attempts=OBSERVE_OBSERVATION_ATTEMPTS,observation_retry_seconds=OBSERVE_OBSERVATION_RETRY_SECONDS,
+        sleep=retry_sleep)
+    status_path=control/'observe-status.json';stopped=[]
+    def stop_requested():
+        if not stop_file.exists():return False
+        if not stopped:
+            # Visible proof for the STOP drill; a write failure never blocks stopping.
+            stopped.append(True)
+            try:
+                raw=canonical({'schema':1,'mode':'observe','enabled':True,'state':'stopped','hostPid':os.getpid(),
+                               'stoppedAtUtc':datetime.now(timezone.utc).isoformat(),'reviewedPreflight':preflight,
+                               'businessRequests':0,'realShadowPassed':False,'switchAccepted':False})
+                temporary=status_path.with_name(status_path.name+'.tmp');temporary.write_bytes(raw);os.replace(temporary,status_path)
+            except Exception:pass
+        return True
+    host=DashboardShadowHost(dashboard.__dict__,_StatusPublisher(publisher,status_path,preflight),
+        bindings,enabled=True,stop_requested=stop_requested,interval_seconds=interval)
+    attach_lifespan(dashboard.app,host)
+    return host
+
+
 def configure(dashboard,spec,mode,control_root):
-    if mode!='preflight':
-        # Deliberately cannot activate from a preliminary, unreviewed report.
-        raise CaptureError('observation_requires_reviewed_preflight')
+    if mode=='observe':
+        # Fails before serving, so the bootstrap falls back to the original entry.
+        return configure_observe(dashboard,spec,control_root)
+    if mode!='preflight':raise CaptureError('observation_requires_reviewed_preflight')
     old=dashboard.app.router.lifespan_context
     stop=threading.Event();thread=None
     def worker():
-        # Let the original server/collector start under its normal lifecycle.
-        if stop.wait(1):return
+        # Let the original server/collector finish its startup scans first; in-host
+        # rounds started after 1 s ran directory windows 2-4x slower than idle.
+        if stop.wait(PREFLIGHT_START_DELAY_SECONDS):return
         try:run_preflight_series(dashboard,spec,control_root,stop)
         except Exception:
             # Failure reports contain a fixed code, no path/exception values.

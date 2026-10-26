@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import inventory from "../../../docs/v2/inventory.json";
+import inventory from "../../../tests/fixtures/frontend-v2/inventory.json";
 describe("inventory function excerpts use the actual source node", () => {
   for (const file of [
     ...new Set(inventory.groups.functions.map((row) => row.source)),

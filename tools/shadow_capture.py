@@ -8,31 +8,47 @@ import hashlib,json,os,re,sqlite3,tempfile,time,stat,math
 from contextlib import closing
 from datetime import datetime,timezone
 from pathlib import Path
-from agent.core.snapshot import Snapshot,SnapshotError,canonical,capture,digest_file,no_links,relative,safe_facts,PRIVATE_FILES,sqlite_rows
-from agent.core.source_profiles import PROFILES,PR49,PR49_HELPER
+from agent.core.snapshot import Snapshot,SnapshotError,canonical,capture,digest_file,no_links,relative,safe_facts,PRIVATE_FILES,sqlite_rows,rows_sha256
+from agent.core.source_profiles import PROFILES,PR49_BEHAVIOR,PR49_HELPER,FRESH_HELPER,SOURCE_HELPER_PROFILES,read_source,validate_fresh_helper_identity
 from tools.shadow_capture_errors import CaptureError
 from tools.shadow_sqlite_snapshot import online_backup
 
 ROOT_NAMES={'repository','workbench','voice','capcut','downloads','generation','final','drafts','audio','pending-delete'}
 
+_URL=re.compile(r'''https?://[^\s\x00-\x1f"'<>]+''')
+_URL_KEY=re.compile(r'token|password|secret|webhook|authorization|cookie|api.?key',re.I)
+_FIELD=re.compile(r'token|password|secret|webhook|authorization|cookie|api.?key|invitation',re.I)
+# The former leading ["']?[^"'\s]* can match empty, so dropping it never changes
+# whether a string matches; it only stops quadratic backtracking on large text.
+_PRIVATE_STRING=re.compile(r'''(?i)(?:token|password|secret|webhook|authorization|cookie|api.?key)[^"'\s]*["']\s*[:=]|-----BEGIN .*PRIVATE KEY-----|\bgh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}''')
+
 def _safe(value):
+    # safe_facts already walks the whole value; calling it again at every level
+    # (as before) rescanned each subtree once per ancestor.
     safe_facts(value)
+    _scan(value)
+
+def _scan(value):
     if isinstance(value,str):
         from urllib.parse import urlsplit,parse_qsl
-        for url in re.findall(r'''https?://[^\s\x00-\x1f"'<>]+''',value):
+        for url in _URL.findall(value):
             try:parts=urlsplit(url)
             except ValueError:raise CaptureError('invalid_capture_url') from None
-            if parts.username or parts.password or any(re.search(r'token|password|secret|webhook|authorization|cookie|api.?key',key,re.I) for key,_ in parse_qsl(parts.query)):raise CaptureError('private_capture_url')
+            if parts.username or parts.password or any(_URL_KEY.search(key) for key,_ in parse_qsl(parts.query)):raise CaptureError('private_capture_url')
     if isinstance(value,dict):
         for key,child in value.items():
-            if re.search(r'token|password|secret|webhook|authorization|cookie|api.?key|invitation',str(key),re.I):raise CaptureError('private_capture_field')
-            _safe(child)
+            if _FIELD.search(str(key)):raise CaptureError('private_capture_field')
+            _scan(child)
     elif isinstance(value,list):
-        for child in value:_safe(child)
-    elif isinstance(value,str) and re.search(r'''(?i)["']?[^"'\s]*(?:token|password|secret|webhook|authorization|cookie|api.?key)[^"'\s]*["']\s*[:=]|-----BEGIN .*PRIVATE KEY-----|\bgh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}''',value):raise CaptureError('private_capture_string')
+        for child in value:_scan(child)
+    elif isinstance(value,str) and _PRIVATE_STRING.search(value):raise CaptureError('private_capture_string')
 
 SMALL_FILE_LIMIT=1024*1024
 SMALL_READ_LIMIT=32*1024*1024
+# Small-file hashing (and its privacy scan) may use at most this much of a
+# 20-second directory window; later files stay pending instead of the window
+# expiring. Measured in-host: 32 MiB took 16 s while the Dashboard was starting.
+WINDOW_HASH_SECONDS=6
 
 
 class ChangeReport:
@@ -55,7 +71,7 @@ class ChangeReport:
 class SmallReadBudget:
     def __init__(self,limit=SMALL_READ_LIMIT):
         if type(limit) is not int or not 0<=limit<=SMALL_READ_LIMIT:raise CaptureError('small_read_budget_limit')
-        self.limit=limit;self.used=0;self.seconds=0.0;self.pending=0
+        self.limit=limit;self.used=0;self.seconds=0.0;self.pending=0;self.deferred=0;self.hash_until=None
 
 
 def _check_deadline(deadline,clock=time.monotonic):
@@ -99,29 +115,55 @@ def _same_version(a,b):
     return a is not None and b is not None and all(a[k]==b[k] for k in keys)
 
 
-def _read(path,limit,*,changes=None,logical_path=None,deadline=None,clock=time.monotonic):
-    raw,opened,closed=_read_version(path,limit,deadline=deadline,clock=clock)
+MAX_VOLATILE_FILES=8
+
+
+def volatile_files(plan):
+    """State files whose content legitimately changes every few seconds (heartbeats).
+
+    They are captured as first read; a later change inside the window is reported,
+    not treated as a failed window. Removal or a type change still fails it.
+    """
+    names=plan.get('volatileFiles',[])
+    if (not isinstance(names,list) or len(names)>MAX_VOLATILE_FILES or len(set(names))!=len(names)
+            or any(not isinstance(n,str) or n not in plan.get('files',{}) for n in names)):
+        raise CaptureError('volatile_files_invalid')
+    return frozenset(names)
+
+
+def _read(path,limit,*,changes=None,logical_path=None,deadline=None,clock=time.monotonic,volatile=False):
+    try:raw,opened,closed=_read_version(path,limit,deadline=deadline,clock=clock)
+    except CaptureError as error:
+        # Name the file that vanished; the refusal used to carry no diagnostics.
+        if str(error)=='state_changed_in_window' and changes is not None:changes.add(logical_path,'removed')
+        raise
     latest=_stat(path)
     if _same_version(opened,closed) and _same_version(closed,latest):return raw,latest
     second,second_open,second_close=_read_version(path,limit,deadline=deadline,clock=clock)
     second_latest=_stat(path)
-    if (not _same_version(second_open,second_close) or not _same_version(second_latest,second_close)
-            or hashlib.sha256(raw).digest()!=hashlib.sha256(second).digest()):
-        if changes is not None:changes.add(logical_path,'content-change')
-        raise CaptureError('state_changed_in_window')
-    if changes is not None:changes.add(logical_path,'stat-only',rewritten=True)
-    return second,second_latest
+    settled=_same_version(second_open,second_close) and _same_version(second_latest,second_close)
+    if settled and hashlib.sha256(raw).digest()==hashlib.sha256(second).digest():
+        if changes is not None:changes.add(logical_path,'stat-only',rewritten=True)
+        return second,second_latest
+    if volatile and settled:
+        # A complete, settled heartbeat version is the fact as of this read.
+        if changes is not None:changes.add(logical_path,'volatile-update')
+        return second,second_latest
+    if changes is not None:changes.add(logical_path,'content-change')
+    raise CaptureError('state_changed_in_window')
 
 
-def recheck_state(path,raw,before,*,limit,changes,logical_path,deadline=None,clock=time.monotonic):
+def recheck_state(path,raw,before,*,limit,changes,logical_path,deadline=None,clock=time.monotonic,volatile=False):
     latest=_stat(path)
     if latest==before:return latest
     if latest is None:
         changes.add(logical_path,'removed');raise CaptureError('state_changed_in_window')
     if latest['kind']!='file':
         changes.add(logical_path,'type-change');raise CaptureError('state_changed_in_window')
-    body,latest=_read(path,limit,deadline=deadline,clock=clock)
+    body,latest=_read(path,limit,deadline=deadline,clock=clock,volatile=volatile)
     if hashlib.sha256(body).digest()!=hashlib.sha256(raw).digest():
+        if volatile:
+            changes.add(logical_path,'volatile-update');return latest
         changes.add(logical_path,'content-change');raise CaptureError('state_changed_in_window')
     changes.add(logical_path,'stat-only',rewritten=True)
     return latest
@@ -130,6 +172,8 @@ def recheck_state(path,raw,before,*,limit,changes,logical_path,deadline=None,clo
 def _small_digest(path,info,budget,*,deadline=None,clock=time.monotonic):
     if info['size']>budget.limit-budget.used:
         budget.pending+=1;return None,info
+    if budget.hash_until is not None and clock()>=budget.hash_until:
+        budget.pending+=1;budget.deferred+=1;return None,info
     started=clock()
     # Account actual reads, including one replacement retry, before each read.
     def version():
@@ -167,6 +211,8 @@ def _source(roots,spec):
 
 def validate_plan(plan,destination):
     if not isinstance(plan,dict) or plan.get('schema')!=1:raise CaptureError('capture_plan_schema')
+    media=plan.get('verifiedFinalMedia',[])
+    if not isinstance(media,list) or len(media)>10000 or any(not isinstance(n,str) for n in media) or len(set(media))!=len(media):raise CaptureError('invalid_verified_final_media')
     roots=plan.get('roots',{})
     if not roots or set(roots)-ROOT_NAMES:raise CaptureError('capture_root_not_allowed')
     roots={k:no_links(v) for k,v in roots.items()}
@@ -197,6 +243,7 @@ def validate_plan(plan,destination):
         if any(path==p or path.is_relative_to(p) for p in exclusions.values()):raise CaptureError('excluded_capture_input')
         if name in files and (path.name.lower() in PRIVATE_FILES or path.suffix.lower() not in {'.json','.csv','.txt','.log'}):raise CaptureError('state_content_not_allowed')
         if name in databases and (name!='repository/data/ops.db' or spec!={'root':'repository','path':'data/ops.db'}):raise CaptureError('database_not_allowlisted')
+    volatile_files(plan)
     return roots,bindings
 
 class DigestCache:
@@ -240,16 +287,25 @@ class DigestCache:
 def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None,*,small_budget=None,baseline=None,deadline=None,clock=time.monotonic):
     nodes={};identity={};hashed=0
     excluded=[_source({k:no_links(v) for k,v in plan['roots'].items()},spec) for spec in plan.get('exclude',{}).values()]
-    def excluded_path(path):return any(path==base or path.is_relative_to(base) for base in excluded)
+    # Normalized prefixes: Path.is_relative_to per entry dominated large trees.
+    prefixes=[os.path.normcase(str(base)) for base in excluded]
+    def excluded_path(path):
+        text=os.path.normcase(str(path))
+        return any(text==base or text.startswith(base.rstrip(os.sep)+os.sep) for base in prefixes)
     def store(name,path,info,*,shallow=False):
         nonlocal hashed
+        if name in plan.get('verifiedFinalMedia',[]):
+            # Directory-entry stat caches need not expose full file IDs on all
+            # Windows versions. Obtain real path facts for explicit media only.
+            info=_stat(path)
+            if info is None:raise CaptureError('directory_changed_in_window')
         _check_deadline(deadline,clock)
         if name in nodes:raise CaptureError('overlapping_metadata_trees')
         if len(nodes)>=max_entries:raise CaptureError('metadata_entry_limit')
         if path.suffix.lower()=='.lock' and info['kind']=='file':
             nodes[name]={'kind':'file','exists':True,'metadataPolicy':'existence-only'}
             identity[name]={'kind':'file','exists':True};return
-        node={k:info[k] for k in ('kind','size','mtimeNs','ctimeNs')}
+        node={k:info[k] for k in ('kind','size','mtimeNs','ctimeNs','device','inode')}
         if info['kind']=='file':
             eligible=(not shallow and path.suffix.lower() in {'.json','.txt','.log'} and path.name.lower() not in PRIVATE_FILES and info['size']<=SMALL_FILE_LIMIT)
             previous=(baseline or {}).get(name,{})
@@ -257,7 +313,7 @@ def _inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache=None,*,smal
             if small_budget is not None and eligible:
                 if same and previous.get('contentSha256'):digest=previous['contentSha256']
                 else:digest,info=_small_digest(path,info,small_budget,deadline=deadline,clock=clock)
-                node.update({k:info[k] for k in ('kind','size','mtimeNs','ctimeNs')})
+                node.update({k:info[k] for k in ('kind','size','mtimeNs','ctimeNs','device','inode')})
                 if digest is None:node.update(hashPending=True,hashState='content_comparison_pending')
                 else:node['contentSha256']=digest;info={**info,'contentSha256':digest}
             elif small_budget is not None and not shallow:
@@ -320,7 +376,7 @@ def reconcile_inventory(nodes,before,after,roots,digest_cache=None,*,changes=Non
     for name,old in before.items():
         latest=after[name]
         if old==latest:continue
-        nodes[name].update({k:latest[k] for k in ('kind','size','mtimeNs','ctimeNs') if k in latest})
+        nodes[name].update({k:latest[k] for k in ('kind','size','mtimeNs','ctimeNs','device','inode') if k in latest})
         if old['kind']=='directory':
             # Membership and type were checked above. Preserve final timestamps.
             changes.add(name,'stat-only');continue
@@ -351,6 +407,7 @@ def measure_directory_stability(plan,destination,*,rounds=3,max_entries=10000,be
                 'smallFileHashSeconds':0,'windows':[]}
     for number in range(rounds):
         started=clock();deadline=started+20;hash_start=budget.seconds;gap=0;entry_count=None
+        budget.hash_until=started+WINDOW_HASH_SECONDS
         try:
             nodes,before=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0,
                                     small_budget=budget,deadline=deadline,clock=clock)
@@ -374,7 +431,7 @@ def measure_directory_stability(plan,destination,*,rounds=3,max_entries=10000,be
             'directoryChangeFailureRatio':changed/rounds if not missing else None,
             'measurementScope':'content-aware-directory-windows','activeBatchRateVerified':False,
             **changes.report(),'smallFileReadBytes':budget.used,'smallFileHashSeconds':budget.seconds,
-            'smallFileHashPendingCount':budget.pending,'windows':timings,
+            'smallFileHashPendingCount':budget.pending,'smallFileHashDeferredCount':budget.deferred,'windows':timings,
             'maxWindowSeconds':max(row['seconds'] for row in timings)}
 
 
@@ -393,28 +450,92 @@ def _observations(process_probe,http_probe):
     if any(not re.fullmatch(r'(receiver|control):/api/[A-Za-z0-9_/?=&%.:-]+',k) for k in http):raise CaptureError('unexpected_external_port')
     return processes,http,generation
 
-def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024,max_entries=10000,max_hash_bytes=64*1024*1024,max_window_seconds=20,digest_cache=None,clock=time.monotonic,now=lambda:datetime.now(timezone.utc).isoformat()):
+def _verified_media(plan,nodes,inventory,roots,budget,*,deadline,clock):
+    """Explicit media only, fresh single-open digest; no cached/partial reuse."""
+    from agent.core.verified_final_replay import ALIGNMENT
+    names=plan.get('verifiedFinalMedia',[])
+    if not isinstance(names,list) or len(names)>10000 or any(not isinstance(n,str) for n in names) or len(set(names))!=len(names):raise CaptureError('invalid_verified_final_media')
+    proofs={};used=0
+    for name in names:
+        relative(name)
+        info=inventory.get(name)
+        if not info or info.get('kind')!='file' or Path(name).suffix.lower() not in {'.mp4','.mov','.mkv'}:raise CaptureError('verified_final_media_not_in_inventory')
+        root,rel=name.split('/',1)
+        path=no_links(roots[root]/rel)
+        node=nodes[name]
+        if info['size']>budget-used:
+            node.update(hashPending=True,hashState='verified_final_digest_budget_pending');continue
+        before=_stat(path)
+        digest=hashlib.sha256();amount=0
+        with path.open('rb') as stream:
+            opened=_info(os.fstat(stream.fileno()))
+            while amount<info['size']:
+                _check_deadline(deadline,clock)
+                block=stream.read(min(1024*1024,info['size']-amount))
+                if not block:break
+                amount+=len(block);digest.update(block)
+            closed=_info(os.fstat(stream.fileno()))
+        used+=amount;after=_stat(path)
+        # Windows path stat and fd stat can expose different ctime semantics.
+        # Compare each API's ctime to itself, never manufacture a shared value.
+        common=('kind','size','mtimeNs','inode','device')
+        same_object=before is not None and all(before[k]==opened[k] for k in common)
+        if not (before==after==info and opened==closed and same_object and amount==info['size']):
+            node.update(hashPending=True,hashState='verified_final_writing');continue
+        value=digest.hexdigest()
+        node.update(contentSha256=value,hashPending=False)
+        node.pop('hashState',None)
+        proofs[name]={'alignment':ALIGNMENT,'sha256':value,'readBytes':amount,
+                      'before':before,'after':after,'opened':opened,'closed':closed}
+    return proofs,used
+
+
+def aligned_capture(plan,destination,**options):
+    """Refusals carry the bounded change report (logical plan names and change
+    types only, never paths or contents) so a host can say what moved."""
+    changes=ChangeReport()
+    try:return _aligned_capture(plan,destination,changes=changes,**options)
+    except CaptureError as error:
+        error.diagnostics={'changes':changes.report()['changes'][:20]}
+        raise
+
+
+def _aligned_capture(plan,destination,*,changes,source_path,process_probe,http_probe,max_file_bytes=32*1024*1024,max_total_bytes=512*1024*1024,max_entries=10000,max_hash_bytes=64*1024*1024,max_window_seconds=20,digest_cache=None,volatile_http=(),process_view=None,clock=time.monotonic,now=lambda:datetime.now(timezone.utc).isoformat()):
     roots,bindings=validate_plan(plan,destination)
     if type(max_window_seconds) not in (int,float) or not math.isfinite(max_window_seconds) or not 0<max_window_seconds<=20:raise CaptureError('capture_window_limit')
-    started=clock();deadline=started+max_window_seconds;changes=ChangeReport();small_budget=SmallReadBudget();opened_at=now();source_path=no_links(source_path)
+    started=clock();deadline=started+max_window_seconds;small_budget=SmallReadBudget();opened_at=now();source_path=no_links(source_path)
+    small_budget.hash_until=started+WINDOW_HASH_SECONDS
     if source_path.stat().st_size>2*1024*1024:raise CaptureError('capture_source_byte_limit')
-    source=source_path.read_text(encoding='utf-8-sig');source_sha=hashlib.sha256(source.encode()).hexdigest()
+    source=read_source(source_path);source_sha=hashlib.sha256(source.encode()).hexdigest()
     if source_sha not in PROFILES:raise CaptureError('unreviewed_capture_source')
     helper=source_path.with_name('verified_final.py')
-    dependency_names=['pending_delete.py','cleanup_tickets.py']+(['verified_final.py'] if source_sha==PR49 else [])
-    package_root=Path(__file__).resolve().parents[1];dependency_hashes={}
+    dependency_names=['pending_delete.py','cleanup_tickets.py']+(['verified_final.py'] if source_sha in PR49_BEHAVIOR else [])
+    package_root=Path(__file__).resolve().parents[1];dependency_hashes={};dependency_identities={}
     for name in dependency_names:
         installed=source_path.with_name(name)
         if not installed.is_file():
             if source_path.parent==package_root:raise CaptureError('capture_dependency_missing')
             continue # Synthetic source-only capture is not live evidence.
-        actual=hashlib.sha256(installed.read_text(encoding='utf-8-sig').encode()).hexdigest()
-        expected=hashlib.sha256((package_root/name).read_text(encoding='utf-8-sig').encode()).hexdigest()
+        identity=_stat(installed)
+        if not identity or identity['size']>2*1024*1024:raise CaptureError('capture_dependency_byte_limit')
+        raw=installed.read_bytes()
+        actual=hashlib.sha256(raw.decode('utf-8-sig').replace('\r\n','\n').replace('\r','\n').encode()).hexdigest()
+        expected=actual if name=='verified_final.py' and (source_sha,actual) in SOURCE_HELPER_PROFILES else hashlib.sha256((package_root/name).read_text(encoding='utf-8-sig').encode()).hexdigest()
+        if name=='verified_final.py' and (source_sha,actual) not in SOURCE_HELPER_PROFILES:raise CaptureError('capture_dependency_not_reviewed')
         if actual!=expected:raise CaptureError('capture_dependency_not_reviewed')
+        if _stat(installed)!=identity:raise CaptureError('dependency_changed_in_window')
+        dependency_identities[name]={**identity,'sha256':hashlib.sha256(raw).hexdigest()}
+        if name=='verified_final.py' and actual==FRESH_HELPER:
+            validate_fresh_helper_identity(dependency_identities[name])
         dependency_hashes[name]=actual
-    if source_sha==PR49 and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('capture_source_dependency_mismatch')
+    if source_sha in PR49_BEHAVIOR and not helper.is_file():raise CaptureError('capture_source_dependency_mismatch')
     processes,http,http_generation=_observations(process_probe,http_probe)
     nodes,inventory=_inventory(plan,bindings,max_entries,max_hash_bytes,digest_cache,small_budget=small_budget,deadline=deadline,clock=clock)
+    fresh=dependency_hashes.get('verified_final.py')==FRESH_HELPER
+    media_limit=min(max_hash_bytes,64*1024*1024)
+    # Reserve the other half for a fresh closing digest, including same-stat
+    # overwrites. A stat-only closing check cannot align this helper's behavior.
+    media_proofs,media_bytes=_verified_media(plan,nodes,inventory,roots,media_limit//2,deadline=deadline,clock=clock) if fresh else ({},0)
     missing={k:_stat(bindings[k]) for k in plan.get('absent',{})}
     if any(v is not None for v in missing.values()):raise CaptureError('declared_absence_exists')
     before={};copied={};database_proofs={};total=0
@@ -422,17 +543,15 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
     destination=Path(destination);destination.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.aligned-capture-',dir=destination.parent) as folder:
         scratch=Path(folder)
+        volatile=volatile_files(plan)
         for name in plan.get('files',{}):
-            body,info=_read(bindings[name],max_file_bytes,changes=changes,logical_path=name,deadline=deadline,clock=clock);total+=len(body)
+            if name in volatile and _stat(bindings[name]) is None:
+                # A heartbeat is removed while its writer is stopped (the workbench
+                # between batches). That absence is the fact; it must hold to the end.
+                missing[name]=None;changes.add(name,'volatile-absent');continue
+            body,info=_read(bindings[name],max_file_bytes,changes=changes,logical_path=name,deadline=deadline,clock=clock,volatile=name in volatile);total+=len(body)
             if total>max_total_bytes:raise CaptureError('capture_total_limit')
-            try:
-                text=body.decode('utf-8-sig');_safe(text)
-                if bindings[name].suffix.lower()=='.json':
-                    try:_safe(json.loads(text))
-                    except json.JSONDecodeError:pass # Corrupt JSON itself must replay faithfully.
-                elif bindings[name].suffix.lower()=='.csv':
-                    import csv
-                    _safe({key:None for key in next(csv.reader(text.splitlines()),[])})
+            try:body.decode('utf-8-sig')
             except UnicodeError:raise CaptureError('state_content_not_utf8') from None
             target=scratch/'inputs'/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(body);os.utime(target,ns=(info['mtimeNs'],info['mtimeNs']))
             copied[name]=target;before[name]=info
@@ -444,22 +563,61 @@ def aligned_capture(plan,destination,*,source_path,process_probe,http_probe,max_
                                 timeout_seconds=max(.001,deadline-clock()),clock=clock)
             database_proofs[name]={**proof,'openedAt':opened,'closedAt':now()}
             total+=target.stat().st_size
-            _safe(sqlite_rows(target));databases[name]=target
+            databases[name]=target
         # Recheck the entire window, including external response bodies and PID birth identity.
-        if _observations(process_probe,http_probe)!=(processes,http,http_generation):raise CaptureError('external_or_process_changed')
+        latest_processes,latest_http,latest_generation=_observations(process_probe,http_probe)
+        # Processes and non-volatile responses must not change in the window. A
+        # declared volatile route (e.g. a status summary stamped with servedAt and
+        # polled every few seconds) only has to stay completely observed; the
+        # response from the window start is the captured fact.
+        stable=set(http)-set(volatile_http)
+        # ``process_view`` lets a host compare only its long-lived role processes;
+        # the window-start records stay the captured fact either way.
+        view=process_view or (lambda value:value)
+        if (view(latest_processes)!=view(processes) or set(latest_http)!=set(http)
+                or any(latest_http[key]!=http[key] for key in stable)
+                or (latest_generation!=http_generation and not set(http)<=set(volatile_http))):
+            raise CaptureError('external_or_process_changed')
+        volatile_updates=sorted(key for key in set(http)&set(volatile_http) if latest_http[key]!=http[key])
         for name,path in copied.items():
             recheck_state(bindings[name],path.read_bytes(),before[name],limit=max_file_bytes,
-                          changes=changes,logical_path=name,deadline=deadline,clock=clock)
+                          changes=changes,logical_path=name,deadline=deadline,clock=clock,volatile=name in volatile)
         if any(_stat(bindings[name]) is not None for name in missing):raise CaptureError('absence_changed_in_window')
         latest=_inventory({**plan,'hashMetadataFiles':False},bindings,max_entries,0,small_budget=small_budget,baseline=inventory,deadline=deadline,clock=clock)[1]
         reconcile_inventory(nodes,inventory,latest,roots,digest_cache,changes=changes)
+        closing,closing_bytes=_verified_media({**plan,'verifiedFinalMedia':list(media_proofs)},nodes,latest,roots,media_limit-media_bytes,deadline=deadline,clock=clock) if fresh else ({},0)
+        media_bytes+=closing_bytes
+        for name in list(media_proofs):
+            if (latest.get(name)!=media_proofs[name]['after'] or name not in closing
+                    or closing[name]['sha256']!=media_proofs[name]['sha256']):
+                del media_proofs[name];nodes[name].pop('contentSha256',None)
+                nodes[name].update(hashPending=True,hashState='verified_final_changed_in_window')
+            else:
+                media_proofs[name]['windowClose']=closing[name]
         if any(hashlib.sha256(source_path.with_name(name).read_text(encoding='utf-8-sig').encode()).hexdigest()!=value for name,value in dependency_hashes.items()):raise CaptureError('dependency_changed_in_window')
-        if source_path.read_text(encoding='utf-8-sig')!=source or source_sha==PR49 and hashlib.sha256(helper.read_text(encoding='utf-8-sig').encode()).hexdigest()!=PR49_HELPER:raise CaptureError('source_changed_in_window')
+        if any({**_stat(source_path.with_name(name)),'sha256':hashlib.sha256(source_path.with_name(name).read_bytes()).hexdigest()}!=identity for name,identity in dependency_identities.items()):raise CaptureError('dependency_changed_in_window')
+        if read_source(source_path)!=source:raise CaptureError('source_changed_in_window')
         if clock()-started>max_window_seconds:raise CaptureError('capture_window_exceeded')
+        # The window is closed; these copies no longer change. Scanning them here
+        # keeps the same refusal before packaging without spending window time.
+        for name,path in copied.items():
+            text=path.read_bytes().decode('utf-8-sig');_safe(text)
+            if path.suffix.lower()=='.json':
+                try:_safe(json.loads(text))
+                except json.JSONDecodeError:pass # Corrupt JSON itself must replay faithfully.
+            elif path.suffix.lower()=='.csv':
+                import csv
+                _safe({key:None for key in next(csv.reader(text.splitlines()),[])})
+        for path in databases.values():
+            rows=sqlite_rows(path);_safe(rows);rows_sha256(path,rows)
         ended_at=now();settings=plan.get('facts',{});_safe(settings)
         if set(settings)-{'machineName','settings','metrics','collectorAlive','scan','historyResetGeneration','historyResetAt','historyAliases'}:raise CaptureError('unexpected_capture_fact')
         facts={**settings,**processes,'http':http,'filesystem':nodes,'pathAliases':{str(p):name for name,p in roots.items()},'dependencyClosure':True,'absentPaths':sorted(missing),'completeDirectoryRoots':sorted(plan.get('trees',{})),'excludedPaths':sorted(plan.get('exclude',{}))}
-        facts['captureProof']={'schema':1,'openedAt':opened_at,'closedAt':ended_at,'processSha256':hashlib.sha256(canonical(processes)).hexdigest(),'httpSha256':hashlib.sha256(canonical(http)).hexdigest(),'inventorySha256':hashlib.sha256(canonical(inventory)).hexdigest(),'databaseSnapshotMethod':'sqlite-online-readonly','databaseSnapshots':database_proofs,'externalObservationGeneration':http_generation,'helperHashes':dependency_hashes}
+        facts['captureProof']={'schema':1,'openedAt':opened_at,'closedAt':ended_at,'processSha256':hashlib.sha256(canonical(processes)).hexdigest(),'httpSha256':hashlib.sha256(canonical(http)).hexdigest(),'inventorySha256':hashlib.sha256(canonical(inventory)).hexdigest(),'databaseSnapshotMethod':'sqlite-online-readonly','databaseSnapshots':database_proofs,'externalObservationGeneration':http_generation,'externalVolatileUpdates':volatile_updates,'helperHashes':dependency_hashes}
+        facts['captureProof']['helperIdentities']=dependency_identities
+        if fresh:
+            facts['verifiedFinalMedia']=media_proofs
+            facts['captureProof']['verifiedFinalDigestReadBytes']=media_bytes
         facts['captureProof'].update(inventoryEndSha256=hashlib.sha256(canonical(latest)).hexdigest(),
             metadataComparisonPolicy='directory-membership-type-state-content',
             stabilityChanges=changes.report(),smallFileReadBytes=small_budget.used,smallFileHashSeconds=small_budget.seconds,

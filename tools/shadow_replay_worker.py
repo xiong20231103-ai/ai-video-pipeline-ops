@@ -1,6 +1,7 @@
 """Offline consumer for retained capture queue. Execute only as a separate process."""
 from pathlib import Path
 import argparse,json,os,re,tempfile
+from agent.core.source_profiles import read_source
 from agent.core.snapshot import canonical,no_links
 from tools.shadow_capture import CaptureError,_safe
 from tools.shadow_store import materialize_snapshot,usage
@@ -27,7 +28,7 @@ def compare_ready(evidence,identity,source,*,module,targets=(),approved_scratch_
     if out.exists():raise CaptureError('report_already_exists_query_only')
     with tempfile.TemporaryDirectory(prefix='.offline-replay-',dir=root) as folder:
         scratch=Path(folder);snapshot=materialize_snapshot(root/'store',identity,scratch/'snapshot')
-        text=source.read_text(encoding='utf-8-sig')
+        text=read_source(source)
         if module=='R2':report=history_compare(snapshot,scratch/'comparison',source_id='home',sequence=1)
         else:report=read_compare(text,snapshot,scratch/'comparison',list(targets),module=module)
         report={**report,'realShadowPassed':False,'switchAccepted':False,'captureSourceIdentity':identity,'module':module}
