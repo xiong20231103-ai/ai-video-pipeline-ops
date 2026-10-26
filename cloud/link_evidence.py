@@ -90,6 +90,10 @@ class Evidence:
         decided = event.get('decidedAt')
         if decided is not None and (type(decided) not in (int,float) or not math.isfinite(decided) or decided <= 0 or decided > self.clock()+300):
             raise ValueError('invalid_decision_time')
+        payload = {k:v for k,v in event.items() if k != 'image'}
+        encoded_payload=json.dumps(payload,ensure_ascii=False,allow_nan=False).encode('utf-8')
+        if len(encoded_payload)>16*1024:
+            raise ValueError('link_metadata_too_large')
         raw = None
         if event.get('image'):
             from PIL import Image
@@ -101,7 +105,6 @@ class Evidence:
                     raise ValueError('invalid_jpeg')
                 im.load()
         key = tuple(event[k] for k in required[:4])
-        payload = {k:v for k,v in event.items() if k != 'image'}
         with self.db() as db:
             old = db.execute('SELECT * FROM records WHERE source=? AND platform=? AND video_id=? AND judge_round=?',key).fetchone()
             stale=bool(old and event['seq']<=old['seq'])

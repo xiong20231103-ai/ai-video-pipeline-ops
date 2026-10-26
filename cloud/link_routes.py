@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+from PIL import Image
 from fastapi import Request, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 from cloud.link_evidence import Evidence
@@ -14,12 +15,13 @@ def mount_links(app, config, session, rate):
     evidence = Evidence(config.get('link_evidence_dir','/srv/ops-console/link-evidence'))
     app.state.link_evidence = evidence
     def auth(request):
+        rate(request,'links',60)
         token = os.environ.get('LINK_EVIDENCE_TOKEN','')
         if not token:
             raise HTTPException(503,'link_token_not_configured')
-        if not secrets.compare_digest(request.headers.get('authorization',''), 'Bearer '+token):
+        header=request.headers.get('authorization','').encode('utf-8','surrogateescape')
+        if not secrets.compare_digest(header, ('Bearer '+token).encode('utf-8','surrogateescape')):
             raise HTTPException(401,'link_auth_required')
-        rate(request,'links',60)
 
     async def body(request):
         raw = bytearray()
@@ -40,7 +42,7 @@ def mount_links(app, config, session, rate):
         data=await body(request)
         try:
             return evidence.ingest(data)
-        except (ValueError,TypeError,OSError):
+        except (ValueError,TypeError,OSError,Image.DecompressionBombError):
             raise HTTPException(400,'invalid_link_event') from None
 
     @app.get('/api/links')

@@ -117,6 +117,34 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.store.ingest(event(decidedAt=float('nan')))
         self.assertEqual(self.store.listing()['total'],0)
 
+    def test_metadata_limit_applies_without_image_and_rejects_nan(self):
+        with self.assertRaises(ValueError):self.store.ingest(event(notes='x'*(16*1024)))
+        with self.assertRaises(ValueError):self.store.ingest(event(extra=float('nan')))
+        self.assertEqual(self.store.listing()['total'],0)
+
+    def test_auth_is_rate_limited_before_comparison_and_non_ascii_is_401(self):
+        from fastapi import FastAPI,HTTPException
+        from fastapi.testclient import TestClient
+        from cloud.link_routes import mount_links
+        calls=[]
+        def rate(*args):calls.append(args[1:])
+        app=FastAPI()
+        mount_links(app,{'link_evidence_enabled':True,'link_evidence_dir':str(self.root/'auth')},lambda r:None,rate)
+        with patch.dict(os.environ,{'LINK_EVIDENCE_TOKEN':'fixture-token'}),TestClient(app) as client:
+            self.assertEqual(client.post('/api/links/ingest',json=event(),headers={b'authorization':b'Bearer \xff'}).status_code,401)
+            self.assertEqual(calls,[('links',60)])
+
+    def test_decompression_bomb_is_client_error(self):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from cloud.link_routes import mount_links
+        app=FastAPI()
+        mount_links(app,{'link_evidence_enabled':True,'link_evidence_dir':str(self.root/'bomb')},lambda r:None,lambda *a:None)
+        with patch.dict(os.environ,{'LINK_EVIDENCE_TOKEN':'fixture-token'}),TestClient(app) as client:
+            with patch('PIL.Image.open',side_effect=Image.DecompressionBombError('fixture')):
+                response=client.post('/api/links/ingest',json=event(image=image()),headers={'Authorization':'Bearer fixture-token'})
+        self.assertEqual(response.status_code,400)
+
     def test_backup_keeps_seven_readable_databases_no_images(self):
         self.store.ingest(event(image=image()))
         for _ in range(9):self.now+=DAY;self.store.backup()
