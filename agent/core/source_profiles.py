@@ -12,10 +12,15 @@ D6A7211_CRLF = 'a02d25a6787e0b33725695d616a595396aa4280ed4c9049f309ad1f3b9d6e8b7
 # inventory instead of a 500 when no task box is active (between batches).
 SUBTITLE_IDLE = '232545fa6c1f72f7a7c98635348d94f49782973024dd087fae6b2b62653a9ee0'
 SUBTITLE_IDLE_CRLF = 'f07466fdaf313ebf49419527769f355dbf1da6bdc0de8c52a18ba7813728638f'
-PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF})
+# SUBTITLE_IDLE with a startup-only native console guard. The frozen replay
+# excludes module-level startup branches; business AST equality is tested.
+PIP_CONSOLE = '91549e1a9a61ec4fc31ce9c32df6e81b9674b118539c684582b00f14f90b808c'
+PIP_CONSOLE_CRLF = '8c48b305936c0f90da80402a03180f307ca8710078e210901047a9f4a81f7eb2'
+PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF, PIP_CONSOLE, PIP_CONSOLE_CRLF})
 PROFILES = {F78:'f78db5a', PR49:'pr49-verified-final',
             D6A7211_CRLF:'d6a7211-crlf-pr49-behavior',
-            SUBTITLE_IDLE:'pr49-subtitle-idle', SUBTITLE_IDLE_CRLF:'pr49-subtitle-idle-crlf'}
+            SUBTITLE_IDLE:'pr49-subtitle-idle', SUBTITLE_IDLE_CRLF:'pr49-subtitle-idle-crlf',
+            PIP_CONSOLE:'pr49-pip-console', PIP_CONSOLE_CRLF:'pr49-pip-console-crlf'}
 SOURCE_HELPER_PROFILES = {
     (source, helper): name
     for source in PR49_BEHAVIOR

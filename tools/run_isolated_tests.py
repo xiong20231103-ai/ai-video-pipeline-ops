@@ -2,6 +2,7 @@
 import importlib
 import json
 import os
+import platform
 import re
 from pathlib import Path
 import subprocess
@@ -16,6 +17,13 @@ sys.path.insert(0, str(root / ".test-deps"))
 assert Path.cwd().resolve() == root
 sys.path.insert(0, str(root))
 sys.dont_write_bytecode = True
+
+# On Windows, argon2 asks platform.machine() during import. The stdlib may
+# run the read-only `ver` command for that first query. Cache it before the
+# audit/process prohibition, keeping all test/application process starts
+# blocked rather than weakening the isolation rule for a dependency import.
+if os.name == "nt":
+    platform.machine()
 
 with tempfile.TemporaryDirectory(prefix="ops-isolated-") as scratch:
     isolated = Path(scratch)

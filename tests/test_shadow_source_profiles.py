@@ -5,7 +5,7 @@ from agent.core.oracle import Oracle
 from agent.core.replay import make_fixture,replay
 from agent.core.collection_replay import replay_collection
 from agent.core.collection import CollectionSession,CollectionError
-from agent.core.source_profiles import PR49,F78,D6A7211_CRLF,SUBTITLE_IDLE,SUBTITLE_IDLE_CRLF,read_source
+from agent.core.source_profiles import PR49,F78,D6A7211_CRLF,SUBTITLE_IDLE,SUBTITLE_IDLE_CRLF,PIP_CONSOLE,PIP_CONSOLE_CRLF,read_source
 from agent.core.snapshot import SnapshotError
 from agent.core.comparison import compare
 ROOT=Path(__file__).resolve().parents[1]
@@ -31,7 +31,7 @@ class ShadowSourceTests(unittest.TestCase):
   node=next(n for n in old.body if isinstance(n,ast.FunctionDef) and n.name=='normalize_task')
   extracted=ast.parse(textwrap.dedent(inspect.getsource(normalize_task))).body[0]
   self.assertEqual(ast.dump(node,include_attributes=False),ast.dump(extracted,include_attributes=False))
-  self.assertEqual(SUBTITLE_IDLE,hashlib.sha256(self.source.encode()).hexdigest())
+  self.assertEqual(PIP_CONSOLE,hashlib.sha256(self.source.encode()).hexdigest())
  def test_metadata_hash_port_supports_both_old_and_candidate_without_media_reads(self):
   snap=self.snapshot()
   with Oracle(self.source,snap,self.root/'old',collect=False) as env:
@@ -98,10 +98,18 @@ class ShadowSourceTests(unittest.TestCase):
     candidate.collector.metadata={'child':self.metadata(env)}
     new=candidate.collector.normalize_task({'taskId':'child','status':'failed'},env.root/'status.json',1)
    self.assertEqual('completed',old['state']);self.assertEqual(old,new)
- def test_subtitle_idle_archive_is_the_checked_in_source_with_crlf(self):
+ def test_subtitle_idle_archive_preserves_pinned_business_source(self):
   raw=(ROOT/'contracts/legacy-app-subtitle-idle-crlf.txt').read_bytes()
   self.assertEqual(SUBTITLE_IDLE_CRLF,hashlib.sha256(raw).hexdigest())
-  self.assertEqual(self.source,raw.decode('utf-8').replace('\r\n','\n'))
+  old_source=raw.decode('utf-8').replace('\r\n','\n')
+  self.assertEqual(SUBTITLE_IDLE,hashlib.sha256(old_source.encode()).hexdigest())
+  old_tree=ast.parse(old_source);current_tree=ast.parse(self.source)
+  # Only the two startup nodes (os import + guarded branch) may differ.
+  self.assertEqual(ast.dump(current_tree.body[1],include_attributes=False),
+                   ast.dump(ast.parse('import os as _guard_os').body[0],include_attributes=False))
+  self.assertIsInstance(current_tree.body[2],ast.If)
+  business=ast.Module(body=current_tree.body[:1]+current_tree.body[3:],type_ignores=[])
+  self.assertEqual(ast.dump(old_tree,include_attributes=False),ast.dump(business,include_attributes=False))
   self.source=read_source(ROOT/'contracts/legacy-app-subtitle-idle-crlf.txt');snap=self.snapshot()
   with Oracle(self.source,snap,self.root/'old',collect=False) as env:
    self.assertEqual(SUBTITLE_IDLE_CRLF,env.source_sha)
@@ -111,6 +119,20 @@ class ShadowSourceTests(unittest.TestCase):
     candidate.collector.metadata={'child':self.metadata(env)}
     new=candidate.collector.normalize_task({'taskId':'child','status':'failed'},env.root/'status.json',1)
    self.assertEqual('completed',old['state']);self.assertEqual(old,new)
+ def test_pip_console_archive_is_current_and_retains_closed_replay(self):
+  raw=(ROOT/'contracts/legacy-app-pip-console-crlf.txt').read_bytes()
+  self.assertEqual(PIP_CONSOLE_CRLF,hashlib.sha256(raw).hexdigest())
+  self.assertEqual(self.source,raw.decode('utf-8').replace('\r\n','\n'))
+  self.source=raw.decode('utf-8');snap=self.snapshot()
+  with Oracle(self.source,snap,self.root/'pip-current',collect=False) as env:
+   self.assertEqual(PIP_CONSOLE_CRLF,env.source_sha)
+   with CollectionSession(env.namespace,source_sha=PIP_CONSOLE_CRLF) as candidate:
+    self.assertIsNotNone(candidate.collector)
+ def test_pip_archive_single_byte_mutation_remains_rejected(self):
+  raw=(ROOT/'contracts/legacy-app-pip-console-crlf.txt').read_bytes()
+  self.source=raw.replace(b'\r\n',b'\n',1).decode('utf-8');snap=self.snapshot()
+  with self.assertRaisesRegex(SnapshotError,'legacy_source_hash_mismatch'):
+   Oracle(self.source,snap,self.root/'pip-modified')
  def test_single_byte_cr_deletion_is_rejected_even_with_matching_manifest(self):
   raw=(ROOT/'contracts/legacy-app-d6a7211-crlf.txt').read_bytes()
   modified=raw.replace(b'\r\n',b'\n',1)
