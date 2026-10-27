@@ -99,7 +99,14 @@ with tempfile.TemporaryDirectory(prefix="ops-isolated-") as scratch:
          patch.object(subprocess, "Popen", side_effect=RuntimeError("Process launch blocked")):
         pattern=os.environ.get('OPS_ISOLATED_PATTERN','test_*.py')
         if not re.fullmatch(r'test_[A-Za-z0-9_*]+\.py',pattern):raise ValueError('Invalid isolated test pattern')
-        suite = unittest.defaultTestLoader.discover(str(root / "tests"), pattern=pattern)
+        selected=os.environ.get('OPS_ISOLATED_TEST_FILES','')
+        if selected:
+            files=selected.split(',')
+            if any(not re.fullmatch(r'test_[A-Za-z0-9_]+\.py',name) for name in files):
+                raise ValueError('Invalid isolated test selection')
+            suite=unittest.TestSuite(unittest.defaultTestLoader.discover(str(root/'tests'),pattern=name) for name in files)
+        else:
+            suite = unittest.defaultTestLoader.discover(str(root / "tests"), pattern=pattern)
         result = unittest.TextTestRunner(verbosity=1).run(suite)
     print("Isolation: worktree/temp writes only; live HTTP and process launches blocked.")
     sys.exit(0 if result.wasSuccessful() else 1)

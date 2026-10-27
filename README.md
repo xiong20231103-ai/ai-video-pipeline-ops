@@ -76,3 +76,7 @@ Dashboard 的“管理生产文件”用于手动管理第1/2步去字幕视频�
 - `baidu_sync_roots`：百度同步盘目录列表；其中任何文件永久禁止由此功能清理。
 
 以上路径均属于本机私有配置，不应提交到 Git。
+
+## 素材交接控制（PR4，默认关闭）
+
+新增云端交接包和单值班端控制的说明、API、包格式及离线恢复世代流程见 [docs/material-handoff-pr4.md](docs/material-handoff-pr4.md)。配置片段在 `cloud/material-handoff.example.json`，不能替换 Dashboard 的根 `config.json`。本功能需要后续本机 PR5/演练 PR6 才能用于双端生产，合并不代表部署批准。

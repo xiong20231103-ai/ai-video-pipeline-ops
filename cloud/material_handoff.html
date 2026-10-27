@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>素材值班交接</title>
+<style>
+body{font:16px/1.6 system-ui,sans-serif;max-width:880px;margin:32px auto;padding:0 20px;color:#172033;background:#f6f8fb}
+section{background:white;padding:22px;margin:18px 0;border:1px solid #d8dfe8;border-radius:10px}
+label{display:block;margin:14px 0}select,input[type=text],textarea,button{font:inherit;padding:9px;max-width:100%;box-sizing:border-box}select,textarea{width:100%}button{cursor:pointer}button:disabled{cursor:wait}dt{font-weight:600}dd{margin:0 0 12px;overflow-wrap:anywhere}.warning{color:#8b3900}.error{color:#a01515}li{margin:12px 0;overflow-wrap:anywhere}
+</style><script src="/material-handoff.js" defer></script></head>
+<body><a href="/">返回控制台</a><h1>素材值班交接</h1><p>同一时间只有值班端可以继续素材工作。正常交接由本机完成备份、上传和释放，再由另一端接手。</p>
+<p id="message" role="status" aria-live="polite">正在读取状态…</p>
+<section><h2>当前状态</h2><button id="refresh" type="button">刷新状态</button><dl id="status"></dl></section>
+<section><h2>确认另一端停止后接手</h2><p class="warning">强制接管使用选定的完整交接包。包之后未上传的查找、判图或审核记录可能需要核对或重做；已经进入家里流水线的任务不会因此撤销。</p>
+<form id="takeover">
+<label>接手端<select id="target"><option value="home">家里</option><option value="office">公司</option></select></label>
+<label>完整交接包<select id="package" required></select></label><p id="package-note"></p>
+<label>接管原因<textarea id="reason" required maxlength="500" rows="2"></textarea></label>
+<label><input type="checkbox" id="stopped" required> 我已确认另一端停止；作废其未完成操作的执行权，未确认的递交结果留待核对。</label>
+<button id="submit" type="submit" disabled>确认强制接管</button>
+</form></section><section><h2>最近审计</h2><ol id="audit"></ol></section></body></html>
