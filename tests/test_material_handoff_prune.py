@@ -213,17 +213,23 @@ class RetentionTests(unittest.TestCase):
     def test_delete_interruption_has_complete_backup_and_can_roll_back(self):
         from cloud.material_handoff_admin import recover
         for _ in range(6):self.package()
+        # Exercise an equivalent noncanonical root even on hosts without 8.3
+        # TEMP aliases, so this injection cannot silently stop matching again.
+        self.root=self.root/'..'/self.root.name
         original=Path.unlink
         calls=0
         def interrupted(path,*args,**kwargs):
             nonlocal calls
-            if path.parent==self.root/'objects':
+            # Windows hosted TEMP can contain an 8.3 alias, while prune resolves
+            # its root before deletion. Compare canonical parents on both sides.
+            if path.parent.resolve()==(self.root/'objects').resolve():
                 calls+=1
                 if calls==2:
                     raise OSError('fixture interrupted deletion')
             return original(path,*args,**kwargs)
         with patch.object(Path,'unlink',interrupted):
             with self.assertRaises(OSError):self.run_prune(0)
+        self.assertEqual(2,calls)
         folder=next(Path(self.backup.name).glob('material-handoff-before-prune-*'))
         manifest=json.loads((folder/'prune-manifest.json').read_text(encoding='utf-8'))
         self.assertEqual(4,len(manifest['files']))
