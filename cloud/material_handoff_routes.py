@@ -8,7 +8,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from starlette.concurrency import run_in_threadpool
 
-from cloud.material_handoff import Handoff, HandoffError, SHA, identifier
+from cloud.material_handoff import Handoff, HandoffError, SHA, identifier, DEFAULT_STORAGE_CAP
 from cloud.material_package import validate_package
 
 PREFIX='/api/material-handoff/v1'
@@ -25,7 +25,7 @@ def mount_handoff(app,config,store,session,csrf,bounded_json,rate):
     handoff=Handoff(config.get('material_handoff_dir',Path(store.path).parent/'material-handoff'),
                     clock=store.clock,lease_seconds=config.get('material_handoff_lease_seconds',120),
                     max_package_bytes=config.get('material_handoff_max_bytes',2*1024**3),
-                    storage_cap_bytes=config.get('material_handoff_storage_cap_bytes',20*1024**3))
+                    storage_cap_bytes=config.get('material_handoff_storage_cap_bytes',DEFAULT_STORAGE_CAP))
     app.state.material_handoff=handoff
 
     def reject(error):

@@ -7,6 +7,7 @@ label{display:block;margin:14px 0}select,input[type=text],textarea,button{font:i
 </style><script src="/material-handoff.js" defer></script></head>
 <body><a href="/">返回控制台</a><h1>素材值班交接</h1><p>同一时间只有值班端可以继续素材工作。正常交接由本机完成备份、上传和释放，再由另一端接手。</p>
 <p id="message" role="status" aria-live="polite">正在读取状态…</p>
+<p id="capacity-warning" class="warning" role="status" aria-live="polite"></p>
 <section><h2>当前状态</h2><button id="refresh" type="button">刷新状态</button><dl id="status"></dl></section>
 <section><h2>确认另一端停止后接手</h2><p class="warning">强制接管使用选定的完整交接包。包之后未上传的查找、判图或审核记录可能需要核对或重做；已经进入家里流水线的任务不会因此撤销。</p>
 <form id="takeover">

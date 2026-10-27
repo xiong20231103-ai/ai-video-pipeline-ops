@@ -3,7 +3,7 @@
   "material_handoff_dir": "/var/lib/ops-console/material-handoff",
   "material_handoff_lease_seconds": 120,
   "material_handoff_max_bytes": 2147483648,
-  "material_handoff_storage_cap_bytes": 21474836480,
+  "material_handoff_storage_cap_bytes": 8589934592,
   "material_handoff_tokens_sha256": {
     "office": "OFFICE_TOKEN_SHA256_SET_PRIVATELY",
     "home": "HOME_TOKEN_SHA256_SET_PRIVATELY"

@@ -4,6 +4,7 @@ on:
     paths:
       - 'cloud/**'
       - 'tests/test_material_handoff.py'
+      - 'tests/test_material_handoff_prune.py'
       - 'tests/material_handoff_ui.test.cjs'
       - 'tools/run_material_handoff_tests.py'
       - 'tools/run_isolated_tests.py'

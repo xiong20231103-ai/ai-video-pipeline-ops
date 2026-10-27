@@ -4,6 +4,7 @@ import hashlib
 from io import BytesIO
 import json
 from pathlib import Path
+from types import SimpleNamespace
 import sqlite3
 from tempfile import TemporaryDirectory
 import unittest
@@ -48,6 +49,8 @@ def package_bytes(holder,package_id='package-0001',parent=None,files=None,edit=N
 
 class HandoffTests(unittest.TestCase):
     def setUp(self):
+        disk=patch('cloud.material_handoff.shutil.disk_usage',return_value=SimpleNamespace(free=40*1024**3))
+        disk.start();self.addCleanup(disk.stop)
         temp=TemporaryDirectory(prefix='material-handoff-test-')
         self.addCleanup(temp.cleanup)
         self.root=Path(temp.name)
@@ -312,6 +315,8 @@ class HandoffTests(unittest.TestCase):
 
 class HandoffRoutesTests(unittest.TestCase):
     def setUp(self):
+        disk=patch('cloud.material_handoff.shutil.disk_usage',return_value=SimpleNamespace(free=40*1024**3))
+        disk.start();self.addCleanup(disk.stop)
         temp=TemporaryDirectory(prefix='handoff-routes-test-')
         self.addCleanup(temp.cleanup)
         self.root=Path(temp.name)

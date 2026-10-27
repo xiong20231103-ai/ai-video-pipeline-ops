@@ -27,6 +27,7 @@
   async function refresh() {
     const [auth, status] = await Promise.all([json('/auth/session'), json('/api/material-handoff/v1/status')]);
     csrf = auth.csrf; state = status;
+    $('capacity-warning').textContent = state.storage.warning ? '交接存储已用及预留容量超过上限的70%。请安排离线备份与清理，避免后续交接受阻。' : '';
     const fields = [['值班端', state.holder === 'home' ? '家里' : state.holder === 'office' ? '公司' : '无'],
       ['状态', state.phase === 'idle' ? '可正常接手' : state.lease_lost ? '连接已失效，需人工确认' : state.phase === 'preparing' ? '正在准备接手' : state.phase === 'draining' ? '正在交接' : '值班中'],
       ['最近联系', timestamp(state.last_contact_at)], ['当前执行许可截止', timestamp(state.lease_until)],

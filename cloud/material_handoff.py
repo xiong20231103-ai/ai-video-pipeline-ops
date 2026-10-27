@@ -1,6 +1,6 @@
 """Durable single-holder handoff control and immutable local package metadata.
 
-No material business tables, task receiver calls, source DB restore or cleanup.
+No material business tables, task receiver calls, source DB restore or online cleanup.
 All holder transitions and the current-package pointer use SQLite transactions.
 """
 from contextlib import contextmanager
@@ -16,6 +16,9 @@ import time
 ID = re.compile(r'[A-Za-z0-9_-]{8,100}\Z')
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 CONFIRMATION = '另一端已停止，未完成操作作废'
+GIB = 1024**3
+DEFAULT_STORAGE_CAP = 8*GIB
+DISK_HEADROOM = 5*GIB
 
 
 class HandoffError(ValueError):
@@ -35,7 +38,8 @@ def encode(value):
 
 
 class Handoff:
-    def __init__(self, root, *, clock=None, lease_seconds=120, max_package_bytes=2*1024**3, storage_cap_bytes=20*1024**3):
+    def __init__(self, root, *, clock=None, lease_seconds=120, max_package_bytes=2*1024**3,
+                 storage_cap_bytes=DEFAULT_STORAGE_CAP, check_storage=True):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root/'handoff.db'
@@ -47,6 +51,10 @@ class Handoff:
         if (type(lease_seconds) is not int or type(max_package_bytes) is not int or type(storage_cap_bytes) is not int or
                 not 15 <= lease_seconds <= 900 or not 1 <= max_package_bytes <= 8*1024**3 or storage_cap_bytes<max_package_bytes):
             raise ValueError('invalid_handoff_limits')
+        # Fail before schema creation. Offline recovery/prune must remain usable
+        # on a full disk; only those explicitly confirmed commands skip startup.
+        if check_storage and storage_cap_bytes+DISK_HEADROOM>shutil.disk_usage(self.root).free:
+            raise RuntimeError('handoff_storage_cap_plus_5gib_exceeds_free_disk')
         wall, mono = time.time(), time.monotonic()
         self.clock = clock or (lambda: wall + time.monotonic() - mono)
         with self.db() as db:
@@ -129,8 +137,12 @@ class Handoff:
                                 'action': r['action'], 'detail': json.loads(r['detail'])}
                                for r in db.execute('SELECT * FROM audit ORDER BY seq DESC LIMIT 30')]
             reserved,untracked=self.budget(db)
-            result['storage']={'reserved_bytes':reserved+untracked,'untracked_object_bytes':untracked,
-                               'cap_bytes':self.storage_cap_bytes,'auto_delete':False}
+            used=reserved+untracked
+            warning=used*100>self.storage_cap_bytes*70
+            result['storage']={'reserved_bytes':used,'used_bytes':used,'untracked_object_bytes':untracked,
+                               'cap_bytes':self.storage_cap_bytes,'auto_delete':False,
+                               'warning':warning,'warning_threshold_percent':70,
+                               'warning_code':'handoff_storage_above_70_percent' if warning else None}
             return result
 
     def budget(self,db):

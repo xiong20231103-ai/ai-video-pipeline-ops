@@ -11,14 +11,14 @@ class Element {
   set value(value) { this._value = value; }
   get value() { return this._value || (this.tag === 'select' ? this.children[0]?.value || '' : ''); }
 }
-async function fixture({ lostAck = false } = {}) {
-  const elements = new Map(['message','status','audit','reason','stopped','submit','takeover','refresh','package-note'].map(id => [id, new Element()]));
+async function fixture({ lostAck = false, capacityWarning = false } = {}) {
+  const elements = new Map(['message','capacity-warning','status','audit','reason','stopped','submit','takeover','refresh','package-note'].map(id => [id, new Element()]));
   elements.set('package', new Element('select')); elements.set('target', new Element('select'));
   elements.get('target').value = 'home';
   const packageRow = { id: 'fixture-package', device: 'office', committed_at: 1000, summary: { unresolved: { imports: 1 } } };
   let state = { generation: 'fixture-generation', epoch: 1, holder: 'office', phase: 'active', lease_lost: false,
     lease_until: 1100, last_contact_at: 1000, package: packageRow, current_package: packageRow.id,
-    candidates: [packageRow], audit: [], storage: { reserved_bytes: 100, cap_bytes: 1000 } };
+    candidates: [packageRow], audit: [], storage: { reserved_bytes: 100, cap_bytes: 1000, warning: capacityWarning } };
   let nextId = 0;
   const posts = [];
   const context = vm.createContext({ document: { getElementById: id => elements.get(id), createElement: tag => new Element(tag) },
@@ -50,6 +50,14 @@ test('confirmation is never preselected and no mutation occurs on read', async (
   assert.equal(elements.get('stopped').checked, false);
   assert.equal(elements.get('submit').disabled, true);
   assert.equal(posts.length, 0);
+});
+
+test('storage warning is shown from status without triggering cleanup', async () => {
+  const { elements, posts } = await fixture({ capacityWarning: true });
+  assert(elements.get('capacity-warning').textContent.includes('70%'));
+  assert.equal(posts.length, 0);
+  const normal = await fixture();
+  assert.equal(normal.elements.get('capacity-warning').textContent, '');
 });
 
 test('lost acknowledgement retries the same request and successful takeover re-confirms', async () => {
