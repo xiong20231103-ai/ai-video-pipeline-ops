@@ -15,6 +15,6 @@ with patch('platform.machine',return_value='AMD64'):
 os.environ['OPS_ISOLATED_TEST_FILES']=','.join([
     'test_material_handoff.py','test_cloud_readonly.py','test_command_routes.py',
     'test_command_queue.py','test_backup_routes.py','test_backup_vault.py',
-    'test_link_evidence.py','test_notification_runtime.py'])
+    'test_link_evidence.py','test_notification_runtime.py','test_public_docs_boundary.py'])
 sys.argv=[str(root/'tools/run_isolated_tests.py')]
 runpy.run_path(str(root/'tools/run_isolated_tests.py'),run_name='__main__')

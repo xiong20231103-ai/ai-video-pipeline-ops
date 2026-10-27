@@ -79,4 +79,4 @@ Dashboard 的“管理生产文件”用于手动管理第1/2步去字幕视频�
 
 ## 素材交接控制（PR4，默认关闭）
 
-新增云端交接包和单值班端控制的说明、API、包格式及离线恢复世代流程见 [docs/material-handoff-pr4.md](docs/material-handoff-pr4.md)。配置片段在 `cloud/material-handoff.example.json`，不能替换 Dashboard 的根 `config.json`。本功能需要后续本机 PR5/演练 PR6 才能用于双端生产，合并不代表部署批准。
+新增云端交接包与单值班端控制代码；设计、审查和部署说明沿用私有文档边界，随本次私有审查交接提供，并在后续文档阶段归档到 ai-video-pipeline-ops-private。配置片段在 `cloud/material-handoff.example.json`，不能替换 Dashboard 的根 `config.json`。本功能需要后续本机 PR5/演练 PR6 才能用于双端生产，合并不代表部署批准。
