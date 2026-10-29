@@ -37,6 +37,19 @@ class CollectionSession:
             if inspect.isfunction(value) and value.__module__==logic.__name__:namespace[name]=_function(value,namespace)
         namespace['Store']=_class(logic.Store,namespace)
         namespace['Collector']=_class(logic.Collector,namespace)
+        # PiP status is an additive projection adapter: preserve the pinned
+        # legacy Collector body and its provenance checks byte-for-byte.
+        from .pip_status import public_capcut_session
+        original_scan = namespace['Collector'].scan_workbench_pipeline
+        def scan_with_pip_status(collector):
+            fresh = original_scan(collector)
+            path = namespace['resolve_path'](str(collector.config.get('workbench_ops_status') or ''))
+            data = collector._json(path) if path.is_file() else {}
+            collector.pipeline['capcut']['capcutSession'] = public_capcut_session(
+                (data or {}).get('capcutSession'), now=__import__('time').time(), workbench_fresh=fresh)
+            return fresh
+        namespace['Collector'].scan_workbench_pipeline = scan_with_pip_status
+
         if source_sha is not None:
             from .source_profiles import PROFILES,PR49_BEHAVIOR
             if source_sha not in PROFILES:raise CollectionError('unsupported_collection_source')

@@ -1,3 +1,4 @@
+import { capcutSessionNotice } from "@/data/pip-status";
 import { replenishmentQueueStatus } from "@/data/replenishment-status";
 import { CountUp } from "@/components/react-bits/Motion";
 import ResetAction from "./ResetAction";
@@ -87,6 +88,14 @@ function Runtime({ data }: { data: Row }) {
           当前项目{facts.projectLabel ? `（${facts.projectLabel}）` : ""}
           显示为运行中，但工作台没有在运行。点击“安全继续当前项目”会自动启动工作台，并从断点继续。
         </p>
+      </div>
+    );
+  const pip = capcutSessionNotice(data);
+  if (facts.workbench && pip)
+    return (
+      <div className={`data-notice ${pip.online ? "tone-warning" : "tone-danger"}`}>
+        <strong>{pip.title}</strong>
+        <p>{pip.detail}</p>
       </div>
     );
   if (facts.workbench && facts.capcut)
