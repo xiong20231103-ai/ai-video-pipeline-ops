@@ -1,5 +1,11 @@
 $ErrorActionPreference = "Stop"
 $project = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $project 'deploy\pip\SessionGuard.ps1')
+$startupPermission = Get-PipStartupPermission
+if (-not $startupPermission.Allow) {
+    Write-PipStartupSkip -LogDirectory (Join-Path $project 'data\session-guard') -Role 'dashboard-launch' -Decision $startupPermission
+    exit 0
+}
 $python = Join-Path $env:LOCALAPPDATA "TikHubOPS\venv_cuda\Scripts\python.exe"
 
 if (Test-Path -LiteralPath $python) {

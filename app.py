@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+import os as _guard_os
+if __name__ == "__main__" or _guard_os.name == "nt":
+    from pathlib import Path as _GuardPath
+    from session_guard import console_startup_allowed as _console_startup_allowed
+    if not _console_startup_allowed("dashboard", _GuardPath(__file__).resolve().parent / "data" / "session-guard"):
+        if __name__ == "__main__":
+            raise SystemExit(0)
+        raise RuntimeError("dashboard_import_refused_outside_console_session")
+
 import csv
 import hashlib
 import ipaddress

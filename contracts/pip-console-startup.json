@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "change": "Native console startup guard before application imports; business AST matches pinned subtitle-idle source",
+  "moduleCalls": [
+    "CleanupTickets",
+    "Collector",
+    "ContextVar",
+    "FastAPI",
+    "Path",
+    "Path(__file__).resolve",
+    "RuntimeError",
+    "StaticFiles",
+    "Store",
+    "SystemExit",
+    "_GuardPath",
+    "_GuardPath(__file__).resolve",
+    "_console_startup_allowed",
+    "app.add_middleware",
+    "app.mount",
+    "int",
+    "load_config",
+    "re.compile",
+    "str",
+    "threading.Lock",
+    "threading.RLock",
+    "uvicorn.run"
+  ],
+  "refusal": "Direct execution exits before application imports; Windows module import raises before application imports",
+  "diagnostics": "Fixed metadata only; logging failure cannot permit startup",
+  "wait": "Native console transient: at most five attempts with 0.2s interval",
+  "systemChanges": false,
+  "deploymentPerformed": false
+}

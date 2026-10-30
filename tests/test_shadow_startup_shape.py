@@ -29,7 +29,10 @@ class StartupShapeTests(unittest.TestCase):
                for call in ast.walk(node) if isinstance(call,ast.Call)}
         self.assertEqual({'ContextVar','Path','Path(__file__).resolve','re.compile','threading.RLock','threading.Lock',
                           'load_config','Store','Collector','FastAPI','app.add_middleware','app.mount','StaticFiles',
-                          'uvicorn.run','str','int','CleanupTickets'},calls)
+                          'uvicorn.run','str','int','CleanupTickets','_GuardPath','_console_startup_allowed',
+                          '_GuardPath(__file__).resolve','RuntimeError','SystemExit'},calls)
+        report=json.loads((SOURCE.parent/'contracts/pip-console-startup.json').read_text(encoding='utf-8'))
+        self.assertEqual(sorted(calls),report['moduleCalls'])
 
     def test_store_repeated_init_has_same_logical_schema_and_migration_rows(self):
         tree=ast.parse(SOURCE.read_text(encoding='utf-8-sig'))

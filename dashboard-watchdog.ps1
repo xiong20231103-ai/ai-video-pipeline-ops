@@ -1,5 +1,11 @@
 $ErrorActionPreference = "Stop"
 $project = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $project 'deploy\pip\SessionGuard.ps1')
+$startupPermission = Get-PipStartupPermission
+if (-not $startupPermission.Allow) {
+    Write-PipStartupSkip -LogDirectory (Join-Path $project 'data\session-guard') -Role 'dashboard-watchdog' -Decision $startupPermission
+    exit 0
+}
 $statusPath = Join-Path $project "data\dashboard_watchdog_status.json"
 $mutex = New-Object System.Threading.Mutex($true, "Local\AI-Video-Pipeline-OPS-Dashboard-Watchdog")
 
