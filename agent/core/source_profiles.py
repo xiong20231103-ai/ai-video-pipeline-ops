@@ -16,8 +16,11 @@ SUBTITLE_IDLE_CRLF = 'f07466fdaf313ebf49419527769f355dbf1da6bdc0de8c52a18ba78137
 # excludes module-level startup branches; business AST equality is tested.
 PIP_CONSOLE = '91549e1a9a61ec4fc31ce9c32df6e81b9674b118539c684582b00f14f90b808c'
 PIP_CONSOLE_CRLF = '8c48b305936c0f90da80402a03180f307ca8710078e210901047a9f4a81f7eb2'
-PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF, PIP_CONSOLE, PIP_CONSOLE_CRLF})
-PROFILES = {F78:'f78db5a', PR49:'pr49-verified-final',
+# Reviewed a93f446 / PR #81: exact CapCut image names, never executor argv.
+CAPCUT_IMAGE = 'd03364c65a48b22ed3da6131d048e015e3a72421680d95641c7dd00bec1fbb9e'
+CAPCUT_IMAGE_CRLF = 'b2ac1ba5bd1b08eeab08e3bd1025717c38d6f9892908f2594ae39fbf7ff224ed'
+PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF, PIP_CONSOLE, PIP_CONSOLE_CRLF, CAPCUT_IMAGE, CAPCUT_IMAGE_CRLF})
+PROFILES = {CAPCUT_IMAGE:'pr81-capcut-image', CAPCUT_IMAGE_CRLF:'pr81-capcut-image-crlf', F78:'f78db5a', PR49:'pr49-verified-final',
             D6A7211_CRLF:'d6a7211-crlf-pr49-behavior',
             SUBTITLE_IDLE:'pr49-subtitle-idle', SUBTITLE_IDLE_CRLF:'pr49-subtitle-idle-crlf',
             PIP_CONSOLE:'pr49-pip-console', PIP_CONSOLE_CRLF:'pr49-pip-console-crlf'}

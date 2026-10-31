@@ -5,7 +5,7 @@ from agent.core.oracle import Oracle
 from agent.core.replay import make_fixture,replay
 from agent.core.collection_replay import replay_collection
 from agent.core.collection import CollectionSession,CollectionError
-from agent.core.source_profiles import PR49,F78,D6A7211_CRLF,SUBTITLE_IDLE,SUBTITLE_IDLE_CRLF,PIP_CONSOLE,PIP_CONSOLE_CRLF,read_source
+from agent.core.source_profiles import PR49,F78,D6A7211_CRLF,SUBTITLE_IDLE,SUBTITLE_IDLE_CRLF,PIP_CONSOLE,PIP_CONSOLE_CRLF,CAPCUT_IMAGE,read_source
 from agent.core.snapshot import SnapshotError
 from agent.core.comparison import compare
 ROOT=Path(__file__).resolve().parents[1]
@@ -31,7 +31,7 @@ class ShadowSourceTests(unittest.TestCase):
   node=next(n for n in old.body if isinstance(n,ast.FunctionDef) and n.name=='normalize_task')
   extracted=ast.parse(textwrap.dedent(inspect.getsource(normalize_task))).body[0]
   self.assertEqual(ast.dump(node,include_attributes=False),ast.dump(extracted,include_attributes=False))
-  self.assertEqual(PIP_CONSOLE,hashlib.sha256(self.source.encode()).hexdigest())
+  self.assertEqual(CAPCUT_IMAGE,hashlib.sha256(self.source.encode()).hexdigest())
  def test_metadata_hash_port_supports_both_old_and_candidate_without_media_reads(self):
   snap=self.snapshot()
   with Oracle(self.source,snap,self.root/'old',collect=False) as env:
@@ -103,8 +103,8 @@ class ShadowSourceTests(unittest.TestCase):
   self.assertEqual(SUBTITLE_IDLE_CRLF,hashlib.sha256(raw).hexdigest())
   old_source=raw.decode('utf-8').replace('\r\n','\n')
   self.assertEqual(SUBTITLE_IDLE,hashlib.sha256(old_source.encode()).hexdigest())
-  old_tree=ast.parse(old_source);current_tree=ast.parse(self.source)
-  # Only the two startup nodes (os import + guarded branch) may differ.
+  old_tree=ast.parse(old_source);current_tree=ast.parse((ROOT/'contracts/legacy-app-pip-console-crlf.txt').read_text(encoding='utf-8'))
+  # Between these two historical archives only the startup guard differs.
   self.assertEqual(ast.dump(current_tree.body[1],include_attributes=False),
                    ast.dump(ast.parse('import os as _guard_os').body[0],include_attributes=False))
   self.assertIsInstance(current_tree.body[2],ast.If)
@@ -119,10 +119,10 @@ class ShadowSourceTests(unittest.TestCase):
     candidate.collector.metadata={'child':self.metadata(env)}
     new=candidate.collector.normalize_task({'taskId':'child','status':'failed'},env.root/'status.json',1)
    self.assertEqual('completed',old['state']);self.assertEqual(old,new)
- def test_pip_console_archive_is_current_and_retains_closed_replay(self):
+ def test_historical_pip_console_archive_retains_closed_replay(self):
   raw=(ROOT/'contracts/legacy-app-pip-console-crlf.txt').read_bytes()
   self.assertEqual(PIP_CONSOLE_CRLF,hashlib.sha256(raw).hexdigest())
-  self.assertEqual(self.source,raw.decode('utf-8').replace('\r\n','\n'))
+  self.assertEqual(PIP_CONSOLE,hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest())
   self.source=raw.decode('utf-8');snap=self.snapshot()
   with Oracle(self.source,snap,self.root/'pip-current',collect=False) as env:
    self.assertEqual(PIP_CONSOLE_CRLF,env.source_sha)
@@ -143,3 +143,17 @@ class ShadowSourceTests(unittest.TestCase):
  def test_current_archive_requires_new_helper_identity_facts(self):
   self.source=read_source(ROOT/'contracts/legacy-app-d6a7211-crlf.txt')
   self.test_new_helper_requires_explicit_identity_facts()
+
+ def test_current_source_has_only_reviewed_pr81_business_delta(self):
+  old=ast.parse((ROOT/'contracts/legacy-app-pip-console-crlf.txt').read_text(encoding='utf-8'))
+  current=ast.parse(self.source)
+  names={'_capcut_draft_processes','process_status'}
+  replacements={n.name:n for n in current.body if isinstance(n,ast.FunctionDef) and n.name in names}
+  self.assertEqual(names,set(replacements))
+  for index,node in enumerate(old.body):
+   if isinstance(node,ast.FunctionDef) and node.name in names:old.body[index]=replacements[node.name]
+  self.assertEqual(ast.dump(old,include_attributes=False),ast.dump(current,include_attributes=False))
+  from agent.core import compatibility_logic
+  import inspect,textwrap
+  candidate=ast.parse(textwrap.dedent(inspect.getsource(compatibility_logic.process_status))).body[0]
+  self.assertEqual(ast.dump(replacements['process_status'],include_attributes=False),ast.dump(candidate,include_attributes=False))
