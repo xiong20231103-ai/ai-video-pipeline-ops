@@ -394,7 +394,10 @@ class BootstrapTests(unittest.TestCase):
             refused=DeferredEngine(state,'https://fixture.ts.net');refused.activate();self.assertIsNone(refused.host)
             self.assertNotIn('inert-value-must-not-be-logged',(state/'engine-runtime.json').read_text())
     def test_r6_package_whitelist_matches_build_inputs_and_includes_runtime_ports(self):
-        from deploy.agent_source_update import R6_RELOCATED_FILES
+        from deploy.agent_source_update import R6_RELOCATED_FILES,PIP_CONSOLE_R6_FILES,SOURCE_WHITELISTS
+        self.assertEqual({'agent/core/pip_status.py'},set(R6_RELOCATED_FILES)-set(PIP_CONSOLE_R6_FILES))
+        self.assertEqual(set(),set(PIP_CONSOLE_R6_FILES)-set(R6_RELOCATED_FILES))
+        self.assertIn(frozenset(PIP_CONSOLE_R6_FILES),SOURCE_WHITELISTS)
         root=Path(__file__).resolve().parents[1]
         self.assertEqual(len(R6_RELOCATED_FILES),len(set(R6_RELOCATED_FILES)))
         for prefix in ('agent','contracts'):

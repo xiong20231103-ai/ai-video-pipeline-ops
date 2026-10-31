@@ -20,6 +20,13 @@ class CompositionTests(unittest.TestCase):
         new={n.name:n for n in ast.parse(Path(compatibility_logic.__file__).read_text(encoding='utf-8')).body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}
         for row in manifest['functions']:
             original=copy.deepcopy(old[row['name']]);original.decorator_list=[]
+            if row['name']=='process_status':
+                # PR #81 (a93f446): the only reviewed change to this legacy handler.
+                before=ast.parse('"capcutbatchclient" in name or "capcutbatchclient" in command',mode='eval').body
+                after=ast.parse('name == "capcutbatchclient.exe"',mode='eval').body
+                matches=[node for node in ast.walk(original) if isinstance(node,ast.If) and ast.dump(node.test)==ast.dump(before)]
+                self.assertEqual(1,len(matches))
+                matches[0].test=after
             self.assertEqual(ast.dump(original,include_attributes=False),ast.dump(new[row['name']],include_attributes=False),row['name'])
 
     def test_all_modules_share_projection_locks_and_strict_context(self):
