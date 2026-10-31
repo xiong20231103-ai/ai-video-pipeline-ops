@@ -48,6 +48,11 @@ class NotificationLedger:
     episode=db.execute('SELECT round FROM notification_episodes WHERE base_key=?',(row[0],)).fetchone()[0]
     original=db.execute('SELECT * FROM notification_events WHERE base_key=? AND round=?',(row[0],episode)).fetchone()
     payload=json.loads(original['payload'])
+    if original['state']=='pending' and not self._confirmed(original,payload):
+     # Cleared before its confirmation window: a normal hand-off, not a failure.
+     db.execute("UPDATE notification_events SET state='transient' WHERE event_key=?",(original['event_key'],))
+     db.execute('UPDATE notification_episodes SET active=0,last_seen=? WHERE base_key=?',(now,row[0]))
+     continue
     # A task switch, stale/missing data or changed error is not recovery.
     # Current-task recovery requires the same positively recovered identity.
     same_task=recovery_identity is not None and all((payload.get('identity') or {}).get(k)==recovery_identity.get(k) for k in ('batchId','canonicalTaskId'))
@@ -58,12 +63,17 @@ class NotificationLedger:
      db.execute("INSERT OR IGNORE INTO notification_events VALUES(?,?,?,?,?,'pending',?,?,NULL)",(recovery_key,row[0],episode,'recovered',json.dumps(recovered,ensure_ascii=False),now,now))
     db.execute('UPDATE notification_episodes SET active=0,last_seen=? WHERE base_key=?',(now,row[0]))
   db.execute('INSERT OR REPLACE INTO notification_sources VALUES(?,?)',(scope,version))
+ @staticmethod
+ def _confirmed(event,payload):
+  wait=payload.get('confirmAfter')
+  return not wait or event['last_seen']-event['first_seen']>=wait
  def observe(self,scope,version,items,recovery_identity=None):
   with self.store.db(True) as db:self._observe(db,scope,version,items,False,recovery_identity)
  def prepare(self,*,quiet=False):
   now=self.store.clock()
   with self.store.db(True) as db:
-   pending=db.execute("SELECT * FROM notification_events WHERE state='pending' ORDER BY first_seen,event_key").fetchall()
+   pending=[r for r in db.execute("SELECT * FROM notification_events WHERE state='pending' ORDER BY first_seen,event_key").fetchall()
+            if self._confirmed(r,json.loads(r['payload']))]
    for first in pending:
     payload=json.loads(first['payload'])
     if quiet and payload.get('severity')!='critical':continue

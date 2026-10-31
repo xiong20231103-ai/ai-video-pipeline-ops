@@ -74,4 +74,18 @@ class RuntimeTests(unittest.TestCase):
   self.worker.settings_loader=lambda:({'enabled':False},None);self.worker.tick();self.assertIsNone(self.worker.ledger.baseline())
   self.worker.settings_loader=lambda:({'enabled':True,'quiet_start':0,'quiet_end':0},lambda b:{'state':'sent'})
   self.worker.tick();self.assertIsNotNone(self.worker.ledger.baseline())
+ def release_pending(self):
+  body=summary();body['currentProjectStatus']['errors']=[{'component':'workbench','phase':'capcut_draft_release_pending','errorCode':'CAPCUT_DRAFT_RELEASE_PENDING','status':'blocked','message':'fixture release pending','attemptId':'fixture-attempt'}]
+  return body
+ def test_brief_draft_release_pending_is_not_reported(self):
+  healthy=summary('running');healthy['currentProjectStatus']['errors']=[]
+  self.put(healthy);self.worker.tick();self.now+=5;self.put(self.release_pending(),2);self.worker.tick()
+  self.now+=5;self.put(healthy,3);self.worker.tick();self.now+=700;self.worker.tick()
+  self.assertEqual([],[b['kind'] for b in self.sent if b['kind'] in {'task_failed','recovered'}]);self.assertEqual(1,self.worker.ledger.status()['events'].get('transient'))
+ def test_lasting_draft_release_pending_is_reported_once(self):
+  healthy=summary('running');healthy['currentProjectStatus']['errors']=[]
+  self.put(healthy);self.worker.tick();self.now+=5;self.put(self.release_pending(),2);self.worker.tick()
+  self.assertEqual([],self.sent)
+  self.now+=121;self.put(self.release_pending(),3);self.worker.tick();self.worker.tick()
+  self.assertEqual(['task_failed'],[b['kind'] for b in self.sent])
 if __name__=='__main__':unittest.main()

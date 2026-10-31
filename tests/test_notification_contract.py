@@ -44,6 +44,10 @@ class FactsTests(unittest.TestCase):
   row={'status':200,'last_success':90,'source_health':json.dumps({'scanAgeSeconds':8})}
   self.assertTrue(source_fresh(row,100,60));self.assertFalse(source_fresh(row,100,15));self.assertFalse(source_fresh(row,80,60))
   row['source_health']='{}';self.assertFalse(source_fresh(row,100,60))
+ def test_only_draft_release_pending_waits_for_confirmation(self):
+  body=summary();self.assertNotIn('confirmAfter',current_facts(body)[0])
+  body['currentProjectStatus']['errors'][0].update({'component':'workbench','phase':'capcut_draft_release_pending'})
+  self.assertEqual(120,current_facts(body)[0]['confirmAfter'])
  def test_distinct_attempt_or_error_is_distinct_key(self):
   a=current_facts(summary())[0]['baseKey'];b=summary();b['currentProjectStatus']['errors'][0]['attemptId']='another'
   self.assertNotEqual(a,current_facts(b)[0]['baseKey'])

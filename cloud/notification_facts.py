@@ -4,6 +4,9 @@ from datetime import datetime,timezone
 
 INFLIGHT={'requested','accepted','running','recovering','persisted','receiver_acknowledged','workbench_acknowledged','executing'}
 BLOCKED={'failed','blocked','stalled','login_required'}
+# Normal hand-offs pass through these phases for a few seconds; only report
+# them once the same episode has been observed for this many seconds.
+CONFIRM_AFTER={'capcut_draft_release_pending':120}
 
 def object_value(value):
  if value is None:return {}
@@ -57,6 +60,7 @@ def current_facts(body,*,cloud_inflight=False):
   if gap and component in {'download','workbench'}:continue
   attempt=error.get('attemptId') or identity.get('attemptId')
   item=fact('task_failed',{**identity,'attemptId':attempt},component+'/'+phase,code,error.get('message') or code)
+  if item and phase in CONFIRM_AFTER:item['confirmAfter']=CONFIRM_AFTER[phase]
   if item:result.append(item)
  # allowed means "there is a legal target", not "press continue now".
  control=object_value(object_value(body.get('controls')).get('continue'))
