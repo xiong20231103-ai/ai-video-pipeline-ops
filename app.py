@@ -764,17 +764,12 @@ def list_control_commands() -> list[dict[str, Any]]:
 
 def _capcut_draft_processes() -> list[dict[str, Any]]:
     active: list[dict[str, Any]] = []
-    for process in psutil.process_iter(["pid", "name", "cmdline"]):
+    for process in psutil.process_iter(["pid", "name"]):
         try:
             name = str(process.info.get("name") or "")
-            command = " ".join(process.info.get("cmdline") or [])
         except (psutil.AccessDenied, psutil.NoSuchProcess):
             continue
-        normalized = f"{name} {command}".lower()
-        if (
-            name.lower() in {"capcut.exe", "capcutbatchclient.exe"}
-            or "capcutbatchclient" in normalized
-        ):
+        if name.lower() in {"capcut.exe", "capcutbatchclient.exe"}:
             active.append({"pid": int(process.info.get("pid") or 0), "name": name or "CapCut"})
     return active
 
@@ -4555,7 +4550,10 @@ def process_status() -> dict[str, bool]:
             result["voice"] = True
         if "board_video_stitcher" in command or "ai板材视频拼接工具" in command:
             result["stitch"] = True
-        if "capcutbatchclient" in name or "capcutbatchclient" in command:
+        # The process name only: the resident PiP executor (python) carries
+        # "--client ...CapCutBatchClient.exe" on its command line and must not
+        # make CapCut look permanently busy (10-31: Safe Continue stayed greyed).
+        if name == "capcutbatchclient.exe":
             result["capcut"] = True
         if "uploadworker" in name or "upload_service.py" in command:
             result["upload"] = True
