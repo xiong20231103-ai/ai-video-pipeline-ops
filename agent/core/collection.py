@@ -56,6 +56,39 @@ class CollectionSession:
             if source_sha in PR49_BEHAVIOR:
                 from .collection_verified_final import normalize_task
                 namespace['Collector'].normalize_task=_function(normalize_task,namespace)
+            from .source_profiles import PREFETCH_VISIBLE,PREFETCH_VISIBLE_CRLF
+            if source_sha in {PREFETCH_VISIBLE,PREFETCH_VISIBLE_CRLF}:
+                # Additive projection only for the explicitly reviewed source.
+                # Clone helpers onto the existing frozen filesystem Path port;
+                # do not read installed workbench paths through real pathlib.
+                import prefetch_view
+                helper_ports=dict(vars(prefetch_view));helper_ports['Path']=namespace['Path']
+                for name in ('read_object','original_hash','public_views'):
+                    helper_ports[name]=_function(getattr(prefetch_view,name),helper_ports)
+                def views():
+                    configured=str(namespace['CONFIG'].get('workbench_dir') or '').strip()
+                    if not configured:return []
+                    return helper_ports['public_views'](namespace['resolve_path'](configured),namespace['COLLECTOR'].project_download_statuses)
+                original_boxes=namespace['task_box_payloads']
+                def boxes_with_prefetch(*args,**kwargs):
+                    boxes=original_boxes(*args,**kwargs);index={v['taskId']:v for v in views()}
+                    for box in boxes:
+                        for item in box.get('items') or []:
+                            if item.get('taskId') in index:item['prefetch']=index[item['taskId']]
+                    return boxes
+                namespace['task_box_payloads']=boxes_with_prefetch
+                original_summary=namespace['dashboard_summary_payload']
+                def summary_with_prefetch(*args,**kwargs):
+                    value=original_summary(*args,**kwargs);value['prefetchViews']=views()
+                    index={v['taskId']:v for v in value['prefetchViews']}
+                    for item in (value.get('currentTaskBox') or {}).get('items') or []:
+                        item['prefetch']=index.get(item.get('taskId'))
+                    return value
+                namespace['dashboard_summary_payload']=summary_with_prefetch
+                original_dashboard=namespace['dashboard_payload']
+                def dashboard_with_prefetch(*args,**kwargs):
+                    value=original_dashboard(*args,**kwargs);value['prefetchViews']=views();return value
+                namespace['dashboard_payload']=dashboard_with_prefetch
 
         self.valid=False
         class MemoryStore(namespace['Store']):

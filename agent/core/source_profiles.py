@@ -21,10 +21,14 @@ CAPCUT_IMAGE = 'd03364c65a48b22ed3da6131d048e015e3a72421680d95641c7dd00bec1fbb9e
 CAPCUT_IMAGE_CRLF = 'b2ac1ba5bd1b08eeab08e3bd1025717c38d6f9892908f2594ae39fbf7ff224ed'
 PREFETCH_NOTICE = '4f3a27136abc3861cacb34906c8485f85b69b2461ea16d6ea196179bd948dcb9'
 PREFETCH_NOTICE_CRLF = 'dfac9bd1c16297cc87017a22ebb12680530b9a8d3b08fff88e22abcd6559d8b8'
+PREFETCH_VISIBLE = 'cd4be7bce881dc758c8c08c713535ab6a1d6d089e5b95598b3a72151c317765c'
+PREFETCH_VISIBLE_CRLF = '2f7e1ec3ed61a780479eddf5f09e7939d1f934e5186ab78b0c18aed314e952a3'
+PREFETCH_VISIBLE_HELPERS = {'prefetch_view.py':'1949fc4636814f7b0529c2aaee020ae798bb443d4955028fb42467f0e5c8962c',
+                           'static_versions.py':'f9a94deb8fe4a7007aff06beae381e1cdc48b8a3312e4f8e0cb37fc58ad86244'}
 # Explicit candidate identity, not a dynamic hash/fallback. Task normalization
 # remains unchanged; the new metadata/route delta is covered by AST tests.
-PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF, PIP_CONSOLE, PIP_CONSOLE_CRLF, CAPCUT_IMAGE, CAPCUT_IMAGE_CRLF, PREFETCH_NOTICE, PREFETCH_NOTICE_CRLF})
-PROFILES = {PREFETCH_NOTICE:'prefetch-notice', PREFETCH_NOTICE_CRLF:'prefetch-notice-crlf', CAPCUT_IMAGE:'pr81-capcut-image', CAPCUT_IMAGE_CRLF:'pr81-capcut-image-crlf', F78:'f78db5a', PR49:'pr49-verified-final',
+PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF, PIP_CONSOLE, PIP_CONSOLE_CRLF, CAPCUT_IMAGE, CAPCUT_IMAGE_CRLF, PREFETCH_NOTICE, PREFETCH_NOTICE_CRLF, PREFETCH_VISIBLE, PREFETCH_VISIBLE_CRLF})
+PROFILES = {PREFETCH_VISIBLE:'prefetch-visible',PREFETCH_VISIBLE_CRLF:'prefetch-visible-crlf',PREFETCH_NOTICE:'prefetch-notice', PREFETCH_NOTICE_CRLF:'prefetch-notice-crlf', CAPCUT_IMAGE:'pr81-capcut-image', CAPCUT_IMAGE_CRLF:'pr81-capcut-image-crlf', F78:'f78db5a', PR49:'pr49-verified-final',
             D6A7211_CRLF:'d6a7211-crlf-pr49-behavior',
             SUBTITLE_IDLE:'pr49-subtitle-idle', SUBTITLE_IDLE_CRLF:'pr49-subtitle-idle-crlf',
             PIP_CONSOLE:'pr49-pip-console', PIP_CONSOLE_CRLF:'pr49-pip-console-crlf'}
@@ -73,6 +77,10 @@ def verify_source(source, snapshot):
     if digest not in PROFILES or snapshot.manifest['legacySha256'] != digest:
         raise SnapshotError('legacy_source_hash_mismatch')
     facts=snapshot.manifest.get('facts',{})
+    if digest in {PREFETCH_VISIBLE,PREFETCH_VISIBLE_CRLF}:
+        for name,expected in PREFETCH_VISIBLE_HELPERS.items():
+            helper=(Path(__file__).resolve().parents[2]/name).read_text(encoding='utf-8-sig')
+            if hashlib.sha256(helper.encode()).hexdigest()!=expected:raise SnapshotError('source_dependency_hash_mismatch')
     helper_hash=reviewed_helper(digest,facts) if digest in PR49_BEHAVIOR else None
     if helper_hash:
         legacy_verified_final_source(helper_hash)
