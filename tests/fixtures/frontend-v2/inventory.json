@@ -2743,7 +2743,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -2761,7 +2762,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -2779,7 +2781,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -2797,7 +2800,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -2815,7 +2819,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -2833,7 +2838,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -2851,7 +2857,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -4188,7 +4195,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -4206,7 +4214,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -4224,7 +4233,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -4357,7 +4367,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
@@ -4375,7 +4386,8 @@
         "planned": "提前下载进度与缺链提示",
         "implemented": true,
         "evidence": [
-          "tests/test_prefetch_notice.py"
+          "tests/test_prefetch_notice.py",
+          "tests/prefetch_notice_fixture.cjs"
         ],
         "verification": "Isolated DOM projection evidence only; not deployed",
         "pr": null,
