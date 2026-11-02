@@ -712,6 +712,7 @@ function renderStage(name, data = {}) {
 function renderPipeline(pipeline = {}) {
   ["download", "voice", "stitch", "capcut", "upload"].forEach(name => renderStage(name, pipeline[name]));
   renderDownloadFailures(pipeline.download || {});
+  renderPrefetchWarnings(pipeline.download || {});
   renderUploadSummary(pipeline.upload || {});
   renderPipelineRows(pipeline);
 }
@@ -745,6 +746,32 @@ function renderUploadSummary(upload = {}) {
   $("uploadCurrentFile").textContent = currentName
     ? `当前文件：${currentName} · ${Number(upload.currentFileProgress || 0)}%（百度单文件分片完成后更新）`
     : (Number(upload.bytesRemaining || 0) > 0 ? "当前文件：等待上传服务领取下一条" : "全部文件已完成上传");
+}
+
+function renderPrefetchWarnings(download = {}) {
+  let panel = $("prefetchGapWarnings");
+  const anchor = $("downloadFailurePanel");
+  if (!anchor) return;
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "prefetchGapWarnings";
+    panel.setAttribute("role", "status");
+    anchor.insertAdjacentElement("afterend", panel);
+  }
+  const warnings = Array.isArray(download.prefetchWarnings) ? download.prefetchWarnings : [];
+  panel.replaceChildren();
+  warnings.forEach(item => {
+    if (!item || !Array.isArray(item.failedLinks) || !item.failedLinks.length) return;
+    const line = document.createElement("p");
+    line.textContent = `第 ${item.batchSequence} 项 ${item.project || ""}/${item.material || ""} 提前下载缺 ${item.failedLinks.length} 条`;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "现在补链";
+    button.addEventListener("click", () => openReplenishment(String(item.taskId || ""), item));
+    line.appendChild(button);
+    panel.appendChild(line);
+  });
+  panel.classList.toggle("hidden", !panel.childElementCount);
 }
 
 function renderDownloadFailures(download = {}) {
@@ -818,7 +845,9 @@ function renderPipelinePayload(payload = {}, currentProjectStatus = {}) {
   (payload.items || []).forEach(item => { pipeline[item.key] = item; });
   // The date ledger remains available for history, but it must never be used
   // as the live progress of a different active project.
-  renderPipeline(currentProjectPipeline(payload, currentProjectStatus) || pipeline);
+  const visible = currentProjectPipeline(payload, currentProjectStatus) || pipeline;
+  visible.download = {...(visible.download || {}), prefetchWarnings: payload.prefetchWarnings || []};
+  renderPipeline(visible);
   renderPipelineDateOptions(payload.availableDates || [], payload.date);
 }
 
@@ -1140,15 +1169,15 @@ async function postJson(url, payload, options = {}) {
   }
 }
 
-function openReplenishment(taskId) {
-  const item = state.gaps[String(taskId)];
+function openReplenishment(taskId, prefetchItem = null) {
+  const item = prefetchItem ? {...prefetchItem, missingCount: prefetchItem.failedLinks.length} : state.gaps[String(taskId)];
   const panel = $("replenishPanel");
   const dialog = $("replenishDialog");
   if (!item || !panel) return;
   const queued = replenishmentQueueStatus(item, state.replenishmentQueue);
   if (queued.queued) { window.alert(queued.message); return; }
-  const expected = Number(item.expectedCount || 0);
-  const completed = Number(item.completed || 0);
+  const expected = Number(item.expectedCount || item.urlCount || 0);
+  const completed = Number(item.completed ?? item.completedOutputs ?? 0);
   const missing = Number(item.missingCount ?? Math.max(0, expected - completed));
   panel.innerHTML = `<header><div><strong>补链：${escapeHtml(item.project)} / ${escapeHtml(item.material)}</strong>
     <p>原计划 ${expected} 条，已完成 ${completed} 条；请只粘贴 ${missing} 条新链接。</p></div>
@@ -1157,6 +1186,13 @@ function openReplenishment(taskId) {
     <label class="wide checkbox"><input id="replenishStartNow" type="checkbox" checked>补链后继续当前项目</label>
     <button class="primary wide" type="submit">提交补链</button></form>`;
   $("closeReplenishDialog")?.addEventListener("click", () => dialog?.close());
+  if (prefetchItem) {
+    $("replenishStartNow").checked = false;
+    $("replenishStartNow").disabled = true;
+    const note = document.createElement("p");
+    note.textContent = "链接保存为原任务的替换计划，轮到该项目时一起下载，不提前启动生产。";
+    panel.appendChild(note);
+  }
   $("replenishForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = event.currentTarget.querySelector("button");
@@ -1165,6 +1201,7 @@ function openReplenishment(taskId) {
       const result = await postJson(`/api/controls/tasks/${encodeURIComponent(taskId)}/replenish`, {
         urls: $("replenishUrls").value,
         startNow: $("replenishStartNow").checked,
+        prefetch: !!prefetchItem,
       });
       renderActionResult("queueActionResult", {
         state: "completed",
