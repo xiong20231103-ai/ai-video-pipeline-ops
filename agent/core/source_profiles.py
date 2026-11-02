@@ -19,8 +19,12 @@ PIP_CONSOLE_CRLF = '8c48b305936c0f90da80402a03180f307ca8710078e210901047a9f4a81f
 # Reviewed a93f446 / PR #81: exact CapCut image names, never executor argv.
 CAPCUT_IMAGE = 'd03364c65a48b22ed3da6131d048e015e3a72421680d95641c7dd00bec1fbb9e'
 CAPCUT_IMAGE_CRLF = 'b2ac1ba5bd1b08eeab08e3bd1025717c38d6f9892908f2594ae39fbf7ff224ed'
-PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF, PIP_CONSOLE, PIP_CONSOLE_CRLF, CAPCUT_IMAGE, CAPCUT_IMAGE_CRLF})
-PROFILES = {CAPCUT_IMAGE:'pr81-capcut-image', CAPCUT_IMAGE_CRLF:'pr81-capcut-image-crlf', F78:'f78db5a', PR49:'pr49-verified-final',
+PREFETCH_NOTICE = '4f3a27136abc3861cacb34906c8485f85b69b2461ea16d6ea196179bd948dcb9'
+PREFETCH_NOTICE_CRLF = 'dfac9bd1c16297cc87017a22ebb12680530b9a8d3b08fff88e22abcd6559d8b8'
+# Explicit candidate identity, not a dynamic hash/fallback. Task normalization
+# remains unchanged; the new metadata/route delta is covered by AST tests.
+PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF, PIP_CONSOLE, PIP_CONSOLE_CRLF, CAPCUT_IMAGE, CAPCUT_IMAGE_CRLF, PREFETCH_NOTICE, PREFETCH_NOTICE_CRLF})
+PROFILES = {PREFETCH_NOTICE:'prefetch-notice', PREFETCH_NOTICE_CRLF:'prefetch-notice-crlf', CAPCUT_IMAGE:'pr81-capcut-image', CAPCUT_IMAGE_CRLF:'pr81-capcut-image-crlf', F78:'f78db5a', PR49:'pr49-verified-final',
             D6A7211_CRLF:'d6a7211-crlf-pr49-behavior',
             SUBTITLE_IDLE:'pr49-subtitle-idle', SUBTITLE_IDLE_CRLF:'pr49-subtitle-idle-crlf',
             PIP_CONSOLE:'pr49-pip-console', PIP_CONSOLE_CRLF:'pr49-pip-console-crlf'}

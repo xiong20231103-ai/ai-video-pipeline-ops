@@ -3455,6 +3455,8 @@ class Collector:
             stage["todayCompleted"] = 0
         stage["todaySummary"] = str(data.get("todaySummary") or "")
         raw_failures = data.get("failureItems") or data.get("failures") or []
+        if isinstance(data.get("prefetchWarnings"), list):
+            stage["prefetchWarnings"] = [item for item in data["prefetchWarnings"] if isinstance(item, dict)][:100]
         if isinstance(raw_failures, list):
             stage["failureItems"] = [item for item in raw_failures if isinstance(item, dict)][:50]
         return stage
@@ -3729,6 +3731,7 @@ class Collector:
             self.store.upsert_task(normalized)
 
     def scan_workbench_pipeline(self) -> bool:
+        self.prefetch_warnings = []
         path = resolve_path(str(self.config.get("workbench_ops_status") or ""))
         if not path.exists():
             return False
@@ -3740,9 +3743,12 @@ class Collector:
             self.config.get("pipeline_live_after_seconds") or 15
         )
         stages = data.get("stages") or {}
+        self.prefetch_warnings = data.get("prefetchWarnings", []) if fresh else []
         for name in ("download", "voice", "stitch", "capcut", "upload"):
             if isinstance(stages.get(name), dict):
                 item = dict(stages[name])
+                if name == "download":
+                    item["prefetchWarnings"] = data.get("prefetchWarnings") if isinstance(data.get("prefetchWarnings"), list) else []
                 item.setdefault("updatedAt", data.get("updatedAt"))
                 item["isLive"] = fresh
                 self.pipeline[name] = self.normalize_stage(item, "工作台实时状态")
@@ -6455,7 +6461,8 @@ async def control_replenish_task(task_id: str, request: Request):
         raise HTTPException(status_code=400, detail="补链不是有效 JSON") from exc
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="补链不是有效 JSON")
-    return receiver_json(f"/api/tasks/replenish/{task_id}", method="POST", payload=payload)
+    route = "prefetch-replenish" if payload.get("prefetch") is True else "replenish"
+    return receiver_json(f"/api/tasks/{route}/{task_id}", method="POST", payload=payload)
 
 
 @app.post("/api/controls/tasks/{task_id}/start")
@@ -6972,6 +6979,7 @@ def pipeline(date: str = ""):
     stages = pipeline_for_date(selected)
     return {
         "date": selected,
+        "prefetchWarnings": getattr(COLLECTOR, "prefetch_warnings", []),
         "availableDates": pipeline_dates(),
         "items": list(stages.values()),
         "updatedAt": COLLECTOR.last_scan_at,
