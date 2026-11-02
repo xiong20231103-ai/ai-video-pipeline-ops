@@ -50,7 +50,7 @@ def cleanup_source_guard(function):
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 
@@ -4930,6 +4930,15 @@ def task_box_sort_key(box: dict[str, Any]) -> tuple[int, tuple[int, int, int], f
     return open_box, production, created_seconds, str(box.get("batchId") or "")
 
 
+def prefetch_public_views():
+    from prefetch_view import public_views
+    configured = str(CONFIG.get("workbench_dir") or "").strip()
+    if not configured:
+        return []
+    directory = resolve_path(configured)
+    return public_views(directory, COLLECTOR.project_download_statuses)
+
+
 def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
     capcut = remote_capcut_summaries()
     projects = [
@@ -5197,6 +5206,11 @@ def task_box_payloads(date_label: str = "") -> list[dict[str, Any]]:
             box["state"] = "stale"
             box["historyWarning"] = "创建已超过 14 天且仍未完成，按历史未完成显示"
         boxes.append(box)
+    prefetch = {item["taskId"]: item for item in prefetch_public_views()}
+    for box in boxes:
+        for item in box.get("items") or []:
+            if item.get("taskId") in prefetch:
+                item["prefetch"] = prefetch[item["taskId"]]
     return sorted(boxes, key=task_box_sort_key, reverse=True)
 
 
@@ -6009,6 +6023,7 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
         template_payload["error"] = str(exc.detail)
     payload = {
         "selectedDate": selected_date,
+        "prefetchViews": prefetch_public_views(),
         "selectedBatchId": str((selected_box or {}).get("batchId") or ""),
         "availableDates": pipeline_dates(),
         "overview": overview_payload(selected_date),
@@ -6075,6 +6090,7 @@ def dashboard_summary_payload() -> dict[str, Any]:
                     "taskId", "canonicalTaskId", "runGroupId", "batchKind", "selectedProjects", "sequence", "project", "material",
                     "expected", "downloadCompleted", "finalCompleted", "status",
                     "currentStep", "stateText", "updatedAt",
+                    "prefetch",
                 )
             }
             for item in active_box.get("items") or []
@@ -6089,6 +6105,7 @@ def dashboard_summary_payload() -> dict[str, Any]:
     summary = {
         "schemaVersion": 3,
         "currentTaskBox": active_public,
+        "prefetchViews": prefetch_public_views(),
         "currentProjectStatus": current_status,
         "currentProjectErrors": current_status.get("errors") or [],
         "health": workbench_health_payload(),
@@ -6156,6 +6173,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.add_middleware(GZipMiddleware, minimum_size=1024)
+@app.get("/static/index.html")
+def static_index():
+    from static_versions import versioned_index
+    return HTMLResponse(versioned_index(STATIC_DIR), headers={"Cache-Control": "no-store"})
+
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -6176,7 +6199,7 @@ async def security_headers(request, call_next):
 
 @app.get("/")
 def index():
-    return FileResponse(STATIC_DIR / "index.html")
+    return static_index()
 
 
 @app.get("/api/health")

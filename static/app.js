@@ -712,7 +712,6 @@ function renderStage(name, data = {}) {
 function renderPipeline(pipeline = {}) {
   ["download", "voice", "stitch", "capcut", "upload"].forEach(name => renderStage(name, pipeline[name]));
   renderDownloadFailures(pipeline.download || {});
-  renderPrefetchWarnings(pipeline.download || {});
   renderUploadSummary(pipeline.upload || {});
   renderPipelineRows(pipeline);
 }
@@ -748,9 +747,16 @@ function renderUploadSummary(upload = {}) {
     : (Number(upload.bytesRemaining || 0) > 0 ? "当前文件：等待上传服务领取下一条" : "全部文件已完成上传");
 }
 
+function renderPrefetchViews(views = []) {
+  renderPrefetchWarnings({prefetchWarnings: (Array.isArray(views) ? views : []).filter(view => view.canReplenish === true && view.state === "finished").map(view => ({
+    ...view, batchSequence:view.sequence, urlCount:view.total, completedOutputs:view.completed,
+    failedLinks:Array.from({length:Math.max(0,Math.min(1000,view.missingCount || 0))}, () => ({}))
+  }))});
+}
+
 function renderPrefetchWarnings(download = {}) {
   let panel = $("prefetchGapWarnings");
-  const anchor = $("downloadFailurePanel");
+  const anchor = $("gapQuickBar");
   if (!anchor) return;
   if (!panel) {
     panel = document.createElement("div");
@@ -764,10 +770,10 @@ function renderPrefetchWarnings(download = {}) {
     if (!item || !Array.isArray(item.failedLinks) || !item.failedLinks.length) return;
     const line = document.createElement("p");
     line.textContent = `第 ${item.batchSequence} 项 ${item.project || ""}/${item.material || ""} 提前下载缺 ${item.failedLinks.length} 条`;
-    const button = document.createElement("button");
+    const button = document.createElement(window.opsCloudPrefetchReadOnly ? "span" : "button");
     button.type = "button";
-    button.textContent = "现在补链";
-    button.addEventListener("click", () => openReplenishment(String(item.taskId || ""), item));
+    button.textContent = window.opsCloudPrefetchReadOnly ? "请在家里 Dashboard 补链" : "现在补链";
+    if (!window.opsCloudPrefetchReadOnly) button.addEventListener("click", () => openReplenishment(String(item.taskId || ""), item));
     line.appendChild(button);
     panel.appendChild(line);
   });
@@ -1260,6 +1266,23 @@ function renderReceiverQueue(items) {
         <summary>更早导入的 ${older.length} 条任务（超过 3 天，通常无需操作）</summary>${render(older)}</details>` : "");
 }
 
+function prefetchLabel(view) {
+  if (!view) return "";
+  const text = view.state === "running" ? `提前下载中 · ${view.completed}/${view.total}`
+    : view.state === "interrupted" ? `已中断，稍后续下 · ${view.completed}/${view.total}`
+    : `已提前下载 ${view.completed}/${view.total}`;
+  return text + (view.acceptedPending ? ` · 已提前补链 ${view.acceptedPending} 条，轮到时下载` : "")
+    + (view.missingCount ? ` · 缺 ${view.missingCount} 条` : "");
+}
+
+function openCardPrefetch(taskId) {
+  if (window.opsCloudPrefetchReadOnly) return;
+  const view = state.prefetchByTaskId?.[taskId];
+  if (!view?.canReplenish) return;
+  openReplenishment(taskId, {...view, batchSequence:view.sequence, urlCount:view.total,
+    completedOutputs:view.completed, failedLinks:Array.from({length:view.missingCount}, () => ({}))});
+}
+
 function renderTaskBoxes(payload = {}) {
   const boxes = Array.isArray(payload.items) ? payload.items : [];
   const history = Array.isArray(payload.history) ? payload.history : [];
@@ -1313,10 +1336,12 @@ function renderTaskBoxes(payload = {}) {
   $("taskBoxNext").textContent = next ? `${next.sequence}/${selected.projectCount} ${next.project}/${next.material}` : "--";
   setBar("taskBoxBar", selected.projectCount ? selected.completedProjects * 100 / selected.projectCount : 0);
   $("batchStatusTitle").textContent = `${selected.projectCount}个项目实时状态`;
+  state.prefetchByTaskId = Object.fromEntries((selected.items || []).filter(item => item.prefetch).map(item => [item.taskId,item.prefetch]));
   $("taskBoxItems").innerHTML = (selected.items || []).map(item => `
     <article class="taskbox-item ${escapeHtml(item.status)} ${current && current.taskId === item.taskId ? "current" : ""}">
       <div><span class="taskbox-sequence">${item.sequence}</span><strong>${escapeHtml(item.project)} / ${escapeHtml(item.material || "--")}</strong><span class="task-state ${item.status === "blocked" ? "failed" : item.status === "planned" ? "neutral" : escapeHtml(item.status)}">${escapeHtml(item.currentStep)}</span></div>
       <p>${escapeHtml(item.stateText)}</p>
+      ${item.prefetch ? `<p class="prefetch-card-status">${escapeHtml(prefetchLabel(item.prefetch))}${item.prefetch.canReplenish ? (window.opsCloudPrefetchReadOnly ? " · 请在家里 Dashboard 补链" : ` <button type="button" onclick="openCardPrefetch(this.dataset.taskId)" data-task-id="${escapeHtml(item.taskId)}">现在补链</button>`) : ""}</p>` : ""}
       <small>成片 ${item.finalCompleted} / ${item.expected}${item.historicalFailed ? ` · 历史失败 ${item.historicalFailed}` : ""}</small>
     </article>`).join("");
 }
@@ -1712,6 +1737,7 @@ async function refresh() {
     const data = await getJson(url, 2);
     recordDashboardReception();
     state.lastGoodDashboard = data;
+    renderPrefetchViews(data.prefetchViews || []);
     state.healthFailures = 0;
     if (useSummary) {
       renderPipelinePayload(data.pipeline || {}, data.currentProjectStatus || {});
