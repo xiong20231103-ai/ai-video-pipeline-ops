@@ -104,3 +104,23 @@ def source_fresh(row,now,maximum):
  health=object_value(json.loads(row.get('source_health') or '{}'))
  scan=health.get('scanAgeSeconds')
  return type(scan) in (int,float) and 0<=scan and 0<=age and age+scan<=maximum
+
+def prefetch_facts(body):
+ """Only validated pending-project gap projections, independent of failures."""
+ views=object_value(body).get('prefetchViews')
+ if not isinstance(views,list):raise ValueError('Missing prefetch projection')
+ result=[]
+ for view in views:
+  if not isinstance(view,dict):raise ValueError('Invalid prefetch projection')
+  if view.get('state')!='finished' or view.get('canReplenish') is not True:continue
+  missing=view.get('missingCount');total=view.get('total');sequence=view.get('sequence')
+  fingerprint=view.get('gapFingerprint')
+  if (type(missing) is not int or type(total) is not int or not 0<missing<=total
+      or type(sequence) is not int or sequence<1 or not re.fullmatch('[a-f0-9]{64}',str(fingerprint or ''))):
+   raise ValueError('Unverified prefetch gap')
+  identity={'batchId':view.get('batchId'),'canonicalTaskId':view.get('taskId'),'project':view.get('project')}
+  message=(public_text(view.get('productionDate'),20)+' 第 '+str(sequence)+' 项 '+public_text(view.get('project'),40)
+           +'/'+public_text(view.get('material'),40)+' 提前下载缺 '+str(missing)+' 条，可提前补链')
+  item=fact('prefetch_gap',identity,'prefetch',fingerprint,message,once=True)
+  if item:result.append(item)
+ return result

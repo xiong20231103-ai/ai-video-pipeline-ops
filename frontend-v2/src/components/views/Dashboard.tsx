@@ -1,4 +1,5 @@
 import { capcutSessionNotice } from "@/data/pip-status";
+import { PrefetchOverview } from "./PrefetchStatus";
 import { replenishmentQueueStatus } from "@/data/replenishment-status";
 import { CountUp } from "@/components/react-bits/Motion";
 import ResetAction from "./ResetAction";
@@ -509,6 +510,7 @@ export default function Dashboard({ view }: { view: View }) {
       {data && (
         <>
           <Runtime data={data} />
+          <PrefetchOverview data={data} />
           {view === "overview" && (
             <>
               <Overview

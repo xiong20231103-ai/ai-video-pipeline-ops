@@ -31,6 +31,15 @@ class EntryTests(unittest.TestCase):
                 for script in ['cloud-readonly.js','cloud-commands.js','cloud-cleanup.js','cloud-backups.js']:
                     self.assertIn(script,page.text)
                 self.assertNotIn('src="/login.js"',page.text)
+    def test_legacy_script_version_is_derived_from_actual_bytes(self):
+        self.login()
+        expected=hashlib.sha256((self.static/'app.js').read_bytes()).hexdigest()[:20]
+        for path in ['/', '/legacy', '/static/index.html']:
+            with self.subTest(path=path):
+                page=self.client.get(path)
+                self.assertEqual(200,page.status_code)
+                self.assertIn('/static/app.js?v='+expected,page.text)
+                self.assertEqual('no-store',page.headers['cache-control'])
     def test_explicit_true_only_switch_and_no_script_injection_in_v2(self):
         for flag in [False, 'true', 1, None, True]:
             client=self.make_client(create_app({**self.config,'v2_default_enabled':flag},self.store,self.static))
