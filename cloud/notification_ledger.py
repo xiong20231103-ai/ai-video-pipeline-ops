@@ -48,7 +48,9 @@ class NotificationLedger:
     episode=db.execute('SELECT round FROM notification_episodes WHERE base_key=?',(row[0],)).fetchone()[0]
     original=db.execute('SELECT * FROM notification_events WHERE base_key=? AND round=?',(row[0],episode)).fetchone()
     payload=json.loads(original['payload'])
-    if original['state']=='pending' and not self._confirmed(original,payload):
+    if payload.get('kind')=='prefetch_gap' and original['state']=='pending':
+     db.execute("UPDATE notification_events SET state='closed' WHERE event_key=?",(original['event_key'],))
+    if payload.get('kind')!='prefetch_gap' and original['state']=='pending' and not self._confirmed(original,payload):
      # Cleared before its confirmation window: a normal hand-off, not a failure.
      db.execute("UPDATE notification_events SET state='transient' WHERE event_key=?",(original['event_key'],))
      db.execute('UPDATE notification_episodes SET active=0,last_seen=? WHERE base_key=?',(now,row[0]))

@@ -2,7 +2,7 @@
 import http.client,json,sqlite3,threading
 from datetime import datetime,timedelta,timezone
 from contracts.cache import cache_key
-from cloud.notification_facts import current_facts,completion_facts,source_fresh,digest
+from cloud.notification_facts import current_facts,completion_facts,source_fresh,digest,prefetch_facts
 from cloud.notification_ledger import NotificationLedger
 from cloud.daily_report import DailyReports
 
@@ -45,6 +45,10 @@ class NotificationWorker:
     if source_fresh(row,now,180):
      body=json.loads(row['body'])
      if not isinstance(body,dict):raise ValueError('Invalid summary object')
+     # A missing field is an old producer, not evidence that an existing gap
+     # has recovered. Only explicit fresh projections advance this scope.
+     if 'prefetchViews' in body:
+      observations.append(('prefetch',row['version'],prefetch_facts(body)))
      status=body.get('currentProjectStatus')
      box=body.get('currentTaskBox');ident=(status or {}).get('identity') if isinstance(status,dict) else None
      if not isinstance(status,dict) or not isinstance(status.get('errors'),list):raise ValueError('Unknown task snapshot')

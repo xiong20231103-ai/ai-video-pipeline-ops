@@ -1,5 +1,7 @@
 'use strict';
 (() => {
+  // Existing audited cloud command contracts do not authorize prefetch writes.
+  window.opsCloudPrefetchReadOnly = true;
   const original = window.fetch.bind(window);
   window.opsCloudNetwork=original;
   const samples = new Map();

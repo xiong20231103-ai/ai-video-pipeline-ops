@@ -150,6 +150,7 @@ export function useDashboard(date: string, batchId: string) {
                 pipeline: data.pipeline,
                 currentProjectStatus: data.currentProjectStatus,
                 currentTaskBox: data.currentTaskBox || null,
+                prefetchViews: data.prefetchViews || [],
                 services: data.services,
                 health: data.health,
                 controls: {

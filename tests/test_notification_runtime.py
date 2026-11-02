@@ -41,6 +41,28 @@ class RuntimeTests(unittest.TestCase):
  def test_disabled_worker_does_not_initialize_or_send(self):
   self.worker.config['enabled']=False;self.put(summary());self.worker.tick()
   self.assertIsNone(self.worker.ledger.baseline());self.assertEqual([],self.sent)
+ def test_prefetch_scope_is_fresh_deduplicated_and_closes_silently(self):
+  healthy=summary('running');healthy['currentProjectStatus']['errors']=[]
+  healthy['prefetchViews']=[]
+  self.put(healthy);self.worker.tick()
+  gap={'taskId':'later','batchId':'batch','project':'项目','material':'材料','productionDate':'11.2',
+       'sequence':6,'state':'finished','canReplenish':True,'missingCount':3,'total':26,'gapFingerprint':'a'*64}
+  self.now+=5;self.put({**healthy,'prefetchViews':[gap]},2);self.worker.tick()
+  self.now+=5;self.put({**healthy,'prefetchViews':[gap]},3);self.worker.tick()
+  self.assertEqual(['prefetch_gap'],[b['kind'] for b in self.sent])
+  # An older producer omitting the field cannot close an observed gap.
+  old={k:v for k,v in healthy.items() if k!='prefetchViews'}
+  self.now+=5;self.put(old,4);self.worker.tick()
+  with self.store.db() as db:
+   self.assertEqual(1,db.execute("SELECT active FROM notification_episodes WHERE scope='prefetch'").fetchone()[0])
+  # Nor can stale explicit empty data; only a fresh empty projection closes it.
+  self.now+=5;self.put(healthy,5,age=181);self.worker.tick()
+  with self.store.db() as db:
+   self.assertEqual(1,db.execute("SELECT active FROM notification_episodes WHERE scope='prefetch'").fetchone()[0])
+  self.now+=5;self.put(healthy,6);self.worker.tick()
+  with self.store.db() as db:
+   self.assertEqual(0,db.execute("SELECT active FROM notification_episodes WHERE scope='prefetch'").fetchone()[0])
+  self.assertEqual(['prefetch_gap'],[b['kind'] for b in self.sent])
  def test_provider_absent_keeps_pending_and_exposes_status(self):
   self.worker.sender=None;self.worker.tick();self.put(summary());self.worker.tick()
   self.assertFalse(self.worker.status()['providerConfigured']);self.assertEqual({'pending':1},self.worker.status()['events'])

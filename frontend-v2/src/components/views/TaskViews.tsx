@@ -26,6 +26,7 @@ import {
   Field,
 } from './shared'
 import { pipelineFor } from './presentation'
+import { PrefetchCard } from './PrefetchStatus'
 
 export function TaskBox({
   data,
@@ -138,6 +139,7 @@ export function TaskBox({
             </header>
             <Status state={t(item.status)}>{t(item.currentStep)}</Status>
             <p>{t(item.stateText)}</p>
+            <PrefetchCard value={item.prefetch} />
             <small>
               成片 {t(item.finalCompleted)} / {t(item.expected)}
               {item.historicalFailed

@@ -6298,19 +6298,19 @@
           "frontend-v2/src/test/queue-wait.test.ts",
           "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
-        "detail": "() => { const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalCloudVerifyButton','resetTestRecordsButton','previewDraftCleanupButton','confirmDraftCleanupButton','previewAudioCleanupBu",
+        "detail": "() => { // Existing audited cloud command contracts do not authorize prefetch writes. window.opsCloudPrefetchReadOnly = true; const original = window.fetch.bind(window); window.opsCloudNetwork=original; const samples = new Map(); const inflight = new Map(); let sourcePanel, dashboardSample; const refreshWatchers = new Map(); const writeIds=['emptyPendingDeleteButton','continueCurrentButton','uploadRescanButton','historicalClou",
         "pr": 37,
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch",
         "excerptStartLine": 2,
         "excerptStartColumn": 2,
-        "excerptEndLine": 166,
+        "excerptEndLine": 168,
         "implementation": "frontend-v2/src/data/client.ts:3"
       },
       {
         "id": "FN-274",
         "source": "cloud/readonly.js",
-        "line": 10,
-        "name": "匿名回调@10",
+        "line": 12,
+        "name": "匿名回调@12",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6326,15 +6326,15 @@
         "detail": "event => { if (!event.target.closest('[data-cloud-account]') && !window.opsCloudAcceptForm?.(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); } }",
         "pr": 37,
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch",
-        "excerptStartLine": 10,
+        "excerptStartLine": 12,
         "excerptStartColumn": 39,
-        "excerptEndLine": 12,
+        "excerptEndLine": 14,
         "implementation": "frontend-v2/src/data/upload-writer.ts:37"
       },
       {
         "id": "FN-275",
         "source": "cloud/readonly.js",
-        "line": 13,
+        "line": 15,
         "name": "wait",
         "mode": "云端",
         "planned": "V2-1",
@@ -6350,15 +6350,15 @@
         "detail": "(ms, signal) => new Promise((resolve, reject) => { if (signal?.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; } const abort = () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }; const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, ms); signal?.addEventListener('abort', abort, {once: true}); })",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 13,
+        "excerptStartLine": 15,
         "excerptStartColumn": 16,
-        "excerptEndLine": 18
+        "excerptEndLine": 20
       },
       {
         "id": "FN-276",
         "source": "cloud/readonly.js",
-        "line": 13,
-        "name": "匿名回调@13",
+        "line": 15,
+        "name": "匿名回调@15",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6373,14 +6373,14 @@
         "detail": "(resolve, reject) => { if (signal?.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; } const abort = () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }; const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, ms); signal?.addEventListener('abort', abort, {once: true}); }",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 13,
+        "excerptStartLine": 15,
         "excerptStartColumn": 44,
-        "excerptEndLine": 18
+        "excerptEndLine": 20
       },
       {
         "id": "FN-277",
         "source": "cloud/readonly.js",
-        "line": 15,
+        "line": 17,
         "name": "abort",
         "mode": "云端",
         "planned": "V2-1",
@@ -6396,15 +6396,15 @@
         "detail": "() => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 15,
+        "excerptStartLine": 17,
         "excerptStartColumn": 19,
-        "excerptEndLine": 15
+        "excerptEndLine": 17
       },
       {
         "id": "FN-278",
         "source": "cloud/readonly.js",
-        "line": 16,
-        "name": "匿名回调@16",
+        "line": 18,
+        "name": "匿名回调@18",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6419,14 +6419,14 @@
         "detail": "() => { signal?.removeEventListener('abort', abort); resolve(); }",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 16,
+        "excerptStartLine": 18,
         "excerptStartColumn": 30,
-        "excerptEndLine": 16
+        "excerptEndLine": 18
       },
       {
         "id": "FN-279",
         "source": "cloud/readonly.js",
-        "line": 19,
+        "line": 21,
         "name": "observe",
         "mode": "云端",
         "planned": "V2-1",
@@ -6442,14 +6442,14 @@
         "detail": "function observe(url, response) { const age = response.headers.get('X-Cache-Age-Seconds'); if (age !== null) { let health={};try{health=JSON.parse(response.headers.get('X-Source-Health')||'{}');}catch{} samples.set(url, {age: Number(age), received: performance.now(), scan: response.headers.get('X-Source-Scanned-At') || '源扫描时间未知', sourceAge:typeof health.scanAgeSeconds==='number'?health.scanAgeSeconds:null}); const path=new URL",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 19,
+        "excerptStartLine": 21,
         "excerptStartColumn": 3,
-        "excerptEndLine": 27
+        "excerptEndLine": 29
       },
       {
         "id": "FN-280",
         "source": "cloud/readonly.js",
-        "line": 28,
+        "line": 30,
         "name": "watchRefresh",
         "mode": "云端",
         "planned": "V2-1",
@@ -6465,15 +6465,15 @@
         "detail": "function watchRefresh(key, response) { if (response.headers.get('X-Cache-Refresh-Pending')!=='true'||refreshWatchers.has(key)) return; const url=new URL(key,location.origin);const batch=url.searchParams.get('batchId'); if(url.pathname!=='/api/dashboard'||!batch)return; const previous=response.headers.get('X-Cache-Version');const previousTag=response.headers.get('ETag'); const watch=(async()=>{ for(let attempt=0;attempt<60;atte",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 28,
+        "excerptStartLine": 30,
         "excerptStartColumn": 3,
-        "excerptEndLine": 47
+        "excerptEndLine": 49
       },
       {
         "id": "FN-281",
         "source": "cloud/readonly.js",
-        "line": 33,
-        "name": "匿名回调@33",
+        "line": 35,
+        "name": "匿名回调@35",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6488,15 +6488,15 @@
         "detail": "async()=>{ for(let attempt=0;attempt<60;attempt++){ await wait(1000); if(document.visibilityState!=='visible')return; if(typeof state==='undefined'||state.batchId!==batch)return; const newer=await original(key,{headers:{'X-Ops-Page-Visible':'true'}}); if(newer.status===401){location.assign('/login');return;} if(newer.status===200&&(newer.headers.get('X-Cache-Version')!==previous||newer.headers.get('ETag')!==previousTag)){ if(!",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 33,
+        "excerptStartLine": 35,
         "excerptStartColumn": 18,
-        "excerptEndLine": 45
+        "excerptEndLine": 47
       },
       {
         "id": "FN-282",
         "source": "cloud/readonly.js",
-        "line": 45,
-        "name": "匿名回调@45",
+        "line": 47,
+        "name": "匿名回调@47",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6511,15 +6511,15 @@
         "detail": "()=>{}",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 45,
+        "excerptStartLine": 47,
         "excerptStartColumn": 16,
-        "excerptEndLine": 45
+        "excerptEndLine": 47
       },
       {
         "id": "FN-283",
         "source": "cloud/readonly.js",
-        "line": 45,
-        "name": "匿名回调@45",
+        "line": 47,
+        "name": "匿名回调@47",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6534,15 +6534,15 @@
         "detail": "()=>refreshWatchers.delete(key)",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 45,
+        "excerptStartLine": 47,
         "excerptStartColumn": 32,
-        "excerptEndLine": 45
+        "excerptEndLine": 47
       },
       {
         "id": "FN-284",
         "source": "cloud/readonly.js",
-        "line": 48,
-        "name": "匿名回调@48",
+        "line": 50,
+        "name": "匿名回调@50",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6557,16 +6557,16 @@
         "detail": "async (input, init = {}) => { const url = new URL(input instanceof Request ? input.url : input, location.href); if (url.origin !== location.origin || !url.pathname.startsWith('/api/')) return original(input, init); const method = (init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase(); if (method !== 'GET') {if(window.opsCloudWriteFetch)return window.opsCloudWriteFetch(url.href,init);throw new Error('写",
         "pr": 37,
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch",
-        "excerptStartLine": 48,
+        "excerptStartLine": 50,
         "excerptStartColumn": 18,
-        "excerptEndLine": 70,
+        "excerptEndLine": 72,
         "implementation": "frontend-v2/src/data/client.ts:3"
       },
       {
         "id": "FN-285",
         "source": "cloud/readonly.js",
-        "line": 58,
-        "name": "匿名回调@58",
+        "line": 60,
+        "name": "匿名回调@60",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6581,15 +6581,15 @@
         "detail": "async () => { for (let attempt = 0; attempt < 120; attempt++) { const response = await original(input, init); if (response.status === 401) { location.assign('/login'); throw new Error('请重新登录'); } if (response.status !== 202) { observe(key, response); watchRefresh(key,response); return response; } // A pending envelope is never delivered to the old business renderer. await wait(500, init.signal || (input instanceof Request ? in",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 58,
+        "excerptStartLine": 60,
         "excerptStartColumn": 19,
-        "excerptEndLine": 67
+        "excerptEndLine": 69
       },
       {
         "id": "FN-286",
         "source": "cloud/readonly.js",
-        "line": 71,
-        "name": "匿名回调@71",
+        "line": 73,
+        "name": "匿名回调@73",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6604,15 +6604,15 @@
         "detail": "() => { // The home H4 timer measures browser reception. Cloud reception is not a // fresh home scan: derive displayed age from cloud cache/source ages. const paintCloudAge=()=>{ if(!dashboardSample||typeof state==='undefined')return; const sample=dashboardSample;const since=(performance.now()-sample.received)/1000; const age=sample.age+since;const known=sample.sourceAge!==null&&Number.isFinite(sample.sourceAge)&&sample.source",
         "pr": 37,
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch",
-        "excerptStartLine": 71,
+        "excerptStartLine": 73,
         "excerptStartColumn": 49,
-        "excerptEndLine": 165,
+        "excerptEndLine": 167,
         "implementation": "frontend-v2/src/data/client.ts:3"
       },
       {
         "id": "FN-287",
         "source": "cloud/readonly.js",
-        "line": 74,
+        "line": 76,
         "name": "paintCloudAge",
         "mode": "云端",
         "planned": "V2-1",
@@ -6628,14 +6628,14 @@
         "detail": "()=>{ if(!dashboardSample||typeof state==='undefined')return; const sample=dashboardSample;const since=(performance.now()-sample.received)/1000; const age=sample.age+since;const known=sample.sourceAge!==null&&Number.isFinite(sample.sourceAge)&&sample.sourceAge>=0; const effective=known?sample.sourceAge+age:null; state.freshnessReceivedAt=known?new Date(Date.now()-effective*1000):null; state.freshnessReceivedTick=performance.no",
         "pr": 30,
         "verification": "isolated only; full production/shadow/switch not tested",
-        "excerptStartLine": 74,
+        "excerptStartLine": 76,
         "excerptStartColumn": 25,
-        "excerptEndLine": 89
+        "excerptEndLine": 91
       },
       {
         "id": "FN-288",
         "source": "cloud/readonly.js",
-        "line": 106,
+        "line": 108,
         "name": "credentials",
         "mode": "云端",
         "planned": "V2-1",
@@ -6648,9 +6648,9 @@
           "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async function credentials() { const response = await original('/auth/session'); if (!response.ok) throw new Error(); return response.json(); }",
-        "excerptStartLine": 106,
+        "excerptStartLine": 108,
         "excerptStartColumn": 5,
-        "excerptEndLine": 106,
+        "excerptEndLine": 108,
         "pr": 37,
         "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
@@ -6658,8 +6658,8 @@
       {
         "id": "FN-289",
         "source": "cloud/readonly.js",
-        "line": 107,
-        "name": "匿名回调@107",
+        "line": 109,
+        "name": "匿名回调@109",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6671,9 +6671,9 @@
           "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async () => { const info = await credentials(); await original('/auth/logout',{method:'POST',headers:{'X-CSRF-Token':info.csrf}}); location.assign('/login'); }",
-        "excerptStartLine": 107,
+        "excerptStartLine": 109,
         "excerptStartColumn": 22,
-        "excerptEndLine": 107,
+        "excerptEndLine": 109,
         "pr": 37,
         "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
@@ -6681,8 +6681,8 @@
       {
         "id": "FN-290",
         "source": "cloud/readonly.js",
-        "line": 108,
-        "name": "匿名回调@108",
+        "line": 110,
+        "name": "匿名回调@110",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6694,9 +6694,9 @@
           "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "() => { if (account.querySelector('form')) return; const form = document.createElement('form'); for (const [name,label] of [['oldPassword','当前密码'],['newPassword','新密码（至少12个字符）']]) { const input = document.createElement('input'); input.type='password'; input.name=name; input.required=true; input.placeholder=label; input.maxLength=256; input.autocomplete=name==='newPassword'?'new-password':'current-password'; if(name==='newPassw",
-        "excerptStartLine": 108,
+        "excerptStartLine": 110,
         "excerptStartColumn": 24,
-        "excerptEndLine": 117,
+        "excerptEndLine": 119,
         "pr": 37,
         "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
@@ -6704,8 +6704,8 @@
       {
         "id": "FN-291",
         "source": "cloud/readonly.js",
-        "line": 115,
-        "name": "匿名回调@115",
+        "line": 117,
+        "name": "匿名回调@117",
         "mode": "云端",
         "planned": "V2-2F",
         "implemented": true,
@@ -6717,9 +6717,9 @@
           "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async event=>{event.preventDefault();submit.disabled=true;try{const info=await credentials();const response=await original('/auth/password',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf},body:JSON.stringify(Object.fromEntries(new FormData(form)))});if(response.ok){form.reset();location.assign('/login');}else alert('未修改，请核对密码后重试');}finally{submit.disabled=false;}}",
-        "excerptStartLine": 115,
+        "excerptStartLine": 117,
         "excerptStartColumn": 21,
-        "excerptEndLine": 115,
+        "excerptEndLine": 117,
         "pr": 37,
         "implementation": "frontend-v2/src/components/views/AccountActions.tsx:6",
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
@@ -6727,7 +6727,7 @@
       {
         "id": "FN-292",
         "source": "cloud/readonly.js",
-        "line": 119,
+        "line": 121,
         "name": "disableWrites",
         "mode": "云端",
         "planned": "V2-1",
@@ -6742,9 +6742,9 @@
           "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "()=>{ const buttons=[...document.querySelectorAll('button[onclick], button[data-cloud-control], #createTaskForm button, #replenishForm button[type=\"submit\"]'),...writeIds.map(id=>document.getElementById(id)).filter(Boolean)]; for(const button of buttons) { const action=/^controlTask\\(this, '(start|cancel)'\\)$/.exec(button.getAttribute('onclick')||''); if(action){button.dataset.cloudControl=action[1];button.removeAttribute('onc",
-        "excerptStartLine": 119,
+        "excerptStartLine": 121,
         "excerptStartColumn": 25,
-        "excerptEndLine": 129,
+        "excerptEndLine": 131,
         "pr": 37,
         "implementation": "frontend-v2/src/data/upload-writer.ts:37",
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
@@ -6752,8 +6752,8 @@
       {
         "id": "FN-293",
         "source": "cloud/readonly.js",
-        "line": 120,
-        "name": "匿名回调@120",
+        "line": 122,
+        "name": "匿名回调@122",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6767,9 +6767,9 @@
           "frontend-v2/src/test/safe-continue.test.tsx"
         ],
         "detail": "id=>document.getElementById(id)",
-        "excerptStartLine": 120,
+        "excerptStartLine": 122,
         "excerptStartColumn": 176,
-        "excerptEndLine": 120,
+        "excerptEndLine": 122,
         "pr": 37,
         "implementation": "frontend-v2/src/data/upload-writer.ts:37",
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
@@ -6777,7 +6777,7 @@
       {
         "id": "FN-294",
         "source": "cloud/readonly.js",
-        "line": 132,
+        "line": 134,
         "name": "pollHealth",
         "mode": "云端",
         "planned": "V2-1",
@@ -6791,9 +6791,9 @@
           "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "async function pollHealth() { try { const response=await original('/console/status',{headers:{'X-Ops-Page-Visible':String(document.visibilityState==='visible')}}); if(response.status===401){location.assign('/login');return;} if(!response.ok)throw new Error(); const health=await response.json(); const text=health.heartbeatAgeSeconds===null?'等待家里代理部署/连接':!health.agentOnline?'家里离线，距心跳 '+Math.floor(health.heartbeatAgeSeconds)+' 秒'",
-        "excerptStartLine": 132,
+        "excerptStartLine": 134,
         "excerptStartColumn": 5,
-        "excerptEndLine": 142,
+        "excerptEndLine": 144,
         "pr": 37,
         "implementation": "frontend-v2/src/data/useDashboard.ts:197",
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
@@ -6801,8 +6801,8 @@
       {
         "id": "FN-295",
         "source": "cloud/readonly.js",
-        "line": 147,
-        "name": "匿名回调@147",
+        "line": 149,
+        "name": "匿名回调@149",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6815,9 +6815,9 @@
           "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "()=>{ if(typeof state!=='undefined'&&!state.refreshBusy&&typeof refresh==='function'){ state.fullDashboardLoaded=false;void refresh(); } }",
-        "excerptStartLine": 147,
+        "excerptStartLine": 149,
         "excerptStartColumn": 17,
-        "excerptEndLine": 151,
+        "excerptEndLine": 153,
         "pr": 37,
         "implementation": "frontend-v2/src/data/useDashboard.ts:197",
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch"
@@ -6825,8 +6825,8 @@
       {
         "id": "FN-296",
         "source": "cloud/readonly.js",
-        "line": 152,
-        "name": "匿名回调@152",
+        "line": 154,
+        "name": "匿名回调@154",
         "mode": "云端",
         "planned": "V2-1",
         "implemented": true,
@@ -6838,9 +6838,9 @@
           "frontend-v2/scripts/readonly-browser-check.cjs"
         ],
         "detail": "() => { const list=sourcePanel.querySelector('ul'); list.replaceChildren(); for (const [key,sample] of samples) { const age=Math.floor(sample.age+(performance.now()-sample.received)/1000); const row=document.createElement('li'); const parsed=new URL(key,location.origin); const names={'/api/health':'递交健康','/api/dashboard':'完整看板','/api/dashboard/summary':'当前摘要','/api/task-boxes/current':'当前任务箱','/api/task-boxes/history':'历史任务箱',",
-        "excerptStartLine": 152,
+        "excerptStartLine": 154,
         "excerptStartColumn": 17,
-        "excerptEndLine": 164,
+        "excerptEndLine": 166,
         "pr": 37,
         "implementation": "frontend-v2/src/components/views/CloudViews.tsx:69",
         "verification": "implementation and isolated fixtures only; no production/shadow/default switch"

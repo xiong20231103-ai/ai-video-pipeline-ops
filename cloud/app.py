@@ -165,10 +165,11 @@ def create_app(config=None,store=None,static_root=None):
             return RedirectResponse(login_location('/legacy'),status_code=303)
         return legacy_page()
     def legacy_page():
-        page=(static_root/'index.html').read_text(encoding='utf-8')
+        from static_versions import versioned_index
+        page=versioned_index(static_root)
         # Insert before app.js executes, while leaving the home static files intact.
         page=page.replace('<head>','<head><script src="/cloud-readonly.js"></script><script src="/cloud-commands.js"></script><script src="/cloud-cleanup.js"></script><script defer src="/cloud-backups.js"></script>',1)
-        return HTMLResponse(page)
+        return HTMLResponse(page,headers={'Cache-Control':'no-store'})
     @application.get('/cloud-readonly.js')
     def readonly_script(request:Request):
         session(request)
