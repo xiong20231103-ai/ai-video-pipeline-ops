@@ -17,6 +17,7 @@ class CollectorIncrementalTests(unittest.TestCase):
    signature=json_read_cache.file_signature(path)
    with patch('json_read_cache.file_signature',return_value=signature):
     collector.scan_statuses()
+    self.assertNotIn(str(path),collector._processed_status_sources)
     path.write_text('{"tasks":[{"taskId":"one","state":"Running"}] }')
     collector.scan_statuses()
    self.assertEqual('Running',store.upsert_task.call_args.args[0]['state'])

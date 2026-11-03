@@ -3781,10 +3781,12 @@ class Collector:
                     self._publish_task_projection(
                         self.normalize_task(item, path, timestamp, batch_id, date_label)
                     )
-            if not requires_verification:
+            if not requires_verification and signature_is_stable(observed):
                 if len(self._processed_status_sources) >= 8192:
                     self._processed_status_sources.clear()
                 self._processed_status_sources[source_key] = source_version
+            else:
+                self._processed_status_sources.pop(source_key, None)
 
         # The fourth-step manifest is authoritative when it was explicitly
         # re-saved (for example after a safe requeue).  Use its real mtime:
@@ -3811,10 +3813,13 @@ class Collector:
             )
             normalized["_force_contract_reset"] = bool(item.get("_authoritative_reset"))
             self._publish_task_projection(normalized)
-            if row_version is not None and str(item.get("status") or "") not in FAILED_STATES:
+            if (row_version is not None and signature_is_stable(row_version[0])
+                    and str(item.get("status") or "") not in FAILED_STATES):
                 if len(self._processed_metadata_rows) >= 8192:
                     self._processed_metadata_rows.clear()
                 self._processed_metadata_rows[task_id] = row_version
+            else:
+                self._processed_metadata_rows.pop(task_id, None)
 
     def scan_workbench_pipeline(self) -> bool:
         self.prefetch_warnings = []
