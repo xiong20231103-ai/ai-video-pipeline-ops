@@ -104,4 +104,3 @@ $env:TMP = $env:TEMP
 - `dash-race-safe-final-5min.json`、`dash-race-safe-final-5min.pstats`
 
 每份final JSON含源文件逐字节SHA-256；已与最终代码逐项核对一致。文档后续提交不改变测量代码。完整5分钟pstats可用Python pstats读取；不提交生产拷贝。
-
