@@ -21,9 +21,9 @@ CAPCUT_IMAGE = 'd03364c65a48b22ed3da6131d048e015e3a72421680d95641c7dd00bec1fbb9e
 CAPCUT_IMAGE_CRLF = 'b2ac1ba5bd1b08eeab08e3bd1025717c38d6f9892908f2594ae39fbf7ff224ed'
 PREFETCH_NOTICE = '4f3a27136abc3861cacb34906c8485f85b69b2461ea16d6ea196179bd948dcb9'
 PREFETCH_NOTICE_CRLF = 'dfac9bd1c16297cc87017a22ebb12680530b9a8d3b08fff88e22abcd6559d8b8'
-CPU_CACHE = 'd793257b069faa43a0576c65767e1c0ff45f253c88217b8ada5b7bf6c52977eb'
-CPU_CACHE_CRLF = 'a19556a2a1e41239d14139898b0f391e21f810b42deafccd282b00b878397a66'
-CPU_CACHE_HELPERS = {'json_read_cache.py':'89bbc8884c71b3b70bb7e85ed508db281ae023ebf18ddd841462a33b7d4fd9bd',
+CPU_CACHE = '044adae92c910f936f8c2cdcc88f325fc783063613cbcce374b520b0ca7ca6f6'
+CPU_CACHE_CRLF = 'f41b3e9467e8e922a0bfb01939a7267cee1f4f30a8363b29d3a1f293479198f5'
+CPU_CACHE_HELPERS = {'json_read_cache.py':'6bb718d248a1d07910867f43e4db634dc4df0e0c8037312abd3df45b316f5fe9',
                      'archive_history_reader.py':'e4e749783271de103aa0a71f06bf856e9234488732ce55146cc8ec86fdf2c08f'}
 # Explicit candidate identity, not a dynamic hash/fallback. Task normalization
 # remains unchanged; the new metadata/route delta is covered by AST tests.

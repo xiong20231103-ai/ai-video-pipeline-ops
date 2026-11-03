@@ -3510,7 +3510,7 @@ class Collector:
 
     def _json(self, path: Path) -> dict[str, Any] | None:
         try:
-            from json_read_cache import file_signature
+            from json_read_cache import file_signature, signature_is_stable
             data = self._json_read_cache.read(path, parser=self._decode_json_source, encoding="utf-8")
             version = file_signature(path)
             signature = f"{version[0]}:{version[1]}"
@@ -3714,6 +3714,7 @@ class Collector:
         self._normalized_projection_seen[key] = dict(normalized)
 
     def scan_statuses(self) -> None:
+        from json_read_cache import signature_is_stable
         # Resolve each unique path once in this pass, not once per language/
         # historical task. No resolution result survives into the next pass.
         resolved_paths = {}
@@ -3758,7 +3759,7 @@ class Collector:
                 or str(self.metadata.get(str(row.get("taskId") or ""), {}).get("status") or "") in FAILED_STATES
                 for row in raw_rows
             )
-            if not requires_verification and self._processed_status_sources.get(source_key) == source_version:
+            if not requires_verification and signature_is_stable(observed) and self._processed_status_sources.get(source_key) == source_version:
                 continue
             batch_id = str(data.get("batchId") or "")
             date_label = str(data.get("date") or "")
@@ -3798,7 +3799,7 @@ class Collector:
             except OSError:
                 row_version = None
                 fallback_timestamp = 0.0
-            if (row_version is not None and str(item.get("status") or "") not in FAILED_STATES
+            if (row_version is not None and signature_is_stable(row_version[0]) and str(item.get("status") or "") not in FAILED_STATES
                     and self._processed_metadata_rows.get(task_id) == row_version):
                 continue
             normalized = self.normalize_task(

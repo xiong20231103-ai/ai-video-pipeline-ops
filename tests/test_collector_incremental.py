@@ -1,12 +1,25 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 import app
+import json_read_cache
 
 
 class CollectorIncrementalTests(unittest.TestCase):
+ def test_recent_same_signature_status_rewrite_reaches_projection(self):
+  with tempfile.TemporaryDirectory() as directory:
+   root=Path(directory);path=root/'sample.status.json'
+   path.write_text('{"tasks":[{"taskId":"one","state":"Failed "}] }')
+   store=Mock();collector=app.Collector({**app.CONFIG,'capcut_handoff_dir':str(root),'simulation_enabled':False},store)
+   signature=json_read_cache.file_signature(path)
+   with patch('json_read_cache.file_signature',return_value=signature):
+    collector.scan_statuses()
+    path.write_text('{"tasks":[{"taskId":"one","state":"Running"}] }')
+    collector.scan_statuses()
+   self.assertEqual('Running',store.upsert_task.call_args.args[0]['state'])
  def test_unchanged_source_health_is_not_requeried_and_mutations_are_isolated(self):
   with tempfile.TemporaryDirectory() as directory:
    root=Path(directory);path=root/'source.json';path.write_text('{"tasks":[{"v":1}]}')
@@ -14,7 +27,9 @@ class CollectorIncrementalTests(unittest.TestCase):
    first=collector._json(path);first['tasks'][0]['v']=99
    self.assertEqual(1,collector._json(path)['tasks'][0]['v'])
    self.assertEqual(1,store.source_result.call_count)
+   previous=path.stat()
    path.write_text('{"tasks":[{"v":2}]}')
+   os.utime(path,ns=(previous.st_atime_ns,previous.st_mtime_ns+1_000_000_000))
    self.assertEqual(2,collector._json(path)['tasks'][0]['v'])
    self.assertEqual(2,store.source_result.call_count)
  def test_unchanged_completed_status_not_reprocessed_but_changed_file_is(self):

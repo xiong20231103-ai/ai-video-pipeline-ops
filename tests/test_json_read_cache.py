@@ -15,6 +15,7 @@ class JsonReadCacheTests(unittest.TestCase):
   self.path=Path(self.tmp.name)/'state.json';self.path.write_text('{"rows":[{"v":1}]}',encoding='utf-8')
   self.cache=JsonReadCache()
  def test_unchanged_parses_once_and_callers_cannot_poison_cache(self):
+  old=self.path.stat();os.utime(self.path,ns=(old.st_atime_ns,old.st_mtime_ns-3_000_000_000))
   with patch('json_read_cache.json.loads',wraps=json.loads) as parse:
    first=self.cache.read(self.path);first['rows'][0]['v']=99
    self.assertEqual(1,self.cache.read(self.path)['rows'][0]['v'])
@@ -24,6 +25,22 @@ class JsonReadCacheTests(unittest.TestCase):
   staged=self.path.with_suffix('.tmp');staged.write_text('{"rows":[{"v":2}]}',encoding='utf-8')
   os.utime(staged,ns=(before.st_atime_ns,before.st_mtime_ns));os.replace(staged,self.path)
   self.assertEqual(2,self.cache.read(self.path)['rows'][0]['v'])
+ def test_recent_same_signature_inplace_rewrite_is_not_cached(self):
+  from json_read_cache import file_signature
+  signature=file_signature(self.path)
+  with patch('json_read_cache.file_signature',return_value=signature):
+   self.assertEqual(1,self.cache.read(self.path)['rows'][0]['v'])
+   self.path.write_text('{"rows":[{"v":2}]}',encoding='utf-8')
+   self.assertEqual(2,self.cache.read(self.path)['rows'][0]['v'])
+ def test_future_mtime_never_cached_even_after_clock_rollback(self):
+  import time
+  from json_read_cache import file_signature
+  signature=list(file_signature(self.path));signature[0]=time.time_ns()+60_000_000_000
+  with patch('json_read_cache.file_signature',return_value=tuple(signature)):
+   self.assertEqual(1,self.cache.read(self.path)['rows'][0]['v'])
+   self.path.write_text('{"rows":[{"v":2}]}',encoding='utf-8')
+   self.assertEqual(2,self.cache.read(self.path)['rows'][0]['v'])
+   self.assertEqual(0,len(self.cache))
  def test_deleted_corrupt_and_unreadable_do_not_return_last_good(self):
   self.cache.read(self.path);self.path.unlink()
   with self.assertRaises(FileNotFoundError):self.cache.read(self.path)
