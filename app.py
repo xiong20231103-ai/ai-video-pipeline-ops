@@ -3312,6 +3312,13 @@ class Store:
 
 class Collector:
     def __init__(self, config: dict[str, Any], store: Store):
+        from json_read_cache import JsonReadCache
+        self._json_read_cache = JsonReadCache()
+        self._source_health_seen = {}
+        self._processed_status_sources = {}
+        self._processed_metadata_rows = {}
+        self._normalized_projection_seen = {}
+        self._metadata_revision = 0
         self.config = config
         self.store = store
         self.stop_event = threading.Event()
@@ -3354,6 +3361,12 @@ class Collector:
     def reset_runtime(self, reset_at: str) -> None:
         """Forget derived state and ignore files older than the reset generation."""
         self.reset_epoch = parse_time(reset_at, time.time())
+        self._json_read_cache.invalidate()
+        self._source_health_seen.clear()
+        self._processed_status_sources.clear()
+        self._processed_metadata_rows.clear()
+        self._normalized_projection_seen.clear()
+        self._metadata_revision += 1
         self.metadata = {}
         self.pipeline = {
             "capcut": self.empty_stage("Waiting for CapCut task"),
@@ -3488,20 +3501,35 @@ class Collector:
                 )
             self.stop_event.wait(max(1, float(self.config["scan_interval_seconds"])))
 
+    @staticmethod
+    def _decode_json_source(raw):
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return json.loads(LEGACY_INVALID_JSON_BACKSLASH.sub(r"\\\\", raw))
+
     def _json(self, path: Path) -> dict[str, Any] | None:
         try:
-            raw = path.read_text(encoding="utf-8")
-            try:
-                data = json.loads(raw)
-            except json.JSONDecodeError:
-                # Legacy workbench handoffs occasionally contain a single
-                # Windows path separator. Read it compatibly so an old path
-                # cannot erase otherwise valid current status from the UI.
-                data = json.loads(LEGACY_INVALID_JSON_BACKSLASH.sub(r"\\\\", raw))
-            signature = f"{path.stat().st_mtime_ns}:{path.stat().st_size}"
-            self.store.source_result(path, True, signature)
+            from json_read_cache import file_signature
+            data = self._json_read_cache.read(path, parser=self._decode_json_source, encoding="utf-8")
+            version = file_signature(path)
+            signature = f"{version[0]}:{version[1]}"
+            key = str(path)
+            if self._source_health_seen.get(key) != (version, True):
+                self.store.source_result(path, True, signature)
+                if len(self._source_health_seen) >= 4096:
+                    self._source_health_seen.clear()
+                self._source_health_seen[key] = (version, True)
             return data if isinstance(data, dict) else None
         except (OSError, json.JSONDecodeError) as exc:
+            self._source_health_seen.pop(str(path), None)
+            if isinstance(exc, OSError):
+                # Preserve the existing reader's diagnostic (not stat's
+                # platform-specific variant) on missing/unreadable files.
+                try:
+                    path.read_text(encoding="utf-8")
+                except OSError as read_error:
+                    exc = read_error
             try:
                 signature = f"{path.stat().st_mtime_ns}:{path.stat().st_size}"
             except OSError:
@@ -3516,7 +3544,7 @@ class Collector:
         # Keeping the last good map also prevents a transient file lock from
         # making the Dashboard forget the formal task contract.
         now = time.time()
-        if self.metadata and now - self.last_metadata_scan_epoch < 5:
+        if self.metadata and now - self.last_metadata_scan_epoch < float(self.config.get("metadata_scan_interval_seconds", 15)):
             return
         roots = [
             resolve_path(str(self.config["capcut_handoff_dir"])),
@@ -3530,6 +3558,7 @@ class Collector:
         for root in roots:
             if not root.exists():
                 continue
+            is_current_ledger = root.resolve() == fourth_step_root
             for path in root.rglob("*.json"):
                 if path.name.endswith(".status.json"):
                     continue
@@ -3573,7 +3602,6 @@ class Collector:
                     # The exception is the authoritative fourth-step ledger:
                     # its explicit requeue/reset state must supersede a stale
                     # CapCut attempt that was scanned first.
-                    is_current_ledger = root.resolve() == fourth_step_root
                     if (
                         previous.get("activeManifestId")
                         and not candidate.get("activeManifestId")
@@ -3581,6 +3609,11 @@ class Collector:
                     ):
                         continue
                     metadata[task_id] = {**previous, **candidate}
+        if self.metadata != metadata:
+            self._metadata_revision += 1
+            self._processed_metadata_rows.clear()
+            self._processed_status_sources.clear()
+            self._normalized_projection_seen.clear()
         self.metadata = metadata
         self.last_metadata_scan_epoch = now
 
@@ -3671,7 +3704,24 @@ class Collector:
             "source_timestamp": source_timestamp,
         }
 
+    def _publish_task_projection(self, normalized):
+        key = (normalized.get("task_id"), normalized.get("source_file"))
+        if self._normalized_projection_seen.get(key) == normalized:
+            return
+        self.store.upsert_task(normalized)
+        if len(self._normalized_projection_seen) >= 8192:
+            self._normalized_projection_seen.clear()
+        self._normalized_projection_seen[key] = dict(normalized)
+
     def scan_statuses(self) -> None:
+        # Resolve each unique path once in this pass, not once per language/
+        # historical task. No resolution result survives into the next pass.
+        resolved_paths = {}
+        def resolved(value):
+            key = str(value)
+            if key not in resolved_paths:
+                resolved_paths[key] = Path(value).resolve()
+            return resolved_paths[key]
         status_paths: list[Path] = []
         capcut_dir = resolve_path(str(self.config["capcut_handoff_dir"]))
         if capcut_dir.exists():
@@ -3680,15 +3730,36 @@ class Collector:
         if self.config.get("simulation_enabled") and simulation.exists():
             status_paths.append(simulation)
 
-        records: list[tuple[float, Path, dict[str, Any]]] = []
+        records = []
         for path in status_paths:
+            from json_read_cache import file_signature
+            try:
+                before = file_signature(path)
+            except OSError:
+                continue
             data = self._json(path)
             if not data:
                 continue
-            timestamp = parse_time(data.get("updatedAt"), path.stat().st_mtime)
-            records.append((timestamp, path, data))
+            try:
+                observed = file_signature(path)
+            except OSError:
+                continue
+            if before != observed:
+                continue
+            timestamp = parse_time(data.get("updatedAt"), observed[0] / 1_000_000_000)
+            records.append((timestamp, path, data, observed))
 
-        for timestamp, path, data in sorted(records, key=lambda row: row[0]):
+        for timestamp, path, data, observed in sorted(records, key=lambda row: row[0]):
+            source_key = str(path)
+            source_version = (observed, self._metadata_revision)
+            raw_rows = [row for row in data.get("tasks") or [] if isinstance(row, dict)]
+            requires_verification = any(
+                str(row.get("state") or row.get("status") or "") in FAILED_STATES
+                or str(self.metadata.get(str(row.get("taskId") or ""), {}).get("status") or "") in FAILED_STATES
+                for row in raw_rows
+            )
+            if not requires_verification and self._processed_status_sources.get(source_key) == source_version:
+                continue
             batch_id = str(data.get("batchId") or "")
             date_label = str(data.get("date") or "")
             for item in data.get("tasks") or []:
@@ -3702,13 +3773,17 @@ class Collector:
                     active_manifest = str(meta.get("activeManifestId") or "").strip()
                     status_manifest = str(data.get("manifestId") or item.get("manifestId") or "").strip()
                     manifest_path = Path(str(path).removesuffix(".status.json") + ".json")
-                    if expected_manifest and Path(expected_manifest).resolve() != manifest_path.resolve():
+                    if expected_manifest and resolved(expected_manifest) != resolved(manifest_path):
                         continue
                     if active_manifest and status_manifest and active_manifest != status_manifest:
                         continue
-                    self.store.upsert_task(
+                    self._publish_task_projection(
                         self.normalize_task(item, path, timestamp, batch_id, date_label)
                     )
+            if not requires_verification:
+                if len(self._processed_status_sources) >= 8192:
+                    self._processed_status_sources.clear()
+                self._processed_status_sources[source_key] = source_version
 
         # The fourth-step manifest is authoritative when it was explicitly
         # re-saved (for example after a safe requeue).  Use its real mtime:
@@ -3717,9 +3792,15 @@ class Collector:
         for task_id, item in self.metadata.items():
             source = Path(item.get("_source") or "")
             try:
+                from json_read_cache import file_signature
+                row_version = (file_signature(source), self._metadata_revision)
                 fallback_timestamp = source.stat().st_mtime
             except OSError:
+                row_version = None
                 fallback_timestamp = 0.0
+            if (row_version is not None and str(item.get("status") or "") not in FAILED_STATES
+                    and self._processed_metadata_rows.get(task_id) == row_version):
+                continue
             normalized = self.normalize_task(
                 item,
                 source,
@@ -3728,7 +3809,11 @@ class Collector:
                 str(item.get("date") or item.get("_date_label") or ""),
             )
             normalized["_force_contract_reset"] = bool(item.get("_authoritative_reset"))
-            self.store.upsert_task(normalized)
+            self._publish_task_projection(normalized)
+            if row_version is not None and str(item.get("status") or "") not in FAILED_STATES:
+                if len(self._processed_metadata_rows) >= 8192:
+                    self._processed_metadata_rows.clear()
+                self._processed_metadata_rows[task_id] = row_version
 
     def scan_workbench_pipeline(self) -> bool:
         self.prefetch_warnings = []
@@ -4057,7 +4142,7 @@ class Collector:
         return stage
 
     def scan_download_pipeline(self, workbench_live: bool) -> None:
-        if time.time() - self.last_download_scan_epoch < 2:
+        if time.time() - self.last_download_scan_epoch < float(self.config.get("download_directory_scan_interval_seconds", 15)):
             return
         self.last_download_scan_epoch = time.time()
         saved_stage = self.scan_saved_download_state()
@@ -4257,7 +4342,7 @@ class Collector:
         self.pipeline["voice"] = stage
 
     def scan_generation_pipeline(self, workbench_available: bool) -> None:
-        if time.time() - self.last_generation_scan_epoch < 10:
+        if time.time() - self.last_generation_scan_epoch < float(self.config.get("generation_directory_scan_interval_seconds", 30)):
             return
         self.last_generation_scan_epoch = time.time()
         root = resolve_path(str(self.config.get("generation_output_root") or ""))
@@ -4758,6 +4843,8 @@ def pipeline_dates() -> list[str]:
     for history in COLLECTOR.pipeline_history.values():
         values.update(history.keys())
     values.update(item["date_label"] for item in STORE.tasks() if item["date_label"])
+    from archive_history_reader import archived_dates
+    values.update(archived_dates(history_archive_root()))
 
     def key(label: str) -> tuple[int, int]:
         try:
@@ -4785,18 +4872,42 @@ def authoritative_capcut_task_ids() -> set[str]:
     }
 
 
+def history_archive_root():
+    configured = str(CONFIG.get("history_archive_root") or "").strip()
+    if configured:
+        return resolve_path(configured)
+    suite = resolve_path(str(CONFIG.get("workbench_dir") or ""))
+    workbench = suite / "workbench" if (suite / "workbench").is_dir() else suite
+    return workbench / "handoff" / "history_archive"
+
+
 def production_capcut_tasks(
     date_label: str = "", state: str = "", remote_task_id: str = ""
 ) -> list[dict[str, Any]]:
     active_ids = authoritative_capcut_task_ids()
     owner = str(remote_task_id or "").strip()
-    return [
+    result = [
         item for item in STORE.tasks(date_label, state)
         if item.get("task_id") in active_ids
         and item.get("remote_pipeline_task_id")
         and (not owner or str(item.get("remote_pipeline_task_id") or "") == owner)
         and not is_test_history_task(item)
     ]
+    # Historical query only: no archive row enters COLLECTOR.metadata, the
+    # current task box, admission, recovery or the live SQLite task projection.
+    if date_label:
+        from archive_history_reader import archived_handoffs
+        existing = {item["task_id"] for item in result}
+        for source, stamp, payload in archived_handoffs(history_archive_root(), date_label):
+            for row in payload["tasks"]:
+                if not isinstance(row, dict) or not row.get("taskId") or row["taskId"] in existing:
+                    continue
+                if row.get("status") != "completed" or not row.get("remotePipelineTaskId"):
+                    continue
+                item = COLLECTOR.normalize_task(row, source, stamp, str(payload.get("batchId") or ""), date_label)
+                if (not state or item["state"] == state) and (not owner or item["remote_pipeline_task_id"] == owner) and not is_test_history_task(item):
+                    result.append(item); existing.add(item["task_id"])
+    return result
 
 
 def upload_task_index() -> dict[str, dict[str, Any]]:

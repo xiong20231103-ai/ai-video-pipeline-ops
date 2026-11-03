@@ -100,7 +100,7 @@ class SandboxIO:
                         node=self.filesystem.get(candidate.relative_to(self.root).as_posix())
                         if node:
                             ns=node.get('mtimeNs',0);seconds=ns/10**9
-                            return types.SimpleNamespace(st_mode=stat.S_IFDIR if node['kind']=='directory' else stat.S_IFREG,st_size=node.get('size',0),st_mtime=seconds,st_mtime_ns=ns,st_ctime=seconds,st_ctime_ns=ns,st_atime=seconds,st_atime_ns=ns)
+                            return types.SimpleNamespace(st_mode=stat.S_IFDIR if node['kind']=='directory' else stat.S_IFREG,st_size=node.get('size',0),st_mtime=seconds,st_mtime_ns=ns,st_ctime=seconds,st_ctime_ns=ns,st_atime=seconds,st_atime_ns=ns,st_dev=node.get('device',0),st_ino=node.get('inode',0))
                 return _original(Path(mapped),*args,**kwargs)
             self.stack.enter_context(patch.object(Path,name,wrapped))
         for name in ('mkdir','unlink','rmdir','rename','replace','remove','utime','chmod'):

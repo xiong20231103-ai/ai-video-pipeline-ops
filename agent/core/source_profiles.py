@@ -21,10 +21,14 @@ CAPCUT_IMAGE = 'd03364c65a48b22ed3da6131d048e015e3a72421680d95641c7dd00bec1fbb9e
 CAPCUT_IMAGE_CRLF = 'b2ac1ba5bd1b08eeab08e3bd1025717c38d6f9892908f2594ae39fbf7ff224ed'
 PREFETCH_NOTICE = '4f3a27136abc3861cacb34906c8485f85b69b2461ea16d6ea196179bd948dcb9'
 PREFETCH_NOTICE_CRLF = 'dfac9bd1c16297cc87017a22ebb12680530b9a8d3b08fff88e22abcd6559d8b8'
+CPU_CACHE = 'd793257b069faa43a0576c65767e1c0ff45f253c88217b8ada5b7bf6c52977eb'
+CPU_CACHE_CRLF = 'a19556a2a1e41239d14139898b0f391e21f810b42deafccd282b00b878397a66'
+CPU_CACHE_HELPERS = {'json_read_cache.py':'89bbc8884c71b3b70bb7e85ed508db281ae023ebf18ddd841462a33b7d4fd9bd',
+                     'archive_history_reader.py':'e4e749783271de103aa0a71f06bf856e9234488732ce55146cc8ec86fdf2c08f'}
 # Explicit candidate identity, not a dynamic hash/fallback. Task normalization
 # remains unchanged; the new metadata/route delta is covered by AST tests.
-PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF, PIP_CONSOLE, PIP_CONSOLE_CRLF, CAPCUT_IMAGE, CAPCUT_IMAGE_CRLF, PREFETCH_NOTICE, PREFETCH_NOTICE_CRLF})
-PROFILES = {PREFETCH_NOTICE:'prefetch-notice', PREFETCH_NOTICE_CRLF:'prefetch-notice-crlf', CAPCUT_IMAGE:'pr81-capcut-image', CAPCUT_IMAGE_CRLF:'pr81-capcut-image-crlf', F78:'f78db5a', PR49:'pr49-verified-final',
+PR49_BEHAVIOR = frozenset({PR49, D6A7211_CRLF, SUBTITLE_IDLE, SUBTITLE_IDLE_CRLF, PIP_CONSOLE, PIP_CONSOLE_CRLF, CAPCUT_IMAGE, CAPCUT_IMAGE_CRLF, PREFETCH_NOTICE, PREFETCH_NOTICE_CRLF, CPU_CACHE, CPU_CACHE_CRLF})
+PROFILES = {CPU_CACHE:'cpu-read-cache',CPU_CACHE_CRLF:'cpu-read-cache-crlf',PREFETCH_NOTICE:'prefetch-notice', PREFETCH_NOTICE_CRLF:'prefetch-notice-crlf', CAPCUT_IMAGE:'pr81-capcut-image', CAPCUT_IMAGE_CRLF:'pr81-capcut-image-crlf', F78:'f78db5a', PR49:'pr49-verified-final',
             D6A7211_CRLF:'d6a7211-crlf-pr49-behavior',
             SUBTITLE_IDLE:'pr49-subtitle-idle', SUBTITLE_IDLE_CRLF:'pr49-subtitle-idle-crlf',
             PIP_CONSOLE:'pr49-pip-console', PIP_CONSOLE_CRLF:'pr49-pip-console-crlf'}
@@ -73,13 +77,19 @@ def verify_source(source, snapshot):
     if digest not in PROFILES or snapshot.manifest['legacySha256'] != digest:
         raise SnapshotError('legacy_source_hash_mismatch')
     facts=snapshot.manifest.get('facts',{})
+    if digest in {CPU_CACHE,CPU_CACHE_CRLF}:
+        for name,expected in CPU_CACHE_HELPERS.items():
+            raw=(Path(__file__).resolve().parents[2]/name).read_text(encoding='utf-8-sig')
+            if hashlib.sha256(raw.encode()).hexdigest()!=expected:raise SnapshotError('source_dependency_hash_mismatch')
     helper_hash=reviewed_helper(digest,facts) if digest in PR49_BEHAVIOR else None
     if helper_hash:
         legacy_verified_final_source(helper_hash)
     if helper_hash==FRESH_HELPER:
         validate_fresh_helper_identity(facts.get('captureProof',{}).get('helperIdentities',{}).get('verified_final.py'))
     for name,expected in snapshot.manifest.get('facts',{}).get('captureProof',{}).get('helperHashes',{}).items():
-        if name not in {'pending_delete.py','cleanup_tickets.py','verified_final.py'}:raise SnapshotError('undeclared_source_dependency')
+        allowed={'pending_delete.py','cleanup_tickets.py','verified_final.py'}
+        if digest in {CPU_CACHE,CPU_CACHE_CRLF}:allowed.update(CPU_CACHE_HELPERS)
+        if name not in allowed:raise SnapshotError('undeclared_source_dependency')
         source=legacy_verified_final_source(helper_hash) if helper_hash and name=='verified_final.py' else (Path(__file__).resolve().parents[2]/name).read_text(encoding='utf-8-sig')
         if hashlib.sha256(source.encode()).hexdigest()!=expected:raise SnapshotError('source_dependency_hash_mismatch')
         if helper_hash==FRESH_HELPER and name!='verified_final.py':
