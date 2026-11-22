@@ -6124,6 +6124,7 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
         template_payload = receiver_json("/api/templates")
     except HTTPException as exc:
         template_payload["error"] = str(exc.detail)
+    from replenishment_demand import annotate_gaps
     payload = {
         "selectedDate": selected_date,
         "selectedBatchId": str((selected_box or {}).get("batchId") or ""),
@@ -6132,7 +6133,7 @@ def dashboard_payload(date_label: str = "", batch_id: str = "") -> dict[str, Any
         "pipeline": {"date": selected_date, "availableDates": pipeline_dates(), "items": list(stages.values())},
         "tasks": {"items": tasks, "count": len(tasks)},
         "events": {"items": STORE.events(30)},
-        "projectGaps": {"items": gaps},
+        "projectGaps": {"items": annotate_gaps(gaps, queue_payload)},
         "receiverQueue": queue_payload,
         "templates": template_payload,
         "taskBoxes": {"items": boxes, "selected": selected_box, "history": archived_task_payloads()},
@@ -6541,7 +6542,14 @@ def project_gaps(date: str = ""):
     items = list(COLLECTOR.project_download_statuses)
     if date:
         items = [item for item in items if str(item.get("date") or "") == date]
-    return {"items": items, "updatedAt": COLLECTOR.last_scan_at}
+    # Expose the same durable admission evidence used by Dashboard, without
+    # leaking queue URLs or changing the parent's actual download deficit.
+    from replenishment_demand import annotate_gaps
+    try:
+        queue = receiver_json("/api/tasks")
+    except HTTPException:
+        queue = None
+    return {"items": annotate_gaps(items, queue), "updatedAt": COLLECTOR.last_scan_at}
 
 
 @app.get("/api/controls/tasks")
